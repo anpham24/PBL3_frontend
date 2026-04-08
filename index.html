@@ -46,12 +46,12 @@
 		<main class="main-content">
 			<header class="top-header">
 				<div class="header-inner">
-					<div class="header-spacer" aria-hidden="true"></div>
-
-					<label class="search-box" for="search-input">
-						<i class="bx bx-search"></i>
-						<input id="search-input" type="search" placeholder="Tìm điểm đến, bài viết...">
-					</label>
+					<div class="search-wrap">
+						<label class="search-box" for="search-input">
+							<i class="bx bx-search"></i>
+							<input id="search-input" type="search" placeholder="Tìm kiếm">
+						</label>
+					</div>
 
 					<button class="header-avatar" type="button" aria-label="Trang cá nhân">
 						<img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="User avatar">
@@ -64,13 +64,13 @@
 					<div class="feed-filters">
 						<button class="filter-chip" type="button">
 							<i class="bx bx-map"></i>
-							<span>Everywhere</span>
+							<span>Tỉnh</span>
 							<i class="bx bx-chevron-down"></i>
 						</button>
 
 						<button class="filter-chip" type="button">
 							<i class="bx bx-star"></i>
-							<span>All Themes</span>
+							<span>Chủ đề</span>
 							<i class="bx bx-chevron-down"></i>
 						</button>
 					</div>
@@ -81,11 +81,27 @@
 								<div class="post-author">
 									<img class="avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=60" alt="Avatar duyen.travels">
 									<div class="post-meta">
-										<h3>duyen.travels</h3>
+										<div class="post-meta-row">
+											<h3>duyen.travels</h3>
+											<span class="meta-divider">&bull;</span>
+											<span class="post-time">2h</span>
+										</div>
 										<p>Ninh Binh, Vietnam</p>
 									</div>
 								</div>
-								<span class="post-time">2h</span>
+
+								<div class="post-menu-wrap">
+									<button class="post-menu-btn" type="button" aria-label="Mở tùy chọn bài đăng">
+										<i class="bx bx-dots-horizontal-rounded"></i>
+									</button>
+
+									<div class="post-dropdown-menu">
+										<button class="post-dropdown-item report-action" type="button">
+											<i class="bx bx-flag"></i>
+											<span>Báo cáo bài đăng</span>
+										</button>
+									</div>
+								</div>
 							</header>
 
 							<div class="post-tags">
@@ -100,7 +116,7 @@
 									<button class="icon-btn" type="button" aria-label="Like post">
 										<i class="bx bx-heart"></i>
 									</button>
-									<button class="icon-btn" type="button" aria-label="Comment post">
+									<button class="icon-btn comment-open-btn" type="button" aria-label="Comment post">
 										<i class="bx bx-comment"></i>
 									</button>
 									<button class="icon-btn" type="button" aria-label="Share post">
@@ -116,7 +132,6 @@
 							<footer class="post-footer">
 								<p class="likes">1,482 likes</p>
 								<p class="caption"><strong>duyen.travels</strong>Sương sớm phủ kín dòng sông, chèo thuyền qua núi đá vôi thật sự rất chill.</p>
-								<p class="view-comments">View all comments</p>
 							</footer>
 						</article>
 
@@ -125,11 +140,27 @@
 								<div class="post-author">
 									<img class="avatar" src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&q=60" alt="Avatar son.wander">
 									<div class="post-meta">
-										<h3>son.wander</h3>
+										<div class="post-meta-row">
+											<h3>son.wander</h3>
+											<span class="meta-divider">&bull;</span>
+											<span class="post-time">6h</span>
+										</div>
 										<p>Da Nang, Vietnam</p>
 									</div>
 								</div>
-								<span class="post-time">6h</span>
+
+								<div class="post-menu-wrap">
+									<button class="post-menu-btn" type="button" aria-label="Mở tùy chọn bài đăng">
+										<i class="bx bx-dots-horizontal-rounded"></i>
+									</button>
+
+									<div class="post-dropdown-menu">
+										<button class="post-dropdown-item report-action" type="button">
+											<i class="bx bx-flag"></i>
+											<span>Báo cáo bài đăng</span>
+										</button>
+									</div>
+								</div>
 							</header>
 
 							<div class="post-tags">
@@ -144,7 +175,7 @@
 									<button class="icon-btn" type="button" aria-label="Like post">
 										<i class="bx bx-heart"></i>
 									</button>
-									<button class="icon-btn" type="button" aria-label="Comment post">
+									<button class="icon-btn comment-open-btn" type="button" aria-label="Comment post">
 										<i class="bx bx-comment"></i>
 									</button>
 									<button class="icon-btn" type="button" aria-label="Share post">
@@ -160,7 +191,6 @@
 							<footer class="post-footer">
 								<p class="likes">2,097 likes</p>
 								<p class="caption"><strong>son.wander</strong>Đứng trên cầu ngắm thành phố lên đèn, gió biển mát và rất dễ chịu.</p>
-								<p class="view-comments">View all comments</p>
 							</footer>
 						</article>
 
@@ -169,11 +199,27 @@
 								<div class="post-author">
 									<img class="avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=60" alt="Avatar annie.go">
 									<div class="post-meta">
-										<h3>annie.go</h3>
+										<div class="post-meta-row">
+											<h3>annie.go</h3>
+											<span class="meta-divider">&bull;</span>
+											<span class="post-time">1d</span>
+										</div>
 										<p>Hoi An, Vietnam</p>
 									</div>
 								</div>
-								<span class="post-time">1d</span>
+
+								<div class="post-menu-wrap">
+									<button class="post-menu-btn" type="button" aria-label="Mở tùy chọn bài đăng">
+										<i class="bx bx-dots-horizontal-rounded"></i>
+									</button>
+
+									<div class="post-dropdown-menu">
+										<button class="post-dropdown-item report-action" type="button">
+											<i class="bx bx-flag"></i>
+											<span>Báo cáo bài đăng</span>
+										</button>
+									</div>
+								</div>
 							</header>
 
 							<div class="post-tags">
@@ -188,7 +234,7 @@
 									<button class="icon-btn" type="button" aria-label="Like post">
 										<i class="bx bx-heart"></i>
 									</button>
-									<button class="icon-btn" type="button" aria-label="Comment post">
+									<button class="icon-btn comment-open-btn" type="button" aria-label="Comment post">
 										<i class="bx bx-comment"></i>
 									</button>
 									<button class="icon-btn" type="button" aria-label="Share post">
@@ -204,7 +250,6 @@
 							<footer class="post-footer">
 								<p class="likes">3,214 likes</p>
 								<p class="caption"><strong>annie.go</strong>Phố cổ về đêm lung linh đèn lồng, chỉ cần đi bộ cũng có rất nhiều góc ảnh đẹp.</p>
-								<p class="view-comments">View all comments</p>
 							</footer>
 						</article>
 					</div>
@@ -218,21 +263,384 @@
 				</div>
 
 				<div id="profile-view" class="view-section">
-					<div class="placeholder-card">
-						<h2>Trang cá nhân</h2>
-						<p>Hồ sơ người dùng và danh sách bài viết sẽ hiển thị tại đây.</p>
+					<div class="profile-page">
+						<header class="profile-header">
+							<img class="profile-avatar" src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=520&q=70" alt="Avatar duyen.travels">
+
+							<div class="profile-info">
+								<div class="profile-top-row">
+									<h2 class="profile-username">duyen.travels</h2>
+									<button class="follow-btn" type="button">Follow</button>
+								</div>
+
+								<div class="profile-stats">
+									<p><strong>132</strong> posts</p>
+									<p><strong>24.8k</strong> followers</p>
+									<p><strong>389</strong> following</p>
+								</div>
+
+								<p class="profile-bio">Travel storyteller • Đam mê săn bình minh, trekking nhẹ và tìm quán cafe local ở mỗi điểm đến.</p>
+								<a class="profile-link" href="https://dutraveler.vn/duyen" target="_blank" rel="noopener noreferrer">https://dutraveler.vn/duyen</a>
+							</div>
+						</header>
+
+						<nav class="profile-tabs" aria-label="Profile tabs">
+							<button class="profile-tab active" type="button">
+								<i class="bx bx-grid-alt"></i>
+								<span>Posts</span>
+							</button>
+							<button class="profile-tab" type="button">
+								<i class="bx bx-bookmark"></i>
+								<span>Saved</span>
+							</button>
+						</nav>
+
+						<div class="profile-grid">
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 1">
+								<img src="https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=900&q=70" alt="Mountain landscape">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 2">
+								<img src="https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=900&q=70" alt="Tropical sea view">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 3">
+								<img src="https://images.unsplash.com/photo-1527631746610-bca00a040d60?auto=format&fit=crop&w=900&q=70" alt="Street in old town">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 4">
+								<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=900&q=70" alt="River and mountains">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 5">
+								<img src="https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=900&q=70" alt="Architecture and sky">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 6">
+								<img src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=900&q=70" alt="Foggy forest valley">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 7">
+								<img src="https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=900&q=70" alt="Sun rays in forest">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 8">
+								<img src="https://images.unsplash.com/photo-1503220317375-aaad61436b1b?auto=format&fit=crop&w=900&q=70" alt="Beach and cliffs">
+							</a>
+							<a class="grid-item" href="#" aria-label="Ảnh bài đăng 9">
+								<img src="https://images.unsplash.com/photo-1475924156734-496f6cac6ec1?auto=format&fit=crop&w=900&q=70" alt="Sunset over ocean">
+							</a>
+						</div>
 					</div>
 				</div>
 
 				<div id="notifications-view" class="view-section">
-					<div class="placeholder-card empty">Trống</div>
+					<section class="notifications-page" aria-label="Danh sách thông báo">
+						<h2 class="notifications-title">Thông báo</h2>
+
+						<div class="notifications-list">
+							<div class="notification-item">
+								<div class="notification-user">
+									<img class="notification-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=60" alt="Avatar son.wander">
+									<span class="notification-badge like-badge" aria-hidden="true">
+										<i class="bx bxs-heart"></i>
+									</span>
+								</div>
+
+								<div class="notification-content">
+									<p><strong>son.wander</strong> đã thích bài viết của bạn.</p>
+									<span class="notification-time">2 giờ trước</span>
+								</div>
+
+								<img class="notification-thumb" src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được thích">
+							</div>
+
+							<div class="notification-item">
+								<div class="notification-user">
+									<img class="notification-avatar" src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&q=60" alt="Avatar annie.go">
+									<span class="notification-badge comment-badge" aria-hidden="true">
+										<i class="bx bxs-message-rounded-dots"></i>
+									</span>
+								</div>
+
+								<div class="notification-content">
+									<p><strong>annie.go</strong> đã bình luận: "Cảnh đẹp quá!"</p>
+									<span class="notification-time">5 giờ trước</span>
+								</div>
+
+								<img class="notification-thumb" src="https://images.unsplash.com/photo-1555400038-63f5ba517a47?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được bình luận">
+							</div>
+
+							<div class="notification-item">
+								<div class="notification-user">
+									<img class="notification-avatar" src="https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=crop&w=120&q=60" alt="Avatar minh.explore">
+									<span class="notification-badge follow-badge" aria-hidden="true">
+										<i class="bx bxs-user"></i>
+									</span>
+								</div>
+
+								<div class="notification-content">
+									<p><strong>minh.explore</strong> đã bắt đầu theo dõi bạn.</p>
+									<span class="notification-time">1 ngày trước</span>
+								</div>
+
+								<button class="following-btn" type="button">Đang theo dõi</button>
+							</div>
+
+							<div class="notification-item">
+								<div class="notification-user">
+									<img class="notification-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=60" alt="Avatar duyen.travels">
+									<span class="notification-badge like-badge" aria-hidden="true">
+										<i class="bx bxs-heart"></i>
+									</span>
+								</div>
+
+								<div class="notification-content">
+									<p><strong>duyen.travels</strong> đã thích bài viết của bạn.</p>
+									<span class="notification-time">2 ngày trước</span>
+								</div>
+
+								<img class="notification-thumb" src="https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được thích">
+							</div>
+
+							<div class="notification-item">
+								<div class="notification-user">
+									<img class="notification-avatar" src="https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=120&q=60" alt="Avatar khai.moves">
+									<span class="notification-badge comment-badge" aria-hidden="true">
+										<i class="bx bxs-message-rounded-dots"></i>
+									</span>
+								</div>
+
+								<div class="notification-content">
+									<p><strong>khai.moves</strong> đã bình luận: "Nên thử vào lúc bình minh nhé!"</p>
+									<span class="notification-time">3 ngày trước</span>
+								</div>
+
+								<img class="notification-thumb" src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được bình luận">
+							</div>
+						</div>
+					</section>
 				</div>
 
 				<div id="settings-view" class="view-section">
-					<div class="placeholder-card empty">Trống</div>
+					<section class="settings-page" aria-label="Cài đặt tài khoản">
+						<div id="settings-main" class="settings-subview">
+							<h2 class="settings-title">Cài đặt</h2>
+
+							<div class="settings-list">
+								<button class="settings-item" type="button" data-action="edit-profile">
+									<span class="settings-item-left">
+										<i class="bx bx-user"></i>
+										<span>Chỉnh sửa trang cá nhân</span>
+									</span>
+									<i class="bx bx-chevron-right settings-arrow"></i>
+								</button>
+
+								<button class="settings-item" type="button" data-action="change-password">
+									<span class="settings-item-left">
+										<i class="bx bx-lock-alt"></i>
+										<span>Đổi mật khẩu</span>
+									</span>
+									<i class="bx bx-chevron-right settings-arrow"></i>
+								</button>
+							</div>
+						</div>
+
+						<div id="settings-edit-profile" class="settings-subview is-hidden">
+							<button class="settings-back-btn" type="button" data-action="back-to-main">
+								<i class="bx bx-arrow-back"></i>
+								<span>Quay lại</span>
+							</button>
+							<h3 class="settings-subtitle">Chỉnh sửa trang cá nhân</h3>
+
+							<form class="settings-form" action="#" method="post">
+								<div class="settings-avatar-row">
+									<img class="settings-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=60" alt="Ảnh đại diện hiện tại">
+									<button class="settings-avatar-change" type="button">Thay đổi ảnh đại diện</button>
+								</div>
+
+								<div class="field-group">
+									<label for="settings-nickname">Tên nick (nickname)</label>
+									<input id="settings-nickname" name="nickname" type="text" placeholder="duyen.travel">
+								</div>
+
+								<div class="field-group">
+									<label for="settings-bio">Tiểu sử (Bio)</label>
+									<textarea id="settings-bio" name="bio" rows="4" placeholder="Travel storyteller"></textarea>
+								</div>
+
+								<div class="field-group">
+									<label for="settings-website">Trang web</label>
+									<input id="settings-website" name="website" type="url" placeholder="https://dutraveler.vn/duyen">
+								</div>
+
+								<button class="settings-submit-btn" type="submit">Lưu thay đổi</button>
+							</form>
+						</div>
+
+						<div id="settings-change-password" class="settings-subview is-hidden">
+							<button class="settings-back-btn" type="button" data-action="back-to-main">
+								<i class="bx bx-arrow-back"></i>
+								<span>Quay lại</span>
+							</button>
+							<h3 class="settings-subtitle">Đổi mật khẩu</h3>
+
+							<form class="settings-form" action="#" method="post">
+								<div class="field-group">
+									<label for="settings-old-password">Mật khẩu cũ</label>
+									<input id="settings-old-password" name="oldPassword" type="password" placeholder="••••••••">
+								</div>
+
+								<div class="field-group">
+									<label for="settings-new-password">Mật khẩu mới</label>
+									<input id="settings-new-password" name="newPassword" type="password" placeholder="••••••••">
+								</div>
+
+								<div class="field-group">
+									<label for="settings-confirm-password">Xác nhận mật khẩu mới</label>
+									<input id="settings-confirm-password" name="confirmPassword" type="password" placeholder="••••••••">
+								</div>
+
+								<button class="settings-submit-btn" type="submit">Cập nhật mật khẩu</button>
+							</form>
+						</div>
+					</section>
 				</div>
 			</section>
 		</main>
 	</div>
+
+	<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
+		<div class="create-post-dialog">
+			<div id="step-1-upload" class="modal-step">
+				<div class="upload-dropzone">
+					<i class="bx bx-images" aria-hidden="true"></i>
+					<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
+					<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
+					<input type="file" id="post-file-input" accept="image/*, video/*" hidden>
+				</div>
+			</div>
+
+			<div id="step-2-details" class="modal-step is-hidden">
+				<header class="create-modal-header">
+					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
+						<i class="bx bx-x"></i>
+					</button>
+					<h2 id="create-post-title">Tạo bài đăng</h2>
+					<button id="publish-post-btn" class="publish-btn" type="button">Đăng</button>
+				</header>
+
+				<div class="create-modal-body">
+					<div class="create-detail-top">
+						<img class="detail-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar người dùng">
+
+						<div class="detail-chips">
+							<button class="detail-chip" type="button">
+								<i class="bx bx-map"></i>
+								<span>Tỉnh</span>
+								<i class="bx bx-chevron-down"></i>
+							</button>
+
+							<button class="detail-chip" type="button">
+								<i class="bx bx-star"></i>
+								<span>Chủ đề</span>
+								<i class="bx bx-chevron-down"></i>
+							</button>
+						</div>
+					</div>
+
+					<div class="post-caption-wrap">
+						<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
+					</div>
+
+					<div class="draft-preview">
+						<img id="post-draft-preview" alt="Ảnh bản nháp bài đăng">
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
+		<button id="close-comment-modal" class="comment-modal-close" type="button" aria-label="Đóng hộp thoại bình luận">
+			<i class="bx bx-x"></i>
+		</button>
+
+		<div class="comment-modal-dialog">
+			<div class="comment-media-pane">
+				<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=80" alt="Ảnh du lịch trong bài đăng">
+			</div>
+
+			<div class="comment-panel">
+				<header class="comment-panel-header">
+					<div class="comment-header-user">
+						<img class="comment-header-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar duyen.travels">
+
+						<div class="comment-header-meta">
+							<strong>duyen.travels</strong>
+							<span class="meta-divider">&bull;</span>
+							<span class="post-time">2h</span>
+						</div>
+					</div>
+
+					<button class="comment-header-menu post-options" type="button" aria-label="Tùy chọn bài đăng">
+						<i class="bx bx-dots-horizontal-rounded"></i>
+					</button>
+				</header>
+
+				<div class="comment-action-bar">
+					<div class="comment-action-right">
+						<button id="btn-like-comment-modal" class="comment-action-btn" type="button" aria-label="Thả tim bài đăng">
+							<i class="bx bx-heart"></i>
+						</button>
+						<button id="btn-save-comment-modal" class="comment-action-btn" type="button" aria-label="Lưu bài đăng">
+							<i class="bx bx-bookmark"></i>
+						</button>
+					</div>
+				</div>
+
+				<div class="comment-list" aria-label="Danh sách bình luận">
+					<div class="comment-item">
+						<img class="comment-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar duyen.travels">
+
+						<div class="comment-content">
+							<p><strong>duyen.travels</strong>Sương sớm phủ kín dòng sông, chèo thuyền qua núi đá vôi thật sự rất chill.</p>
+							<span class="comment-time">2 giờ trước</span>
+						</div>
+
+						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
+							<i class="bx bx-heart"></i>
+						</button>
+					</div>
+
+					<div class="comment-item">
+						<img class="comment-avatar" src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=96&q=60" alt="Avatar son.wander">
+
+						<div class="comment-content">
+							<p><strong>son.wander</strong>Góc này đẹp quá, mình cũng muốn đi Tam Coc vào cuối tuần.</p>
+							<span class="comment-time">1 giờ trước</span>
+						</div>
+
+						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
+							<i class="bx bx-heart"></i>
+						</button>
+					</div>
+
+					<div class="comment-item">
+						<img class="comment-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=60" alt="Avatar annie.go">
+
+						<div class="comment-content">
+							<p><strong>annie.go</strong>Cảnh đẹp quá! Nhìn yên bình thật sự.</p>
+							<span class="comment-time">35 phút trước</span>
+						</div>
+
+						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
+							<i class="bx bx-heart"></i>
+						</button>
+					</div>
+				</div>
+
+				<footer class="comment-input-bar">
+					<textarea id="comment-input" rows="1" placeholder="Thêm bình luận..."></textarea>
+					<button class="comment-post-btn" type="button">Đăng</button>
+				</footer>
+			</div>
+		</div>
+	</div>
+
+	<script src="script.js"></script>
 </body>
 </html>
