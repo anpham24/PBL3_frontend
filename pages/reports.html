@@ -1,0 +1,42 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>DUTraveler - Quản lý báo cáo</title>
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+	<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="../assets/css/style.css">
+	<link rel="stylesheet" href="../assets/css/reports.css">
+</head>
+<body>
+	<div class="app-shell">
+		<aside id="app-sidebar" class="sidebar" aria-label="Sidebar navigation"></aside>
+
+		<main class="main-content">
+			<header class="reports-header">
+				<div class="reports-header-inner">
+					<h1>Quản lý báo cáo</h1>
+					<p>Kiểm duyệt và xử lý các bài viết bị người dùng báo cáo.</p>
+				</div>
+			</header>
+
+			<section class="main-inner">
+				<section class="reports-page" aria-label="Danh sách bài viết bị báo cáo">
+					<div class="reports-toolbar">
+						<span id="reports-count-badge" class="reports-count-badge">0 bài viết bị báo cáo</span>
+					</div>
+
+					<div id="reported-post-list" class="post-list"></div>
+					<p id="reports-empty-state" class="reports-empty-state is-hidden">Không còn bài viết nào cần xử lý.</p>
+				</section>
+			</section>
+		</main>
+	</div>
+
+	<script src="../assets/js/pages/reports.js"></script>
+</body>
+</html>
+
