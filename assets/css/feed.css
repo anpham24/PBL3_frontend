@@ -1,0 +1,130 @@
+.feed-page {
+	width: 100%;
+	max-width: 600px;
+}
+
+.feed-filters {
+	display: flex;
+	justify-content: center;
+	gap: 12px;
+	margin-bottom: 18px;
+}
+
+.filter-chip {
+	border: 1px solid var(--border);
+	background: var(--chip-bg);
+	border-radius: 999px;
+	padding: 9px 14px;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 500;
+	cursor: default;
+}
+
+.filter-chip i {
+	font-size: 1.05rem;
+	color: #4b5563;
+}
+
+.filter-select {
+	border: none;
+	background: transparent;
+	outline: none;
+	font: inherit;
+	color: var(--text);
+	min-width: 124px;
+	padding-right: 6px;
+	cursor: pointer;
+	appearance: none;
+}
+
+.filter-select option {
+	color: #111827;
+}
+
+.feed-status {
+	margin-top: 14px;
+	font-size: 0.92rem;
+	font-weight: 500;
+	line-height: 1.4;
+	text-align: center;
+}
+
+.post-like-btn.is-liked i {
+	color: #ef4444;
+}
+
+.post-like-btn:disabled {
+	opacity: 0.7;
+	cursor: wait;
+}
+
+.detail-chip-select {
+	padding-right: 10px;
+}
+
+.detail-chip-select select {
+	border: none;
+	outline: none;
+	background: transparent;
+	font: inherit;
+	color: var(--text);
+	min-width: 104px;
+	appearance: none;
+	cursor: pointer;
+}
+
+#create-post-address {
+	width: 100%;
+	border: none;
+	outline: none;
+	font-size: 0.94rem;
+	background: transparent;
+}
+
+.create-post-feedback {
+	font-size: 0.9rem;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
+.publish-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+}
+
+.publish-btn:disabled {
+	opacity: 0.82;
+	cursor: wait;
+}
+
+.btn-spinner {
+	width: 14px;
+	height: 14px;
+	border-radius: 50%;
+	border: 2px solid rgba(255, 255, 255, 0.45);
+	border-top-color: #ffffff;
+	animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.post-image video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+@media (max-width: 640px) {
+	.feed-filters {
+		flex-wrap: wrap;
+	}
+}

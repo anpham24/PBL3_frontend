@@ -1,0 +1,178 @@
+.notifications-page {
+	width: 100%;
+	max-width: 600px;
+	margin: 0 auto;
+}
+
+.notifications-title {
+	font-size: 1.85rem;
+	font-weight: 800;
+	line-height: 1.2;
+	margin-bottom: 20px;
+}
+
+.notifications-list {
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	background: #ffffff;
+	overflow: hidden;
+}
+
+.notification-item {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--border);
+	transition: background-color 0.2s ease;
+}
+
+.notification-item:last-child {
+	border-bottom: none;
+}
+
+.notification-item:hover {
+	background: #f9fafb;
+}
+
+.notification-user {
+	position: relative;
+	width: 48px;
+	height: 48px;
+	flex-shrink: 0;
+}
+
+.notification-avatar {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 1px solid var(--border);
+}
+
+.notification-badge {
+	position: absolute;
+	right: -2px;
+	bottom: -2px;
+	width: 20px;
+	height: 20px;
+	border-radius: 50%;
+	border: 2px solid #ffffff;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	color: #ffffff;
+}
+
+.notification-badge i {
+	font-size: 0.74rem;
+}
+
+.like-badge {
+	background: #ef4444;
+}
+
+.comment-badge {
+	background: #3b82f6;
+}
+
+.follow-badge {
+	background: #111827;
+}
+
+.notification-content {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+.notification-content p {
+	font-size: 0.94rem;
+	line-height: 1.45;
+	color: #111827;
+}
+
+.notification-content strong {
+	font-weight: 700;
+}
+
+.notification-time {
+	font-size: 0.78rem;
+	color: #9ca3af;
+}
+
+.notification-thumb {
+	width: 52px;
+	height: 52px;
+	border-radius: 10px;
+	object-fit: cover;
+	border: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.following-btn {
+	border: 1px solid var(--border);
+	background: #ffffff;
+	color: #111827;
+	padding: 8px 12px;
+	border-radius: 999px;
+	font-size: 0.82rem;
+	font-weight: 600;
+	white-space: nowrap;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+@media (max-width: 900px) {
+	.notifications-title {
+		font-size: 1.65rem;
+	}
+}
+
+@media (max-width: 640px) {
+	.notifications-title {
+		font-size: 1.45rem;
+		margin-bottom: 14px;
+	}
+
+	.notifications-list {
+		border-radius: 14px;
+	}
+
+	.notification-item {
+		gap: 10px;
+		padding: 10px;
+	}
+
+	.notification-user,
+	.notification-avatar {
+		width: 42px;
+		height: 42px;
+	}
+
+	.notification-badge {
+		width: 18px;
+		height: 18px;
+	}
+
+	.notification-content p {
+		font-size: 0.86rem;
+	}
+
+	.notification-time {
+		font-size: 0.74rem;
+	}
+
+	.notification-thumb {
+		width: 44px;
+		height: 44px;
+		border-radius: 8px;
+	}
+
+	.following-btn {
+		padding: 7px 10px;
+		font-size: 0.76rem;
+	}
+}
