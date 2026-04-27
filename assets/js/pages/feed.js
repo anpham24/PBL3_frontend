@@ -6,15 +6,23 @@ import { initCreatePostModal } from "./create-post-modal.js";
 
 const SCROLL_BOTTOM_THRESHOLD = 220;
 const DEFAULT_PUBLISH_LABEL = "Đăng";
+const FEED_MODE_EXPLORE = "EXPLORE";
+const FEED_MODE_FOLLOWING = "FOLLOWING";
 
 const feedState = {
 	posts: [],
 	lastId: "",
 	provinceCode: "",
 	topicCode: "",
+	feedMode: FEED_MODE_EXPLORE,
 	hasMore: true,
 	isLoading: false,
 	requestSequence: 0
+};
+
+const reportState = {
+	activePostId: "",
+	isSubmitting: false
 };
 
 let provinceSelectElement;
@@ -22,11 +30,18 @@ let topicSelectElement;
 let feedPostListElement;
 let feedEmptyStateElement;
 let feedStatusElement;
+let feedTabExploreElement;
+let feedTabFollowingElement;
+let reportPostModalElement;
+let reportPostFormElement;
+let reportPostCloseButton;
+let reportPostCancelButton;
+let reportPostSubmitButton;
+let reportPostFeedbackElement;
 let createPostModalController;
 let createPostFormElement;
 let createPostFileInputElement;
 let createPostContentElement;
-let createPostProvinceSelectElement;
 let createPostVisibilitySelectElement;
 let createPostAddressInputElement;
 let createPostFeedbackElement;
@@ -46,14 +61,13 @@ const normalizeNumber = (value, fallback = 0) => {
 	return Number.isFinite(numericValue) ? numericValue : fallback;
 };
 
-const escapeHtml = (value) => {
-	return String(value ?? "")
+const escapeHtml = (value) =>
+	String(value ?? "")
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
 		.replace(/>/g, "&gt;")
 		.replace(/\"/g, "&quot;")
 		.replace(/'/g, "&#039;");
-};
 
 const toCssSelectorValue = (value) => {
 	const safeValue = normalizeString(value);
@@ -62,16 +76,28 @@ const toCssSelectorValue = (value) => {
 		return CSS.escape(safeValue);
 	}
 
-	return safeValue.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
+	return safeValue.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"");
 };
 
-const formatLikeCount = (likeCount) => {
-	return new Intl.NumberFormat("vi-VN").format(normalizeNumber(likeCount, 0));
-};
+const formatLikeCount = (likeCount) => new Intl.NumberFormat("vi-VN").format(normalizeNumber(likeCount, 0));
 
 const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
 
 const isTruthyLike = (value) => value === true || value === "true" || value === 1 || value === "1";
+
+const toArray = (value) => (Array.isArray(value) ? value : []);
+
+const toMessage = (error, fallbackMessage) => {
+	if (typeof error?.data?.message === "string" && error.data.message.trim().length > 0) {
+		return error.data.message.trim();
+	}
+
+	if (typeof error?.message === "string" && error.message.trim().length > 0) {
+		return error.message.trim();
+	}
+
+	return fallbackMessage;
+};
 
 const setStatus = (message, variant = "info") => {
 	if (!feedStatusElement) {
@@ -79,10 +105,15 @@ const setStatus = (message, variant = "info") => {
 	}
 
 	feedStatusElement.textContent = message;
-	feedStatusElement.classList.remove("is-hidden");
+	feedStatusElement.classList.toggle("is-hidden", normalizeString(message).length === 0);
 
 	if (variant === "error") {
 		feedStatusElement.style.color = "#dc2626";
+		return;
+	}
+
+	if (variant === "success") {
+		feedStatusElement.style.color = "#15803d";
 		return;
 	}
 
@@ -90,13 +121,10 @@ const setStatus = (message, variant = "info") => {
 };
 
 const clearStatus = () => {
-	if (!feedStatusElement) {
-		return;
+	setStatus("");
+	if (feedStatusElement) {
+		feedStatusElement.style.color = "";
 	}
-
-	feedStatusElement.textContent = "";
-	feedStatusElement.classList.add("is-hidden");
-	feedStatusElement.style.color = "";
 };
 
 const setCreatePostFeedback = (message, variant = "error") => {
@@ -119,6 +147,26 @@ const clearCreatePostFeedback = () => {
 	createPostFeedbackElement.style.color = "";
 };
 
+const setReportFeedback = (message, variant = "error") => {
+	if (!reportPostFeedbackElement) {
+		return;
+	}
+
+	reportPostFeedbackElement.textContent = message;
+	reportPostFeedbackElement.classList.remove("is-hidden");
+	reportPostFeedbackElement.style.color = variant === "error" ? "#dc2626" : "#15803d";
+};
+
+const clearReportFeedback = () => {
+	if (!reportPostFeedbackElement) {
+		return;
+	}
+
+	reportPostFeedbackElement.textContent = "";
+	reportPostFeedbackElement.classList.add("is-hidden");
+	reportPostFeedbackElement.style.color = "";
+};
+
 const syncEmptyState = () => {
 	if (!feedEmptyStateElement) {
 		return;
@@ -127,33 +175,45 @@ const syncEmptyState = () => {
 	feedEmptyStateElement.classList.toggle("is-hidden", feedState.posts.length > 0);
 };
 
-const createMediaHtml = (mediaUrl, authorName) => {
-	const safeMediaUrl = normalizeString(mediaUrl);
-	if (safeMediaUrl.length === 0) {
+const resolvePostMediaUrl = (post) => {
+	const directMediaUrl = normalizeString(post?.media_url || post?.mediaUrl || post?.image_url || post?.imageUrl);
+	if (directMediaUrl.length > 0) {
+		return directMediaUrl;
+	}
+
+	const mediaUrls = toArray(post?.media_urls || post?.mediaUrls);
+	const firstMediaUrl = normalizeString(mediaUrls[0]);
+	return firstMediaUrl;
+};
+
+const createMediaHtml = (post, authorName) => {
+	const mediaUrl = resolvePostMediaUrl(post);
+	if (mediaUrl.length === 0) {
 		return "";
 	}
 
-	if (isVideoUrl(safeMediaUrl)) {
+	if (isVideoUrl(mediaUrl)) {
 		return `
 			<div class="post-image">
-				<video src="${escapeHtml(safeMediaUrl)}" controls preload="metadata"></video>
+				<video src="${escapeHtml(mediaUrl)}" controls preload="metadata"></video>
 			</div>
 		`;
 	}
 
-	return `
-		<img class="post-image" src="${escapeHtml(safeMediaUrl)}" alt="Bài viết của ${escapeHtml(authorName)}">
-	`;
+	return `<img class="post-image" src="${escapeHtml(mediaUrl)}" alt="Bài viết của ${escapeHtml(authorName)}">`;
 };
 
 const createPostCardHtml = (post) => {
 	const postId = normalizeString(post?.id);
-	const authorName = normalizeString(post?.author_name) || "Người dùng";
-	const avatarUrl = normalizeString(post?.avt_url) || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
-	const content = normalizeString(post?.content) || "";
+	const authorName = normalizeString(post?.author_name || post?.authorName || post?.username) || "Người dùng";
+	const avatarUrl =
+		normalizeString(post?.avt_url || post?.avatar_url || post?.avatar) ||
+		"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
+	const content = normalizeString(post?.content || post?.caption);
 	const isLiked = isTruthyLike(post?.is_liked);
-	const likeCount = normalizeNumber(post?.like_count, 0);
-	const mediaHtml = createMediaHtml(post?.media_url, authorName);
+	const likeCount = normalizeNumber(post?.like_count || post?.likeCount, 0);
+	const address = normalizeString(post?.address || post?.location);
+	const mediaHtml = createMediaHtml(post, authorName);
 
 	return `
 		<article class="post-card" data-post-id="${escapeHtml(postId)}">
@@ -166,19 +226,38 @@ const createPostCardHtml = (post) => {
 						</div>
 					</div>
 				</div>
+
+				<div class="post-menu-wrap">
+					<button class="post-menu-btn" type="button" aria-label="Tùy chọn bài đăng">
+						<i class="bx bx-dots-horizontal-rounded"></i>
+					</button>
+					<div class="post-dropdown-menu">
+						<button class="post-dropdown-item" type="button" data-action="report-post" data-post-id="${escapeHtml(postId)}">
+							<i class="bx bx-flag"></i>
+							<span>Báo cáo</span>
+						</button>
+					</div>
+				</div>
 			</header>
 
 			${mediaHtml}
 
 			<div class="post-actions">
 				<div class="left-actions">
-					<button class="icon-btn post-like-btn${isLiked ? " is-liked" : ""}" type="button" aria-label="${isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"}">
+					<button class="icon-btn post-like-btn${isLiked ? " is-liked" : ""}" type="button" aria-label="${
+						isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"
+					}">
 						<i class="bx ${isLiked ? "bxs-heart" : "bx-heart"}"></i>
 					</button>
 				</div>
 			</div>
 
 			<footer class="post-footer">
+				${
+					address.length > 0
+						? `<p class="post-location"><i class="bx bx-current-location"></i><span>${escapeHtml(address)}</span></p>`
+						: ""
+				}
 				<p class="likes"><span data-role="like-count">${escapeHtml(formatLikeCount(likeCount))}</span> lượt thích</p>
 				<p class="caption"><strong>${escapeHtml(authorName)}</strong>${escapeHtml(content)}</p>
 			</footer>
@@ -224,18 +303,6 @@ const renderSelectOptions = (selectElement, options, defaultLabel) => {
 		.join("");
 
 	selectElement.innerHTML = `<option value="">${escapeHtml(defaultLabel)}</option>${optionHtml}`;
-};
-
-const toErrorMessage = (error, fallbackMessage) => {
-	if (typeof error?.data?.message === "string" && error.data.message.trim().length > 0) {
-		return error.data.message.trim();
-	}
-
-	if (typeof error?.message === "string" && error.message.trim().length > 0) {
-		return error.message.trim();
-	}
-
-	return fallbackMessage;
 };
 
 const appendUniquePosts = (incomingPosts, shouldReset) => {
@@ -296,6 +363,14 @@ const prependPost = (post) => {
 	syncEmptyState();
 };
 
+const resolveFeedRequest = (lastId, provinceCode, topicCode) => {
+	if (feedState.feedMode === FEED_MODE_FOLLOWING) {
+		return feedApi.getFollowingFeed(lastId, provinceCode, topicCode);
+	}
+
+	return feedApi.getExploreFeed(lastId, provinceCode, topicCode);
+};
+
 const loadFeed = async (shouldReset = false) => {
 	if (feedState.isLoading) {
 		return;
@@ -312,7 +387,7 @@ const loadFeed = async (shouldReset = false) => {
 	const requestLastId = shouldReset ? "" : feedState.lastId;
 
 	try {
-		const response = await feedApi.getFeed(requestLastId, feedState.provinceCode, feedState.topicCode);
+		const response = await resolveFeedRequest(requestLastId, feedState.provinceCode, feedState.topicCode);
 
 		if (requestId !== feedState.requestSequence) {
 			return;
@@ -346,7 +421,7 @@ const loadFeed = async (shouldReset = false) => {
 			renderPosts([], true);
 		}
 
-		setStatus(toErrorMessage(error, "Không thể tải bảng tin. Vui lòng thử lại."), "error");
+		setStatus(toMessage(error, "Không thể tải bảng tin. Vui lòng thử lại."), "error");
 	} finally {
 		if (requestId === feedState.requestSequence) {
 			feedState.isLoading = false;
@@ -390,9 +465,8 @@ const loadDropdowns = async () => {
 
 		renderSelectOptions(provinceSelectElement, provinces, "Tất cả tỉnh");
 		renderSelectOptions(topicSelectElement, topics, "Tất cả chủ đề");
-		renderSelectOptions(createPostProvinceSelectElement, provinces, "Chọn tỉnh");
 	} catch (error) {
-		setStatus(toErrorMessage(error, "Không tải được dữ liệu bộ lọc."), "error");
+		setStatus(toMessage(error, "Không tải được dữ liệu bộ lọc."), "error");
 	}
 };
 
@@ -473,7 +547,7 @@ const handleLikeButtonClick = async (likeButton) => {
 
 		updatePostLikeState(postId, resolvedLikeCount, resolvedIsLiked);
 	} catch (error) {
-		setStatus(toErrorMessage(error, "Không thể cập nhật lượt thích. Vui lòng thử lại."), "error");
+		setStatus(toMessage(error, "Không thể cập nhật lượt thích. Vui lòng thử lại."), "error");
 	} finally {
 		delete likeButton.dataset.loading;
 		likeButton.disabled = false;
@@ -496,12 +570,18 @@ const setPublishSubmittingState = (isSubmitting) => {
 	publishPostButtonElement.textContent = DEFAULT_PUBLISH_LABEL;
 };
 
-const buildCreatePostFormData = ({ file, visibility, provinceCode, content, address }) => {
+const buildCreatePostFormData = ({ files, visibility, content, address }) => {
 	const formData = new FormData();
 
-	formData.append("file", file);
+	files.forEach((file) => {
+		formData.append("files", file);
+	});
+
+	if (files.length > 0) {
+		formData.append("file", files[0]);
+	}
+
 	formData.append("visibility", visibility);
-	formData.append("province_code", provinceCode);
 	formData.append("content", content);
 	formData.append("address", address);
 
@@ -515,42 +595,159 @@ const handleCreatePostSubmit = async () => {
 
 	clearCreatePostFeedback();
 
-	const selectedFile = createPostFileInputElement.files?.[0] ?? null;
-	if (!selectedFile) {
-		setCreatePostFeedback("Vui lòng chọn file ảnh hoặc video để đăng bài.");
+	const selectedFiles = Array.from(createPostFileInputElement.files || []).filter(
+		(file) => file instanceof File && file.type.startsWith("image/")
+	);
+
+	if (selectedFiles.length === 0) {
+		setCreatePostFeedback("Vui lòng chọn ít nhất một ảnh để đăng bài.");
 		return;
 	}
 
-	const provinceCode = normalizeString(createPostProvinceSelectElement?.value);
-	if (provinceCode.length === 0) {
-		setCreatePostFeedback("Vui lòng chọn tỉnh cho bài đăng.");
+	const address = normalizeString(createPostAddressInputElement?.value);
+	if (address.length === 0) {
+		setCreatePostFeedback("Vui lòng nhập địa chỉ cụ thể cho bài đăng.");
 		return;
 	}
 
 	const payload = {
-		file: selectedFile,
+		files: selectedFiles,
 		visibility: normalizeString(createPostVisibilitySelectElement?.value) || "PUBLIC",
-		provinceCode,
 		content: normalizeString(createPostContentElement.value),
-		address: normalizeString(createPostAddressInputElement?.value)
+		address
 	};
 
 	setPublishSubmittingState(true);
 
 	try {
 		const response = await postApi.createPost(buildCreatePostFormData(payload));
-		const createdPost = response?.data;
+		const createdPost = response?.data?.post || response?.data;
 
 		if (createdPost && typeof createdPost === "object") {
 			prependPost(createdPost);
 		}
 
-		setStatus("Đăng bài thành công.");
+		setStatus("Đăng bài thành công.", "success");
 		createPostModalController?.close();
 	} catch (error) {
-		setCreatePostFeedback(toErrorMessage(error, "Đăng bài thất bại. Vui lòng thử lại."));
+		setCreatePostFeedback(toMessage(error, "Đăng bài thất bại. Vui lòng thử lại."));
 	} finally {
 		setPublishSubmittingState(false);
+	}
+};
+
+const updateFeedTabs = () => {
+	if (!feedTabExploreElement || !feedTabFollowingElement) {
+		return;
+	}
+
+	const isExploreMode = feedState.feedMode === FEED_MODE_EXPLORE;
+
+	feedTabExploreElement.classList.toggle("is-active", isExploreMode);
+	feedTabExploreElement.setAttribute("aria-selected", isExploreMode ? "true" : "false");
+
+	feedTabFollowingElement.classList.toggle("is-active", !isExploreMode);
+	feedTabFollowingElement.setAttribute("aria-selected", !isExploreMode ? "true" : "false");
+};
+
+const changeFeedMode = async (mode) => {
+	if (mode !== FEED_MODE_EXPLORE && mode !== FEED_MODE_FOLLOWING) {
+		return;
+	}
+
+	if (feedState.feedMode === mode) {
+		return;
+	}
+
+	feedState.feedMode = mode;
+	updateFeedTabs();
+	await reloadFeedWithFilters();
+};
+
+const closeAllPostMenus = (exceptWrap = null) => {
+	if (!feedPostListElement) {
+		return;
+	}
+
+	feedPostListElement.querySelectorAll(".post-menu-wrap.open").forEach((menuWrap) => {
+		if (menuWrap !== exceptWrap) {
+			menuWrap.classList.remove("open");
+		}
+	});
+};
+
+const openReportModal = (postId) => {
+	if (!reportPostModalElement || !reportPostFormElement) {
+		return;
+	}
+
+	reportState.activePostId = normalizeString(postId);
+	reportState.isSubmitting = false;
+
+	reportPostFormElement.reset();
+	clearReportFeedback();
+	reportPostSubmitButton && (reportPostSubmitButton.disabled = false);
+
+	reportPostModalElement.classList.remove("is-hidden");
+	reportPostModalElement.setAttribute("aria-hidden", "false");
+	document.body.style.overflow = "hidden";
+};
+
+const closeReportModal = () => {
+	if (!reportPostModalElement) {
+		return;
+	}
+
+	reportPostModalElement.classList.add("is-hidden");
+	reportPostModalElement.setAttribute("aria-hidden", "true");
+	reportState.activePostId = "";
+	reportState.isSubmitting = false;
+	clearReportFeedback();
+	document.body.style.overflow = "";
+};
+
+const submitReportPost = async () => {
+	if (!reportPostFormElement || reportState.isSubmitting) {
+		return;
+	}
+
+	const reasonInput = reportPostFormElement.querySelector('input[name="report-reason"]:checked');
+	const reasonCode = normalizeString(reasonInput?.value);
+
+	if (reasonCode.length === 0) {
+		setReportFeedback("Vui lòng chọn lý do báo cáo.");
+		return;
+	}
+
+	if (reportState.activePostId.length === 0) {
+		setReportFeedback("Không xác định được bài đăng cần báo cáo.");
+		return;
+	}
+
+	reportState.isSubmitting = true;
+	if (reportPostSubmitButton) {
+		reportPostSubmitButton.disabled = true;
+		reportPostSubmitButton.textContent = "Đang gửi...";
+	}
+
+	clearReportFeedback();
+
+	try {
+		await postApi.reportPost(reportState.activePostId, reasonCode);
+		setReportFeedback("Đã gửi báo cáo thành công.", "success");
+		setStatus("Đã gửi báo cáo bài đăng.", "success");
+
+		window.setTimeout(() => {
+			closeReportModal();
+		}, 550);
+	} catch (error) {
+		setReportFeedback(toMessage(error, "Không thể gửi báo cáo. Vui lòng thử lại."));
+	} finally {
+		reportState.isSubmitting = false;
+		if (reportPostSubmitButton) {
+			reportPostSubmitButton.disabled = false;
+			reportPostSubmitButton.textContent = "Gửi";
+		}
 	}
 };
 
@@ -560,6 +757,14 @@ const initFeedPage = () => {
 	feedPostListElement = document.getElementById("feed-post-list");
 	feedEmptyStateElement = document.getElementById("feed-empty-state");
 	feedStatusElement = document.getElementById("feed-status");
+	feedTabExploreElement = document.getElementById("feed-tab-explore");
+	feedTabFollowingElement = document.getElementById("feed-tab-following");
+	reportPostModalElement = document.getElementById("report-post-modal");
+	reportPostFormElement = document.getElementById("report-post-form");
+	reportPostCloseButton = document.getElementById("report-post-close");
+	reportPostCancelButton = document.getElementById("report-post-cancel");
+	reportPostSubmitButton = document.getElementById("report-post-submit");
+	reportPostFeedbackElement = document.getElementById("report-post-feedback");
 
 	if (!provinceSelectElement || !topicSelectElement || !feedPostListElement || !feedEmptyStateElement || !feedStatusElement) {
 		return;
@@ -569,7 +774,6 @@ const initFeedPage = () => {
 	createPostFormElement = document.getElementById("create-post-form");
 	createPostFileInputElement = createPostModalController?.elements?.postFileInput ?? null;
 	createPostContentElement = createPostModalController?.elements?.postCaptionInput ?? null;
-	createPostProvinceSelectElement = createPostModalController?.elements?.createPostProvinceInput ?? null;
 	createPostVisibilitySelectElement = createPostModalController?.elements?.createPostVisibilityInput ?? null;
 	createPostAddressInputElement = createPostModalController?.elements?.createPostAddressInput ?? null;
 	createPostFeedbackElement = createPostModalController?.elements?.createPostFeedbackElement ?? null;
@@ -581,13 +785,41 @@ const initFeedPage = () => {
 	});
 
 	feedPostListElement.addEventListener("click", (event) => {
-		const likeButton = event.target.closest(".post-like-btn");
-		if (!likeButton || !feedPostListElement.contains(likeButton)) {
+		const menuButton = event.target.closest(".post-menu-btn");
+		if (menuButton) {
+			event.preventDefault();
+			event.stopPropagation();
+
+			const menuWrap = menuButton.closest(".post-menu-wrap");
+			if (!menuWrap) {
+				return;
+			}
+
+			const shouldOpen = !menuWrap.classList.contains("open");
+			closeAllPostMenus();
+			if (shouldOpen) {
+				menuWrap.classList.add("open");
+			}
+
 			return;
 		}
 
-		event.preventDefault();
-		void handleLikeButtonClick(likeButton);
+		const reportActionButton = event.target.closest('[data-action="report-post"]');
+		if (reportActionButton) {
+			event.preventDefault();
+			event.stopPropagation();
+
+			const postId = normalizeString(reportActionButton.dataset.postId);
+			closeAllPostMenus();
+			openReportModal(postId);
+			return;
+		}
+
+		const likeButton = event.target.closest(".post-like-btn");
+		if (likeButton && feedPostListElement.contains(likeButton)) {
+			event.preventDefault();
+			void handleLikeButtonClick(likeButton);
+		}
 	});
 
 	provinceSelectElement.addEventListener("change", () => {
@@ -598,8 +830,43 @@ const initFeedPage = () => {
 		void reloadFeedWithFilters();
 	});
 
+	feedTabExploreElement?.addEventListener("click", () => {
+		void changeFeedMode(FEED_MODE_EXPLORE);
+	});
+
+	feedTabFollowingElement?.addEventListener("click", () => {
+		void changeFeedMode(FEED_MODE_FOLLOWING);
+	});
+
+	reportPostFormElement?.addEventListener("submit", (event) => {
+		event.preventDefault();
+		void submitReportPost();
+	});
+
+	reportPostCloseButton?.addEventListener("click", closeReportModal);
+	reportPostCancelButton?.addEventListener("click", closeReportModal);
+	reportPostModalElement?.addEventListener("click", (event) => {
+		if (event.target === reportPostModalElement) {
+			closeReportModal();
+		}
+	});
+
+	document.addEventListener("click", (event) => {
+		if (!event.target.closest(".post-menu-wrap")) {
+			closeAllPostMenus();
+		}
+	});
+
+	document.addEventListener("keydown", (event) => {
+		if (event.key === "Escape") {
+			closeAllPostMenus();
+			closeReportModal();
+		}
+	});
+
 	window.addEventListener("scroll", handleScrollToBottom, { passive: true });
 
+	updateFeedTabs();
 	void Promise.all([loadDropdowns(), loadFeed(true)]);
 };
 

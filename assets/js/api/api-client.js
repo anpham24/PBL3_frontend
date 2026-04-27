@@ -124,5 +124,20 @@ export const apiClient = {
 			method: "POST",
 			data
 		});
+	},
+
+	async put(endpoint, data, options = {}) {
+		return this.request(endpoint, {
+			...options,
+			method: "PUT",
+			data
+		});
+	},
+
+	async delete(endpoint, options = {}) {
+		return this.request(endpoint, {
+			...options,
+			method: "DELETE"
+		});
 	}
 };

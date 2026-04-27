@@ -26,9 +26,14 @@
 			<section class="main-inner">
 				<section class="reports-page" aria-label="Danh sách bài viết bị báo cáo">
 					<div class="reports-toolbar">
+						<label class="reports-search" for="reports-search-input">
+							<i class="bx bx-search"></i>
+							<input id="reports-search-input" type="search" placeholder="Tìm theo người đăng hoặc nội dung..." autocomplete="off">
+						</label>
 						<span id="reports-count-badge" class="reports-count-badge">0 bài viết bị báo cáo</span>
 					</div>
 
+					<p id="reports-status" class="reports-status is-hidden" role="status" aria-live="polite"></p>
 					<div id="reported-post-list" class="post-list"></div>
 					<p id="reports-empty-state" class="reports-empty-state is-hidden">Không còn bài viết nào cần xử lý.</p>
 				</section>
@@ -36,7 +41,7 @@
 		</main>
 	</div>
 
-	<script src="../assets/js/pages/reports.js"></script>
+	<script type="module" src="../assets/js/pages/reports.js"></script>
 </body>
 </html>
 

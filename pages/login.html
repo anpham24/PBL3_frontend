@@ -42,6 +42,30 @@
         </p>
     </form>
 
+    <div id="account-locked-modal" class="account-lock-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="account-lock-title">
+        <div class="account-lock-dialog">
+            <h2 id="account-lock-title">Tài khoản đã bị khóa</h2>
+            <p id="account-lock-message" class="account-lock-message">Tài khoản của bạn đang bị khóa tạm thời.</p>
+
+            <ul class="account-lock-list" aria-label="Thông tin khóa tài khoản">
+                <li>
+                    <span>Thời gian mở khóa</span>
+                    <strong id="account-lock-until">Chưa có thông tin</strong>
+                </li>
+                <li>
+                    <span>Lý do bị khóa</span>
+                    <strong id="account-lock-reason">Chưa có thông tin</strong>
+                </li>
+                <li>
+                    <span>Số lần vi phạm còn lại</span>
+                    <strong id="account-lock-remaining">Chưa có thông tin</strong>
+                </li>
+            </ul>
+
+            <button id="account-lock-close" class="account-lock-close" type="button">Đã hiểu</button>
+        </div>
+    </div>
+
     <script type="module" src="../assets/js/pages/login.js"></script>
 </body>
 </html>

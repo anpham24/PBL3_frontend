@@ -30,6 +30,18 @@ export const initCommentModal = (triggerSelector) => {
 		});
 	});
 
+	if (typeof triggerSelector === "string" && triggerSelector.trim().length > 0) {
+		document.addEventListener("click", (event) => {
+			const dynamicTrigger = event.target.closest(triggerSelector);
+			if (!dynamicTrigger) {
+				return;
+			}
+
+			event.preventDefault();
+			openCommentModal();
+		});
+	}
+
 	closeCommentModalBtn?.addEventListener("click", closeCommentModal);
 
 	commentModal.addEventListener("click", (event) => {

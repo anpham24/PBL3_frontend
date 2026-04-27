@@ -51,6 +51,16 @@
 	cursor: pointer;
 }
 
+.follow-btn.is-following {
+	background: #e5e7eb;
+	color: #1f2937;
+}
+
+.follow-btn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+}
+
 .profile-stats {
 	display: flex;
 	flex-wrap: wrap;
@@ -72,6 +82,21 @@
 	color: #2563eb;
 	font-weight: 500;
 	word-break: break-word;
+}
+
+.profile-feedback {
+	max-width: 800px;
+	margin: 0 auto 14px;
+	font-size: 0.92rem;
+	line-height: 1.45;
+}
+
+.profile-feedback.is-error {
+	color: #b91c1c;
+}
+
+.profile-feedback.is-success {
+	color: #15803d;
 }
 
 .profile-tabs {

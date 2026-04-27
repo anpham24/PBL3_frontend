@@ -39,6 +39,20 @@
 	background: #f9fafb;
 }
 
+.settings-logout-item {
+	border-color: #fecaca;
+	background: #fff7f7;
+}
+
+.settings-logout-item:hover {
+	background: #fee2e2;
+}
+
+.settings-logout-item .settings-item-left,
+.settings-logout-item .settings-item-left i {
+	color: #b91c1c;
+}
+
 .settings-item-left {
 	display: inline-flex;
 	align-items: center;
@@ -103,6 +117,13 @@
 	border-radius: 50%;
 	object-fit: cover;
 	border: 1px solid var(--border);
+	cursor: pointer;
+	transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-avatar:hover {
+	border-color: #9ca3af;
+	box-shadow: 0 0 0 4px rgba(156, 163, 175, 0.14);
 }
 
 .settings-avatar-change {
@@ -114,6 +135,13 @@
 	cursor: pointer;
 	text-decoration: underline;
 	text-underline-offset: 3px;
+}
+
+.settings-avatar-hint {
+	margin-top: -4px;
+	font-size: 0.82rem;
+	line-height: 1.4;
+	color: #6b7280;
 }
 
 .field-group {
@@ -164,6 +192,25 @@
 	align-self: flex-start;
 }
 
+.settings-submit-btn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+}
+
+.settings-feedback {
+	font-size: 0.88rem;
+	line-height: 1.45;
+	margin-top: -2px;
+}
+
+.settings-feedback.is-error {
+	color: #b91c1c;
+}
+
+.settings-feedback.is-success {
+	color: #15803d;
+}
+
 @media (max-width: 900px) {
 	.settings-title {
 		font-size: 1.65rem;
@@ -211,6 +258,10 @@
 
 	.settings-avatar-change {
 		font-size: 0.88rem;
+	}
+
+	.settings-avatar-hint {
+		font-size: 0.78rem;
 	}
 
 	.field-group label {

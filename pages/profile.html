@@ -53,34 +53,32 @@
 							<input id="search-input" type="search" placeholder="Tìm kiếm">
 						</label>
 					</div>
-
-					<button class="header-avatar" type="button" aria-label="Trang cá nhân">
-						<img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="User avatar">
-					</button>
 				</div>
 			</header>
 
 			<section class="main-inner">
 				<div class="profile-page">
 					<header class="profile-header">
-						<img class="profile-avatar" src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=520&q=70" alt="Avatar duyen.travels">
+						<img id="profile-avatar" class="profile-avatar" src="https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=520&q=70" alt="Avatar">
 
 						<div class="profile-info">
 							<div class="profile-top-row">
-								<h2 class="profile-username">duyen.travels</h2>
-								<button class="follow-btn" type="button">Follow</button>
+								<h2 id="profile-nickname" class="profile-username">duyen.travels</h2>
+								<button id="profile-follow-button" class="follow-btn" type="button">Follow</button>
 							</div>
 
 							<div class="profile-stats">
-								<p><strong>132</strong> posts</p>
-								<p><strong>24.8k</strong> followers</p>
-								<p><strong>389</strong> following</p>
+								<p><strong id="profile-posts-count">132</strong> posts</p>
+								<p><strong id="profile-followers-count">24.8k</strong> followers</p>
+								<p><strong id="profile-following-count">389</strong> following</p>
 							</div>
 
-							<p class="profile-bio">Travel storyteller • Đam mê săn bình minh, trekking nhẹ và tìm quán cafe local ở mỗi điểm đến.</p>
-							<a class="profile-link" href="https://dutraveler.vn/duyen" target="_blank" rel="noopener noreferrer">https://dutraveler.vn/duyen</a>
+							<p id="profile-bio" class="profile-bio">Travel storyteller • Đam mê săn bình minh, trekking nhẹ và tìm quán cafe local ở mỗi điểm đến.</p>
+							<a id="profile-link" class="profile-link is-hidden" href="#" target="_blank" rel="noopener noreferrer"></a>
 						</div>
 					</header>
+
+					<p id="profile-feedback" class="profile-feedback is-hidden" role="status" aria-live="polite"></p>
 
 					<nav class="profile-tabs" aria-label="Profile tabs">
 						<button class="profile-tab active" type="button">
@@ -132,9 +130,9 @@
 			<div id="step-1-upload" class="modal-step">
 				<div class="upload-dropzone">
 					<i class="bx bx-images" aria-hidden="true"></i>
-					<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
+					<p>Chọn nhiều ảnh để bắt đầu tạo bài đăng mới</p>
 					<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
-					<input type="file" id="post-file-input" accept="image/*, video/*" hidden>
+					<input type="file" id="post-file-input" accept="image/*" multiple hidden>
 				</div>
 			</div>
 
@@ -147,22 +145,18 @@
 					<button id="publish-post-btn" class="publish-btn" type="button">Đăng</button>
 				</header>
 
-				<div class="create-modal-body">
+				<form id="create-post-form" class="create-modal-body" novalidate>
 					<div class="create-detail-top">
 						<img class="detail-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar người dùng">
 
 						<div class="detail-chips">
-							<button class="detail-chip" type="button">
-								<i class="bx bx-map"></i>
-								<span>Tỉnh</span>
-								<i class="bx bx-chevron-down"></i>
-							</button>
-
-							<button class="detail-chip" type="button">
-								<i class="bx bx-star"></i>
-								<span>Chủ đề</span>
-								<i class="bx bx-chevron-down"></i>
-							</button>
+							<label class="detail-chip detail-chip-select" for="create-post-visibility">
+								<i class="bx bx-lock-alt"></i>
+								<select id="create-post-visibility" aria-label="Quyền riêng tư bài đăng" required>
+									<option value="PUBLIC">Công khai</option>
+									<option value="PRIVATE">Chỉ mình tôi</option>
+								</select>
+							</label>
 						</div>
 					</div>
 
@@ -170,10 +164,16 @@
 						<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
 					</div>
 
-					<div class="draft-preview">
-						<img id="post-draft-preview" alt="Ảnh bản nháp bài đăng">
+					<div class="post-caption-wrap">
+						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể" required autocomplete="off">
 					</div>
-				</div>
+
+					<div class="draft-preview">
+						<div id="post-draft-preview-grid" class="draft-preview-grid"></div>
+					</div>
+
+					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status" aria-live="polite"></p>
+				</form>
 			</div>
 		</div>
 	</div>
@@ -185,7 +185,10 @@
 
 		<div class="comment-modal-dialog">
 			<div class="comment-media-pane">
-				<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=80" alt="Ảnh du lịch trong bài đăng">
+				<div class="comment-media-gallery">
+					<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=80" alt="Ảnh du lịch trong bài đăng">
+					<img src="https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1400&q=80" alt="Ảnh du lịch thứ hai trong bài đăng">
+				</div>
 			</div>
 
 			<div class="comment-panel">
@@ -215,6 +218,15 @@
 						</button>
 					</div>
 				</div>
+
+				<section class="comment-post-info" aria-label="Thông tin bài viết">
+					<p class="comment-post-caption"><strong>duyen.travels</strong>Sương sớm phủ kín dòng sông, chèo thuyền qua núi đá vôi thật sự rất chill.</p>
+					<div class="comment-post-tags">
+						<span class="comment-info-chip"><i class="bx bx-map"></i><span>Tỉnh: Ninh Bình</span></span>
+						<span class="comment-info-chip"><i class="bx bx-category"></i><span>Chủ đề: Nature</span></span>
+						<span class="comment-info-chip"><i class="bx bx-current-location"></i><span>Địa chỉ: Tam Cốc, Hoa Lư</span></span>
+					</div>
+				</section>
 
 				<div class="comment-list" aria-label="Danh sách bình luận">
 					<div class="comment-item">
@@ -265,6 +277,7 @@
 		</div>
 	</div>
 
+	<script src="../assets/js/utils/sidebar-role.js"></script>
 	<script type="module" src="../assets/js/pages/profile.js"></script>
 </body>
 </html>
