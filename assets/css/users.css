@@ -258,6 +258,10 @@
 	background: #fcfcfc;
 }
 
+.users-confirm-modal.is-hidden {
+	display: none;
+}
+
 .users-confirm-modal {
 	position: fixed;
 	inset: 0;

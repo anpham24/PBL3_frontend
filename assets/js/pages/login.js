@@ -87,20 +87,52 @@ const isAccountLockedError = (error) => {
 
 const extractAccountLockDetails = (error) => {
 	const payload = error?.data || {};
+	const detailSource =
+		payload && typeof payload.data === "object" && payload.data !== null ? payload.data : payload;
 
 	const message =
-		resolveFirstText(payload.message, error?.message) ||
+		resolveFirstText(payload.message, detailSource.message, error?.message) ||
 		"Tài khoản của bạn đang bị khóa. Vui lòng thử lại sau.";
 
 	const unlockTime =
-		resolveFirstText(payload.unlock_time, payload.unlockAt, payload.unblock_at, payload.blocked_until) ||
+		resolveFirstText(
+			detailSource.unlockTime,
+			payload.unlockTime,
+			detailSource.unlock_time,
+			payload.unlock_time,
+			detailSource.unlockAt,
+			payload.unlockAt,
+			detailSource.unblock_at,
+			payload.unblock_at,
+			detailSource.blocked_until,
+			payload.blocked_until
+		) ||
 		"Chưa có thông tin";
 
 	const reason =
-		resolveFirstText(payload.reason, payload.lock_reason, payload.block_reason, payload.description) ||
+		resolveFirstText(
+			detailSource.lockReason,
+			payload.lockReason,
+			detailSource.reason,
+			payload.reason,
+			detailSource.lock_reason,
+			payload.lock_reason,
+			detailSource.block_reason,
+			payload.block_reason,
+			detailSource.description,
+			payload.description
+		) ||
 		"Chưa có thông tin";
 
-	const remainingViolationsRaw = payload.remaining_violations ?? payload.remainingAttempts ?? payload.violation_left;
+	const remainingViolationsRaw =
+		detailSource.strikesLeft ??
+		payload.strikesLeft ??
+		detailSource.remaining_violations ??
+		payload.remaining_violations ??
+		detailSource.remainingAttempts ??
+		payload.remainingAttempts ??
+		detailSource.violation_left ??
+		payload.violation_left;
 	const remainingViolations =
 		typeof remainingViolationsRaw === "number" || typeof remainingViolationsRaw === "string"
 			? String(remainingViolationsRaw)

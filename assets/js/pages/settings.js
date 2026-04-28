@@ -84,7 +84,7 @@ const createProfileUpdateFormData = ({ nickname, bio, avatarFile }) => {
 	formData.append("bio", bio);
 
 	if (avatarFile instanceof File) {
-		formData.append("avatar", avatarFile);
+		formData.append("file", avatarFile);
 	}
 
 	return formData;
@@ -172,11 +172,6 @@ const attachEditProfileHandler = () => {
 			};
 
 			const response = await userApi.updateProfileWithAvatar(createProfileUpdateFormData(payload));
-			const isSuccess = Number(response?.code) === 200;
-
-			if (!isSuccess) {
-				throw new Error("Cập nhật hồ sơ thất bại.");
-			}
 
 			const responseAvatar =
 				safeText(response?.data?.user?.avatar) ||
@@ -202,7 +197,7 @@ const attachEditProfileHandler = () => {
 			const response = await userApi.getMyProfile();
 			const user = response?.data?.user;
 
-			if (Number(response?.code) !== 200 || !user) {
+			if (!user) {
 				throw new Error("Không tìm thấy thông tin người dùng.");
 			}
 
@@ -261,11 +256,6 @@ const attachChangePasswordHandler = () => {
 
 		try {
 			const response = await userApi.changePassword({ oldPassword, newPassword });
-			const isSuccess = Number(response?.code) === 200;
-
-			if (!isSuccess) {
-				throw new Error("Đổi mật khẩu thất bại.");
-			}
 
 			form.reset();
 			setFeedback(feedbackElement, safeText(response?.message) || "Đổi mật khẩu thành công.", "success");

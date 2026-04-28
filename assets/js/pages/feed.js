@@ -2,6 +2,7 @@
 
 import { feedApi } from "../api/feed-api.js";
 import { postApi } from "../api/post-api.js";
+import { initCommentModal } from "./comment-modal.js";
 import { initCreatePostModal } from "./create-post-modal.js";
 
 const SCROLL_BOTTOM_THRESHOLD = 220;
@@ -211,6 +212,7 @@ const createPostCardHtml = (post) => {
 		"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
 	const content = normalizeString(post?.content || post?.caption);
 	const isLiked = isTruthyLike(post?.is_liked);
+	const isSaved = isTruthyLike(post?.is_saved || post?.isSaved);
 	const likeCount = normalizeNumber(post?.like_count || post?.likeCount, 0);
 	const address = normalizeString(post?.address || post?.location);
 	const mediaHtml = createMediaHtml(post, authorName);
@@ -248,6 +250,16 @@ const createPostCardHtml = (post) => {
 						isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"
 					}">
 						<i class="bx ${isLiked ? "bxs-heart" : "bx-heart"}"></i>
+					</button>
+					<button class="icon-btn post-comment-btn" type="button" aria-label="Bình luận bài viết">
+						<i class="bx bx-message-rounded"></i>
+					</button>
+				</div>
+				<div class="right-actions">
+					<button class="icon-btn post-save-btn${isSaved ? " is-saved" : ""}" type="button" aria-label="${
+						isSaved ? "Bỏ lưu bài viết" : "Lưu bài viết"
+					}">
+						<i class="bx ${isSaved ? "bxs-bookmark" : "bx-bookmark"}"></i>
 					</button>
 				</div>
 			</div>
@@ -523,6 +535,51 @@ const updatePostLikeState = (postId, newLikeCount, isLiked) => {
 	});
 };
 
+const setSaveButtonVisualState = (saveButton, isSaved) => {
+	if (!saveButton) {
+		return;
+	}
+
+	const saved = Boolean(isSaved);
+	const iconElement = saveButton.querySelector("i");
+
+	saveButton.classList.toggle("is-saved", saved);
+	saveButton.setAttribute("aria-label", saved ? "Bỏ lưu bài viết" : "Lưu bài viết");
+
+	if (!iconElement) {
+		return;
+	}
+
+	iconElement.classList.toggle("bx-bookmark", !saved);
+	iconElement.classList.toggle("bxs-bookmark", saved);
+};
+
+const updatePostSaveState = (postId, isSaved) => {
+	const safePostId = normalizeString(postId);
+	if (safePostId.length === 0) {
+		return;
+	}
+
+	const normalizedIsSaved = Boolean(isSaved);
+
+	const postCard = feedPostListElement?.querySelector(`[data-post-id="${toCssSelectorValue(safePostId)}"]`);
+	if (postCard) {
+		const saveButton = postCard.querySelector(".post-save-btn");
+		setSaveButtonVisualState(saveButton, normalizedIsSaved);
+	}
+
+	feedState.posts = feedState.posts.map((post) => {
+		if (normalizeString(post?.id) !== safePostId) {
+			return post;
+		}
+
+		return {
+			...post,
+			is_saved: normalizedIsSaved
+		};
+	});
+};
+
 const handleLikeButtonClick = async (likeButton) => {
 	const postCard = likeButton?.closest(".post-card");
 	const postId = normalizeString(postCard?.dataset.postId);
@@ -554,6 +611,33 @@ const handleLikeButtonClick = async (likeButton) => {
 	}
 };
 
+const handleSaveButtonClick = async (saveButton) => {
+	const postCard = saveButton?.closest(".post-card");
+	const postId = normalizeString(postCard?.dataset.postId);
+
+	if (postId.length === 0 || saveButton.dataset.loading === "true") {
+		return;
+	}
+
+	const wasSaved = saveButton.classList.contains("is-saved");
+	const nextSaved = !wasSaved;
+
+	saveButton.dataset.loading = "true";
+	saveButton.disabled = true;
+	setSaveButtonVisualState(saveButton, nextSaved);
+
+	try {
+		await postApi.savePost(postId, nextSaved);
+		updatePostSaveState(postId, nextSaved);
+	} catch (error) {
+		setSaveButtonVisualState(saveButton, wasSaved);
+		setStatus(toMessage(error, "Không thể lưu bài viết. Vui lòng thử lại."), "error");
+	} finally {
+		delete saveButton.dataset.loading;
+		saveButton.disabled = false;
+	}
+};
+
 const setPublishSubmittingState = (isSubmitting) => {
 	if (!publishPostButtonElement) {
 		return;
@@ -577,10 +661,6 @@ const buildCreatePostFormData = ({ files, visibility, content, address }) => {
 		formData.append("files", file);
 	});
 
-	if (files.length > 0) {
-		formData.append("file", files[0]);
-	}
-
 	formData.append("visibility", visibility);
 	formData.append("content", content);
 	formData.append("address", address);
@@ -595,12 +675,16 @@ const handleCreatePostSubmit = async () => {
 
 	clearCreatePostFeedback();
 
-	const selectedFiles = Array.from(createPostFileInputElement.files || []).filter(
-		(file) => file instanceof File && file.type.startsWith("image/")
-	);
+	const selectedFiles = Array.from(createPostFileInputElement.files || []).filter((file) => {
+		if (!(file instanceof File)) {
+			return false;
+		}
+
+		return file.type.startsWith("image/") || file.type.startsWith("video/");
+	});
 
 	if (selectedFiles.length === 0) {
-		setCreatePostFeedback("Vui lòng chọn ít nhất một ảnh để đăng bài.");
+		setCreatePostFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
 		return;
 	}
 
@@ -771,6 +855,7 @@ const initFeedPage = () => {
 	}
 
 	createPostModalController = initCreatePostModal({ closeOnPublish: false });
+	initCommentModal(".post-comment-btn");
 	createPostFormElement = document.getElementById("create-post-form");
 	createPostFileInputElement = createPostModalController?.elements?.postFileInput ?? null;
 	createPostContentElement = createPostModalController?.elements?.postCaptionInput ?? null;
@@ -819,6 +904,13 @@ const initFeedPage = () => {
 		if (likeButton && feedPostListElement.contains(likeButton)) {
 			event.preventDefault();
 			void handleLikeButtonClick(likeButton);
+			return;
+		}
+
+		const saveButton = event.target.closest(".post-save-btn");
+		if (saveButton && feedPostListElement.contains(saveButton)) {
+			event.preventDefault();
+			void handleSaveButtonClick(saveButton);
 		}
 	});
 

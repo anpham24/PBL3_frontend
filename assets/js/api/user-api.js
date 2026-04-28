@@ -28,7 +28,24 @@ export const userApi = {
 	},
 
 	async updateProfile(payload) {
-		return apiClient.put("/api/users/update", payload);
+		if (payload instanceof FormData) {
+			return apiClient.put("/api/users/update", payload);
+		}
+
+		const formData = new FormData();
+		if (typeof payload?.nickname === "string") {
+			formData.append("nickname", payload.nickname);
+		}
+
+		if (typeof payload?.bio === "string") {
+			formData.append("bio", payload.bio);
+		}
+
+		if (payload?.file instanceof File) {
+			formData.append("file", payload.file);
+		}
+
+		return apiClient.put("/api/users/update", formData);
 	},
 
 	async updateProfileWithAvatar(formData) {

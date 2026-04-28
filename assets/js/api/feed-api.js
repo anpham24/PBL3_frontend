@@ -11,7 +11,7 @@ const normalizeValue = (value) => {
 	return trimmedValue.length > 0 ? trimmedValue : "";
 };
 
-const buildFeedQueryString = (lastId, provinceCode, topicCode) => {
+const buildFeedQueryString = (lastId, provinceCode, topicCode, feedType) => {
 	const params = new URLSearchParams();
 
 	const safeLastId = normalizeValue(lastId);
@@ -30,19 +30,15 @@ const buildFeedQueryString = (lastId, provinceCode, topicCode) => {
 		params.set("topic_code", safeTopicCode);
 	}
 
+	if (typeof feedType === "string" && feedType.trim().length > 0) {
+		params.set("feed_type", feedType.trim());
+	}
+
 	return params.toString();
 };
 
-const buildFeedUrl = (basePath, lastId, provinceCode, topicCode) => {
-	const queryString = buildFeedQueryString(lastId, provinceCode, topicCode);
-	return queryString.length > 0 ? `${basePath}?${queryString}` : basePath;
-};
-
-const buildFallbackFeedUrl = (feedMode, lastId, provinceCode, topicCode) => {
-	const params = new URLSearchParams(buildFeedQueryString(lastId, provinceCode, topicCode));
-	params.set("feed_mode", feedMode);
-
-	const queryString = params.toString();
+const buildFeedUrl = (lastId, provinceCode, topicCode, feedType) => {
+	const queryString = buildFeedQueryString(lastId, provinceCode, topicCode, feedType);
 	return queryString.length > 0 ? `/api/posts?${queryString}` : "/api/posts";
 };
 
@@ -55,30 +51,14 @@ export const feedApi = {
 	},
 
 	async getFeed(lastId, provinceCode, topicCode) {
-		return apiClient.get(buildFeedUrl("/api/posts", lastId, provinceCode, topicCode));
+		return apiClient.get(buildFeedUrl(lastId, provinceCode, topicCode, ""));
 	},
 
 	async getExploreFeed(lastId, provinceCode, topicCode) {
-		try {
-			return await apiClient.get(buildFeedUrl("/api/posts/explore", lastId, provinceCode, topicCode));
-		} catch (error) {
-			if (Number(error?.status) !== 404) {
-				throw error;
-			}
-
-			return apiClient.get(buildFallbackFeedUrl("EXPLORE", lastId, provinceCode, topicCode));
-		}
+		return apiClient.get(buildFeedUrl(lastId, provinceCode, topicCode, "EXPLORE"));
 	},
 
 	async getFollowingFeed(lastId, provinceCode, topicCode) {
-		try {
-			return await apiClient.get(buildFeedUrl("/api/posts/following", lastId, provinceCode, topicCode));
-		} catch (error) {
-			if (Number(error?.status) !== 404) {
-				throw error;
-			}
-
-			return apiClient.get(buildFallbackFeedUrl("FOLLOWING", lastId, provinceCode, topicCode));
-		}
+		return apiClient.get(buildFeedUrl(lastId, provinceCode, topicCode, "FOLLOWING"));
 	}
 };

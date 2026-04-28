@@ -153,10 +153,6 @@ const loadProfileData = async () => {
 				? await userApi.getProfileById(targetUserId)
 				: await userApi.getMyProfile();
 
-		if (Number(response?.code) !== 200) {
-			throw new Error("Khong the tai du lieu ho so.");
-		}
-
 		renderProfile(response);
 	} catch (error) {
 		setFeedback(feedbackElement, toMessage(error, "Khong the tai thong tin ho so."), "error");

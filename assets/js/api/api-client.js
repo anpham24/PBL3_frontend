@@ -1,5 +1,6 @@
 "use strict";
 
+import { API_BASE_URL } from "../config.js";
 import { clearAuthStorage, getToken } from "../utils/auth.js";
 
 const isFormData = (value) => typeof FormData !== "undefined" && value instanceof FormData;
@@ -80,6 +81,24 @@ const createBody = (data) => {
 	return JSON.stringify(data);
 };
 
+const resolveApiUrl = (endpoint) => {
+	if (typeof endpoint !== "string") {
+		return endpoint;
+	}
+
+	if (/^https?:\/\//i.test(endpoint)) {
+		return endpoint;
+	}
+
+	const baseUrl = typeof API_BASE_URL === "string" ? API_BASE_URL.trim().replace(/\/+$/, "") : "";
+	if (baseUrl.length === 0) {
+		return endpoint;
+	}
+
+	const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
+	return `${baseUrl}${normalizedEndpoint}`;
+};
+
 export const apiClient = {
 	async request(endpoint, options = {}) {
 		const {
@@ -91,7 +110,7 @@ export const apiClient = {
 			...restOptions
 		} = options;
 
-		const response = await fetch(endpoint, {
+		const response = await fetch(resolveApiUrl(endpoint), {
 			...restOptions,
 			method,
 			headers: createRequestHeaders({ headers, requiresAuth, data }),

@@ -112,7 +112,13 @@ export const initCreatePostModal = (options = {}) => {
 	};
 
 	const renderPreviewGrid = (files) => {
-		const safeFiles = Array.from(files || []).filter((file) => file instanceof File && file.type.startsWith("image/"));
+		const safeFiles = Array.from(files || []).filter((file) => {
+			if (!(file instanceof File)) {
+				return false;
+			}
+
+			return file.type.startsWith("image/") || file.type.startsWith("video/");
+		});
 
 		resetPreviewGrid();
 
@@ -125,14 +131,24 @@ export const initCreatePostModal = (options = {}) => {
 				const previewItem = document.createElement("figure");
 				previewItem.className = "draft-preview-item";
 
-				const imageElement = document.createElement("img");
 				const objectUrl = URL.createObjectURL(file);
 				previewObjectUrls.push(objectUrl);
 
-				imageElement.src = objectUrl;
-				imageElement.alt = file.name || "Ảnh bản nháp";
+				if (file.type.startsWith("video/")) {
+					const videoElement = document.createElement("video");
+					videoElement.src = objectUrl;
+					videoElement.muted = true;
+					videoElement.loop = true;
+					videoElement.playsInline = true;
+					videoElement.setAttribute("aria-label", file.name || "Video bản nháp");
+					previewItem.appendChild(videoElement);
+				} else {
+					const imageElement = document.createElement("img");
+					imageElement.src = objectUrl;
+					imageElement.alt = file.name || "Ảnh bản nháp";
+					previewItem.appendChild(imageElement);
+				}
 
-				previewItem.appendChild(imageElement);
 				postDraftPreviewGrid.appendChild(previewItem);
 			});
 			return;

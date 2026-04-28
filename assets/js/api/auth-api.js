@@ -22,6 +22,6 @@ export const authApi = {
 	},
 
 	async getProfile() {
-		return apiClient.get("/api/auth/me");
+		return apiClient.get("/api/users/profile/me");
 	}
 };

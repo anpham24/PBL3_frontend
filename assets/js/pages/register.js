@@ -3,7 +3,6 @@
 import { authApi } from "../api/auth-api.js";
 
 const REDIRECT_DELAY_MS = 1200;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const setFeedback = (feedbackElement, message, variant) => {
 	if (!feedbackElement) {
@@ -46,7 +45,7 @@ const setSubmittingState = (button, isSubmitting) => {
 	button.textContent = isSubmitting ? "Đang đăng ký..." : "Đăng ký";
 };
 
-const validateRegisterPayload = ({ username, password, nickname, email }) => {
+const validateRegisterPayload = ({ username, password, nickname }) => {
 	if (username.length < 3) {
 		return "Tên đăng nhập phải có ít nhất 3 ký tự.";
 	}
@@ -57,10 +56,6 @@ const validateRegisterPayload = ({ username, password, nickname, email }) => {
 
 	if (nickname.length === 0) {
 		return "Vui lòng nhập nickname.";
-	}
-
-	if (!EMAIL_PATTERN.test(email)) {
-		return "Email không hợp lệ.";
 	}
 
 	return "";
@@ -75,11 +70,10 @@ const initRegisterPage = () => {
 	const usernameInput = document.getElementById("register-username");
 	const passwordInput = document.getElementById("register-password");
 	const nicknameInput = document.getElementById("register-nickname");
-	const emailInput = document.getElementById("register-email");
 	const submitButton = document.getElementById("register-submit");
 	const feedbackElement = document.getElementById("register-feedback");
 
-	if (!usernameInput || !passwordInput || !nicknameInput || !emailInput) {
+	if (!usernameInput || !passwordInput || !nicknameInput) {
 		return;
 	}
 
@@ -90,8 +84,7 @@ const initRegisterPage = () => {
 		const payload = {
 			username: usernameInput.value.trim(),
 			password: passwordInput.value.trim(),
-			nickname: nicknameInput.value.trim(),
-			email: emailInput.value.trim()
+			nickname: nicknameInput.value.trim()
 		};
 
 		const validationMessage = validateRegisterPayload(payload);
@@ -103,12 +96,7 @@ const initRegisterPage = () => {
 		setSubmittingState(submitButton, true);
 
 		try {
-			const response = await authApi.register(payload);
-			const isSuccess = Number(response?.code) === 201;
-
-			if (!isSuccess) {
-				throw new Error("Đăng ký thất bại. Vui lòng thử lại.");
-			}
+			await authApi.register(payload);
 
 			setFeedback(feedbackElement, "Đăng ký thành công. Đang chuyển sang trang đăng nhập...", "success");
 
