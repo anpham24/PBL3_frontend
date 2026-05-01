@@ -1,6 +1,8 @@
 "use strict";
 
 import { userApi } from "../api/user-api.js";
+import { getCurrentUser } from "../utils/auth.js";
+import { initCreatePostModal } from "../components/create-post-modal.js";
 
 const ADMIN_ROLE = "ADMIN";
 const SEARCH_DEBOUNCE_MS = 320;
@@ -30,7 +32,7 @@ const escapeHtml = (value) =>
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
 		.replace(/>/g, "&gt;")
-		.replace(/\"/g, "&quot;")
+		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#039;");
 
 const safeText = (value) => {
@@ -54,13 +56,11 @@ const toMessage = (error, fallbackMessage) => {
 };
 
 const getCurrentUserRole = () => {
-	const authRole = localStorage.getItem("authRole");
-	if (typeof authRole === "string" && authRole.trim().length > 0) {
-		return authRole.trim().toUpperCase();
+	const currentUser = getCurrentUser();
+	if (currentUser && typeof currentUser.userRole === "string") {
+		return currentUser.userRole.trim().toUpperCase();
 	}
-
-	const legacyRole = localStorage.getItem("userRole");
-	return typeof legacyRole === "string" ? legacyRole.trim().toUpperCase() : "";
+	return "";
 };
 
 const setStatus = (message, variant = "info") => {
@@ -72,7 +72,7 @@ const setStatus = (message, variant = "info") => {
 	usersStatus.classList.toggle("is-hidden", safeText(message).length === 0);
 
 	if (variant === "error") {
-		usersStatus.style.color = "#b91c1c";
+		usersStatus.style.color = "#b91c16";
 		return;
 	}
 
@@ -140,7 +140,7 @@ const escapeSelectorValue = (value) => {
 		return CSS.escape(safeValue);
 	}
 
-	return safeValue.replace(/\\/g, "\\\\").replace(/\"/g, "\\\"");
+	return safeValue.replace(/\\/g, "\\\\").replace(/"/g, "\\\"");
 };
 
 const updateUsersCountBadge = () => {
@@ -291,7 +291,7 @@ const loadUsers = async (keyword = "") => {
 			setStatus(
 				resolvedKeyword.length > 0
 					? "Không tìm thấy người dùng phù hợp từ khóa."
-					: "Không có người dùng nào để hiển thị."
+					: "Không có người dùng nào được hiển thị."
 			);
 			return;
 		}
@@ -440,6 +440,7 @@ const initUsersPage = async () => {
 	usersSearchInput?.addEventListener("input", handleSearchInput);
 	usersSearchInput?.addEventListener("keydown", handleSearchEnter);
 
+	initCreatePostModal();
 	await loadUsers("");
 };
 

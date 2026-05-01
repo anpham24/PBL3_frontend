@@ -1,9 +1,12 @@
-﻿<!DOCTYPE html>
+�<!DOCTYPE html>
 <html lang="vi">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Cài đặt</title>
+	
+	
+	
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -151,28 +154,40 @@
 	</div>
 
 	<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
-		<div class="create-post-dialog">
-			<div id="step-1-upload" class="modal-step">
+		<div class="create-post-dialog split-layout">
+			<div class="create-preview-col">
 				<div class="upload-dropzone">
 					<i class="bx bx-images" aria-hidden="true"></i>
 					<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
 					<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
 					<input type="file" id="post-file-input" accept="image/*,video/*" multiple hidden>
 				</div>
+				<div id="draft-preview-container" class="draft-preview-container is-hidden">
+					<div id="post-draft-preview-carousel" class="draft-preview-carousel">
+						<div id="post-draft-preview-inner" class="draft-preview-inner"></div>
+						<button id="draft-prev-btn" class="carousel-btn prev-btn is-hidden" type="button"
+							aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
+						<button id="draft-next-btn" class="carousel-btn next-btn is-hidden" type="button"
+							aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
+					</div>
+					<button id="reselect-file-btn" class="reselect-btn" type="button"><i
+							class="bx bx-image-add"></i></button>
+				</div>
 			</div>
 
-			<div id="step-2-details" class="modal-step is-hidden">
+			<div class="create-form-col">
 				<header class="create-modal-header">
+					<h2 id="create-post-title">Tạo bài đăng</h2>
 					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
 						<i class="bx bx-x"></i>
 					</button>
-					<h2 id="create-post-title">Tạo bài đăng</h2>
-					<button id="publish-post-btn" class="publish-btn" type="button">Đăng</button>
 				</header>
 
 				<form id="create-post-form" class="create-modal-body" novalidate>
 					<div class="create-detail-top">
-						<img class="detail-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar người dùng">
+						<img class="detail-avatar"
+							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar người dùng">
 
 						<div class="detail-chips">
 							<label class="detail-chip detail-chip-select" for="create-post-visibility">
@@ -190,21 +205,24 @@
 					</div>
 
 					<div class="post-caption-wrap">
-						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể" required autocomplete="off">
+						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể" required
+							autocomplete="off">
 					</div>
 
-					<div class="draft-preview">
-						<div id="post-draft-preview-grid" class="draft-preview-grid"></div>
-					</div>
+					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
+						aria-live="polite"></p>
 
-					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status" aria-live="polite"></p>
+					<div class="create-modal-footer">
+						<button id="publish-post-btn" class="publish-btn" type="submit">Đăng</button>
+					</div>
 				</form>
 			</div>
 		</div>
 	</div>
 
-	<script src="../assets/js/utils/sidebar-role.js"></script>
+	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/settings.js"></script>
 </body>
 </html>
+
 

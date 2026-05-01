@@ -1,9 +1,9 @@
 "use strict";
 
 import { userApi } from "../api/user-api.js";
-import { initCommentModal } from "./comment-modal.js";
-import { initCreatePostModal } from "./create-post-modal.js";
-import { initPostInteractions } from "./post-interactions.js";
+import { initCommentModal } from "../components/comment-modal.js";
+import { initCreatePostModal } from "../components/create-post-modal.js";
+import { initPostInteractions } from "../components/post-interactions.js";
 
 const DEFAULT_AVATAR_URL =
 	"https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=520&q=70";

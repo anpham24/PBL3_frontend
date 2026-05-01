@@ -1,9 +1,13 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Trang chủ</title>
+
+
+
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -11,6 +15,7 @@
 	<link rel="stylesheet" href="../assets/css/global.css">
 	<link rel="stylesheet" href="../assets/css/feed.css">
 </head>
+
 <body>
 	<div class="app-shell">
 		<aside class="sidebar">
@@ -59,24 +64,12 @@
 			<section class="main-inner">
 				<div class="feed-page">
 					<div class="feed-tabs" role="tablist" aria-label="Lọc bảng tin">
-						<button
-							id="feed-tab-explore"
-							class="feed-tab is-active"
-							type="button"
-							data-feed-mode="EXPLORE"
-							role="tab"
-							aria-selected="true"
-						>
+						<button id="feed-tab-explore" class="feed-tab is-active" type="button" data-feed-mode="EXPLORE"
+							role="tab" aria-selected="true">
 							Khám phá
 						</button>
-						<button
-							id="feed-tab-following"
-							class="feed-tab"
-							type="button"
-							data-feed-mode="FOLLOWING"
-							role="tab"
-							aria-selected="false"
-						>
+						<button id="feed-tab-following" class="feed-tab" type="button" data-feed-mode="FOLLOWING"
+							role="tab" aria-selected="false">
 							Đang theo dõi
 						</button>
 					</div>
@@ -85,20 +78,21 @@
 						<label class="filter-chip" for="province-filter">
 							<i class="bx bx-map"></i>
 							<select id="province-filter" class="filter-select" aria-label="Lọc theo tỉnh">
-								<option value="">Tất cả tỉnh</option>
+								<option value="ALL">Tất cả tỉnh</option>
 							</select>
 						</label>
 
 						<label class="filter-chip" for="topic-filter">
 							<i class="bx bx-star"></i>
 							<select id="topic-filter" class="filter-select" aria-label="Lọc theo chủ đề">
-								<option value="">Tất cả chủ đề</option>
+								<option value="ALL">Tất cả chủ đề</option>
 							</select>
 						</label>
 					</div>
 
 					<div id="feed-post-list" class="post-list"></div>
-					<p id="feed-empty-state" class="placeholder-card empty is-hidden">Không có bài viết phù hợp với bộ lọc hiện tại.</p>
+					<p id="feed-empty-state" class="placeholder-card empty is-hidden">Không có bài viết phù hợp với bộ
+						lọc hiện tại.</p>
 					<p id="feed-status" class="feed-status is-hidden" role="status" aria-live="polite"></p>
 				</div>
 			</section>
@@ -106,28 +100,40 @@
 	</div>
 
 	<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
-		<div class="create-post-dialog">
-			<div id="step-1-upload" class="modal-step">
+		<div class="create-post-dialog split-layout">
+			<div class="create-preview-col">
 				<div class="upload-dropzone">
 					<i class="bx bx-images" aria-hidden="true"></i>
 					<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
 					<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
 					<input type="file" id="post-file-input" accept="image/*,video/*" multiple hidden>
 				</div>
+				<div id="draft-preview-container" class="draft-preview-container is-hidden">
+					<div id="post-draft-preview-carousel" class="draft-preview-carousel">
+						<div id="post-draft-preview-inner" class="draft-preview-inner"></div>
+						<button id="draft-prev-btn" class="carousel-btn prev-btn is-hidden" type="button"
+							aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
+						<button id="draft-next-btn" class="carousel-btn next-btn is-hidden" type="button"
+							aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
+					</div>
+					<button id="reselect-file-btn" class="reselect-btn" type="button"><i
+							class="bx bx-image-add"></i></button>
+				</div>
 			</div>
 
-			<div id="step-2-details" class="modal-step is-hidden">
+			<div class="create-form-col">
 				<header class="create-modal-header">
+					<h2 id="create-post-title">Tạo bài đăng</h2>
 					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
 						<i class="bx bx-x"></i>
 					</button>
-					<h2 id="create-post-title">Tạo bài đăng</h2>
-					<button id="publish-post-btn" class="publish-btn" type="submit" form="create-post-form">Đăng</button>
 				</header>
 
 				<form id="create-post-form" class="create-modal-body" novalidate>
 					<div class="create-detail-top">
-						<img class="detail-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar người dùng">
+						<img class="detail-avatar"
+							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar người dùng">
 
 						<div class="detail-chips">
 							<label class="detail-chip detail-chip-select" for="create-post-visibility">
@@ -145,92 +151,97 @@
 					</div>
 
 					<div class="post-caption-wrap">
-						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể" required autocomplete="off">
+						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể" required
+							autocomplete="off">
 					</div>
 
-					<div class="draft-preview">
-						<div id="post-draft-preview-grid" class="draft-preview-grid"></div>
-					</div>
+					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
+						aria-live="polite"></p>
 
-					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status" aria-live="polite"></p>
+					<div class="create-modal-footer">
+						<button id="publish-post-btn" class="publish-btn" type="submit">Đăng</button>
+					</div>
 				</form>
 			</div>
 		</div>
 	</div>
 
 	<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
-		<button id="close-comment-modal" class="comment-modal-close" type="button" aria-label="Đóng hộp thoại bình luận">
+		<button id="close-comment-modal" class="comment-modal-close" type="button"
+			aria-label="Đóng hộp thoại bình luận">
 			<i class="bx bx-x"></i>
 		</button>
 
 		<div class="comment-modal-dialog">
 			<div class="comment-media-pane">
-				<div class="comment-media-gallery">
-					<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=80" alt="Ảnh du lịch trong bài đăng">
-					<img src="https://images.unsplash.com/photo-1482192596544-9eb780fc7f66?auto=format&fit=crop&w=1400&q=80" alt="Ảnh du lịch thứ hai trong bài đăng">
+				<div id="comment-modal-media-gallery" class="comment-media-gallery">
+					<!-- Media dynamically injected here -->
 				</div>
 			</div>
 
 			<div class="comment-panel">
 				<header class="comment-panel-header">
 					<div class="comment-header-user">
-						<img class="comment-header-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar duyen.travels">
+						<img id="comment-modal-author-avatar" class="comment-header-avatar" src="" alt="Avatar">
 
 						<div class="comment-header-meta">
-							<strong>duyen.travels</strong>
+							<strong id="comment-modal-author-name"></strong>
 							<span class="meta-divider">&bull;</span>
-							<span class="post-time">2h</span>
+							<span id="comment-modal-post-time" class="post-time"></span>
 						</div>
 					</div>
 
-					<button class="comment-header-menu post-options" type="button" aria-label="Tùy chọn bài đăng">
-						<i class="bx bx-dots-horizontal-rounded"></i>
-					</button>
+					<div class="post-menu-wrap">
+						<button class="comment-header-menu post-menu-btn" type="button" aria-label="Tùy chọn bài đăng">
+							<i class="bx bx-dots-horizontal-rounded"></i>
+						</button>
+						<div class="post-dropdown-menu">
+							<button id="comment-modal-report-btn" class="post-dropdown-item" type="button"
+								data-action="report-post" data-post-id="">
+								<i class="bx bx-flag"></i>
+								<span>Báo cáo</span>
+							</button>
+						</div>
+					</div>
 				</header>
 
 				<section class="comment-post-info" aria-label="Thông tin bài viết">
-					<div class="comment-post-tags">
-						<span class="comment-info-chip"><i class="bx bx-map"></i><span>Tỉnh: Ninh Bình</span></span>
-						<span class="comment-info-chip"><i class="bx bx-category"></i><span>Chủ đề: Nature</span></span>
-						<span class="comment-info-chip"><i class="bx bx-current-location"></i><span>Địa chỉ: Tam Cốc, Hoa Lư</span></span>
+					<div id="comment-modal-post-tags" class="comment-post-tags">
+						<!-- Tags injected here -->
 					</div>
-					<p class="comment-post-caption">Sương sớm phủ kín dòng sông, chèo thuyền qua núi đá vôi thật sự rất chill.</p>
+					<p id="comment-modal-post-caption" class="comment-post-caption"></p>
 				</section>
 
-				<div class="comment-list" aria-label="Danh sách bình luận">
+				<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sách bình luận">
+					<!-- Mock comments for UI preview, no like buttons -->
 					<div class="comment-item">
-						<img class="comment-avatar" src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=96&q=60" alt="Avatar son.wander">
+						<img class="comment-avatar"
+							src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar son.wander">
 
 						<div class="comment-content">
 							<p><strong>son.wander</strong>Góc này đẹp quá, mình cũng muốn đi Tam Cốc vào cuối tuần.</p>
 							<span class="comment-time">1 giờ trước</span>
 						</div>
-
-						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
-							<i class="bx bx-heart"></i>
-						</button>
 					</div>
 
 					<div class="comment-item">
-						<img class="comment-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=60" alt="Avatar annie.go">
+						<img class="comment-avatar"
+							src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar annie.go">
 
 						<div class="comment-content">
 							<p><strong>annie.go</strong>Cảnh đẹp quá! Nhìn yên bình thật sự.</p>
 							<span class="comment-time">35 phút trước</span>
 						</div>
-
-						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
-							<i class="bx bx-heart"></i>
-						</button>
 					</div>
 				</div>
 
 				<div class="comment-action-bar">
-					<button id="btn-like-comment-modal" class="comment-action-btn" type="button" aria-label="Thả tim bài đăng">
+					<button id="btn-like-comment-modal" class="comment-action-btn post-action-btn post-like-btn"
+						type="button" aria-label="Thả tim bài đăng">
 						<i class="bx bx-heart"></i>
-					</button>
-					<button id="btn-save-comment-modal" class="comment-action-btn" type="button" aria-label="Lưu bài đăng">
-						<i class="bx bx-bookmark"></i>
+						<span id="comment-modal-like-count" class="action-count" data-role="like-count"></span>
 					</button>
 				</div>
 
@@ -242,7 +253,8 @@
 		</div>
 	</div>
 
-	<div id="report-post-modal" class="report-post-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="report-post-title">
+	<div id="report-post-modal" class="report-post-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true"
+		aria-labelledby="report-post-title">
 		<div class="report-post-dialog">
 			<header class="report-post-header">
 				<h2 id="report-post-title">Báo cáo bài đăng</h2>
@@ -279,17 +291,21 @@
 					<span>Lý do khác</span>
 				</label>
 
-				<p id="report-post-feedback" class="report-post-feedback is-hidden" role="status" aria-live="polite"></p>
+				<p id="report-post-feedback" class="report-post-feedback is-hidden" role="status" aria-live="polite">
+				</p>
 
 				<div class="report-post-actions">
-					<button id="report-post-cancel" class="report-post-btn report-post-cancel" type="button">Hủy</button>
-					<button id="report-post-submit" class="report-post-btn report-post-submit" type="submit">Gửi</button>
+					<button id="report-post-cancel" class="report-post-btn report-post-cancel"
+						type="button">Hủy</button>
+					<button id="report-post-submit" class="report-post-btn report-post-submit"
+						type="submit">Gửi</button>
 				</div>
 			</form>
 		</div>
 	</div>
 
-	<script src="../assets/js/utils/sidebar-role.js"></script>
+	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/feed.js"></script>
 </body>
+
 </html>

@@ -76,20 +76,21 @@ export const initCreatePostModal = (options = {}) => {
 		return null;
 	}
 
-	const step1Upload = document.getElementById("step-1-upload");
-	const step2Details = document.getElementById("step-2-details");
+	const uploadDropzone = document.querySelector(".upload-dropzone");
+	const draftPreviewContainer = document.getElementById("draft-preview-container");
+	const draftPreviewInner = document.getElementById("post-draft-preview-inner");
+	const draftPrevBtn = document.getElementById("draft-prev-btn");
+	const draftNextBtn = document.getElementById("draft-next-btn");
+	const reselectFileBtn = document.getElementById("reselect-file-btn");
 	const chooseFileBtn = document.getElementById("choose-file-btn");
 	const postFileInput = document.getElementById("post-file-input");
 	const closeCreateModalBtn = document.getElementById("close-create-modal");
 	const publishPostBtn = document.getElementById("publish-post-btn");
 	const postCaptionInput = document.getElementById("post-caption-input");
-	const postDraftPreviewGrid = document.getElementById("post-draft-preview-grid");
-	const postDraftPreviewFallback = document.getElementById("post-draft-preview");
 	const createPostProvinceInput = document.getElementById("create-post-province");
 	const createPostVisibilityInput = document.getElementById("create-post-visibility");
 	const createPostAddressInput = document.getElementById("create-post-address");
 	const createPostFeedbackElement = document.getElementById("create-post-feedback");
-	const createPostLinks = toArray(document.querySelectorAll(".create-post-link"));
 
 	const previewObjectUrls = [];
 
@@ -101,14 +102,12 @@ export const initCreatePostModal = (options = {}) => {
 			}
 		}
 
-		if (postDraftPreviewGrid) {
-			postDraftPreviewGrid.innerHTML = "";
+		if (draftPreviewInner) {
+			draftPreviewInner.innerHTML = "";
 		}
 
-		if (postDraftPreviewFallback) {
-			postDraftPreviewFallback.removeAttribute("src");
-			postDraftPreviewFallback.alt = "Ảnh bản nháp bài đăng";
-		}
+		uploadDropzone?.classList.remove("is-hidden");
+		draftPreviewContainer?.classList.add("is-hidden");
 	};
 
 	const renderPreviewGrid = (files) => {
@@ -116,7 +115,6 @@ export const initCreatePostModal = (options = {}) => {
 			if (!(file instanceof File)) {
 				return false;
 			}
-
 			return file.type.startsWith("image/") || file.type.startsWith("video/");
 		});
 
@@ -126,10 +124,10 @@ export const initCreatePostModal = (options = {}) => {
 			return;
 		}
 
-		if (postDraftPreviewGrid) {
+		if (draftPreviewInner) {
 			safeFiles.forEach((file) => {
-				const previewItem = document.createElement("figure");
-				previewItem.className = "draft-preview-item";
+				const previewItem = document.createElement("div");
+				previewItem.className = "carousel-item";
 
 				const objectUrl = URL.createObjectURL(file);
 				previewObjectUrls.push(objectUrl);
@@ -140,6 +138,7 @@ export const initCreatePostModal = (options = {}) => {
 					videoElement.muted = true;
 					videoElement.loop = true;
 					videoElement.playsInline = true;
+					videoElement.controls = true;
 					videoElement.setAttribute("aria-label", file.name || "Video bản nháp");
 					previewItem.appendChild(videoElement);
 				} else {
@@ -149,17 +148,19 @@ export const initCreatePostModal = (options = {}) => {
 					previewItem.appendChild(imageElement);
 				}
 
-				postDraftPreviewGrid.appendChild(previewItem);
+				draftPreviewInner.appendChild(previewItem);
 			});
-			return;
-		}
-
-		if (postDraftPreviewFallback) {
-			const firstFile = safeFiles[0];
-			const objectUrl = URL.createObjectURL(firstFile);
-			previewObjectUrls.push(objectUrl);
-			postDraftPreviewFallback.src = objectUrl;
-			postDraftPreviewFallback.alt = firstFile.name || "Ảnh bản nháp bài đăng";
+			
+			uploadDropzone?.classList.add("is-hidden");
+			draftPreviewContainer?.classList.remove("is-hidden");
+			
+			if (safeFiles.length > 1) {
+				draftPrevBtn?.classList.remove("is-hidden");
+				draftNextBtn?.classList.remove("is-hidden");
+			} else {
+				draftPrevBtn?.classList.add("is-hidden");
+				draftNextBtn?.classList.add("is-hidden");
+			}
 		}
 	};
 
@@ -196,9 +197,6 @@ export const initCreatePostModal = (options = {}) => {
 
 		clearFeedback();
 		resetPreviewGrid();
-
-		step1Upload?.classList.remove("is-hidden");
-		step2Details?.classList.add("is-hidden");
 	};
 
 	const initAddressAutocomplete = async () => {
@@ -253,11 +251,12 @@ export const initCreatePostModal = (options = {}) => {
 		document.body.style.overflow = "";
 	};
 
-	createPostLinks.forEach((link) => {
-		link.addEventListener("click", (event) => {
+	document.body.addEventListener("click", (event) => {
+		const link = event.target.closest(".create-post-link");
+		if (link) {
 			event.preventDefault();
 			openCreateModal();
-		});
+		}
 	});
 
 	chooseFileBtn?.addEventListener("click", () => {
@@ -266,7 +265,7 @@ export const initCreatePostModal = (options = {}) => {
 
 	postFileInput?.addEventListener("change", (event) => {
 		const selectedFiles = Array.from(event.target.files || []).filter(
-			(file) => file instanceof File && file.type.startsWith("image/")
+			(file) => file instanceof File && (file.type.startsWith("image/") || file.type.startsWith("video/"))
 		);
 
 		if (selectedFiles.length === 0) {
@@ -275,9 +274,10 @@ export const initCreatePostModal = (options = {}) => {
 		}
 
 		renderPreviewGrid(selectedFiles);
+	});
 
-		step1Upload?.classList.add("is-hidden");
-		step2Details?.classList.remove("is-hidden");
+	reselectFileBtn?.addEventListener("click", () => {
+		postFileInput?.click();
 	});
 
 	closeCreateModalBtn?.addEventListener("click", closeCreateModal);
@@ -304,13 +304,9 @@ export const initCreatePostModal = (options = {}) => {
 		reset: resetCreateModalState,
 		elements: {
 			createPostModal,
-			step1Upload,
-			step2Details,
 			postFileInput,
 			publishPostBtn,
 			postCaptionInput,
-			postDraftPreviewGrid,
-			postDraftPreviewFallback,
 			createPostProvinceInput,
 			createPostVisibilityInput,
 			createPostAddressInput,

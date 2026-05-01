@@ -1,65 +1,10 @@
 "use strict";
 
 import { postApi } from "../api/post-api.js";
+import { getCurrentUser } from "../utils/auth.js";
+import { initCreatePostModal } from "../components/create-post-modal.js";
 
 const ALLOWED_ROLES = new Set(["MODERATOR", "ADMIN"]);
-
-const SIDEBAR_BASE_ITEMS = [
-	{
-		id: "home",
-		label: "Trang chủ",
-		href: "feed.html",
-		icon: "bx-home-alt-2",
-		activePages: ["feed.html"]
-	},
-	{
-		id: "create-post",
-		label: "Tạo bài đăng",
-		href: "feed.html",
-		icon: "bx-plus-circle",
-		activePages: []
-	},
-	{
-		id: "profile",
-		label: "Trang cá nhân",
-		href: "profile.html",
-		icon: "bx-user",
-		activePages: ["profile.html"]
-	},
-	{
-		id: "notifications",
-		label: "Thông báo",
-		href: "notifications.html",
-		icon: "bx-bell",
-		activePages: ["notifications.html"]
-	},
-	{
-		id: "settings",
-		label: "Cài đặt",
-		href: "settings.html",
-		icon: "bx-cog",
-		activePages: ["settings.html"]
-	}
-];
-
-const SIDEBAR_MANAGEMENT_ITEMS = [
-	{
-		id: "reports",
-		label: "Quản lý báo cáo",
-		href: "reports.html",
-		icon: "bx-shield-quarter",
-		roles: ["MODERATOR", "ADMIN"],
-		activePages: ["reports.html"]
-	},
-	{
-		id: "users",
-		label: "Quản lý người dùng",
-		href: "users.html",
-		icon: "bx-group",
-		roles: ["ADMIN"],
-		activePages: ["users.html"]
-	}
-];
 
 const DEFAULT_AVATAR_URL =
 	"https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=60";
@@ -117,30 +62,14 @@ const toMessage = (error, fallbackMessage) => {
 };
 
 const getUserRole = () => {
-	const authRole = localStorage.getItem("authRole");
-	if (typeof authRole === "string" && authRole.trim().length > 0) {
-		return authRole.trim().toUpperCase();
+	const user = getCurrentUser();
+	const userRole = user?.userRole || "";
+	if (typeof userRole === "string" && userRole.trim().length > 0) {
+		return userRole.trim().toUpperCase();
 	}
 
-	const legacyRole = localStorage.getItem("userRole");
-	return typeof legacyRole === "string" ? legacyRole.trim().toUpperCase() : "";
+	return "";
 };
-
-const getCurrentPage = () => {
-	const page = window.location.pathname.split("/").pop();
-	return typeof page === "string" && page.length > 0 ? page : "reports.html";
-};
-
-const isVisibleForRole = (item, userRole) => {
-	if (!Array.isArray(item.roles) || item.roles.length === 0) {
-		return true;
-	}
-
-	return item.roles.includes(userRole);
-};
-
-const isActiveSidebarItem = (item, currentPage) =>
-	Array.isArray(item.activePages) && item.activePages.includes(currentPage);
 
 const ensureModeratorAccess = () => {
 	const userRole = getUserRole();
@@ -151,39 +80,6 @@ const ensureModeratorAccess = () => {
 	}
 
 	return userRole;
-};
-
-const renderSidebar = (userRole) => {
-	const sidebar = document.getElementById("app-sidebar");
-	if (!sidebar) {
-		return;
-	}
-
-	const currentPage = getCurrentPage();
-	const items = SIDEBAR_BASE_ITEMS.concat(
-		SIDEBAR_MANAGEMENT_ITEMS.filter((item) => isVisibleForRole(item, userRole))
-	);
-
-	const navHtml = items
-		.map((item) => {
-			const activeClass = isActiveSidebarItem(item, currentPage) ? " active" : "";
-			const createPostClass = item.id === "create-post" ? " create-post-link" : "";
-
-			return `
-				<a class="nav-item${createPostClass}${activeClass}" href="${item.href}">
-					<i class="bx ${item.icon}"></i>
-					<span class="nav-label">${item.label}</span>
-				</a>
-			`;
-		})
-		.join("");
-
-	sidebar.innerHTML = `
-		<h1 class="brand">DUTraveler</h1>
-		<nav class="side-nav" aria-label="Sidebar navigation">
-			${navHtml}
-		</nav>
-	`;
 };
 
 const setStatus = (message, variant = "info") => {
@@ -356,11 +252,10 @@ const buildReasonItemsHtml = (post) => {
 			return `
 				<li class="reason-item">
 					<p class="reason-title">${escapeHtml(reason.label)}</p>
-					${
-						safeText(reason.details).length > 0
-							? `<p class="reason-details">${escapeHtml(reason.details)}</p>`
-							: ""
-					}
+					${safeText(reason.details).length > 0
+					? `<p class="reason-details">${escapeHtml(reason.details)}</p>`
+					: ""
+				}
 					${metadata.length > 0 ? `<p class="reason-meta">${escapeHtml(metadata)}</p>` : ""}
 				</li>
 			`;
@@ -385,11 +280,10 @@ const createPostCardHtml = (post) => {
 					<div class="post-meta">
 						<div class="post-meta-row">
 							<h3>${escapeHtml(post.authorName)}</h3>
-							${
-								timeMeta.length > 0
-									? `<span class="meta-divider">&bull;</span><span class="post-time">${escapeHtml(timeMeta)}</span>`
-									: ""
-							}
+							${timeMeta.length > 0
+			? `<span class="meta-divider">&bull;</span><span class="post-time">${escapeHtml(timeMeta)}</span>`
+			: ""
+		}
 						</div>
 						${locationMeta.length > 0 ? `<p>${escapeHtml(locationMeta)}</p>` : ""}
 					</div>
@@ -595,7 +489,7 @@ const initReportsPage = async () => {
 		return;
 	}
 
-	renderSidebar(userRole);
+	initCreatePostModal();
 	reportedPostListElement.addEventListener("click", handleReportAction);
 
 	reportsSearchInputElement?.addEventListener("input", handleSearchChange);

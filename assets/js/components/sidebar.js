@@ -1,5 +1,7 @@
 "use strict";
 
+import { getCurrentUser } from "../utils/auth.js";
+
 const SIDEBAR_BASE_ITEMS = [
 	{
 		id: "home",
@@ -66,12 +68,13 @@ const normalizeRole = (value) => {
 };
 
 const getCurrentUserRole = () => {
-	const authRole = normalizeRole(localStorage.getItem("authRole"));
-	if (authRole.length > 0) {
-		return authRole;
+	const user = getCurrentUser();
+	const userRole = normalizeRole(user?.userRole || "");
+	if (userRole.length > 0) {
+		return userRole;
 	}
 
-	return normalizeRole(localStorage.getItem("userRole"));
+	return "";
 };
 
 const getCurrentPage = () => {
@@ -146,4 +149,8 @@ const syncSidebarItems = () => {
 	});
 };
 
-document.addEventListener("DOMContentLoaded", syncSidebarItems);
+if (document.readyState === "loading") {
+	document.addEventListener("DOMContentLoaded", syncSidebarItems);
+} else {
+	syncSidebarItems();
+}

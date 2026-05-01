@@ -1,7 +1,8 @@
 "use strict";
 
 import { userApi } from "../api/user-api.js";
-import { initCreatePostModal } from "./create-post-modal.js";
+import { authApi } from "../api/auth-api.js";
+import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initSettingsSubviews } from "./settings-subviews.js";
 import { clearAuthStorage } from "../utils/auth.js";
 
@@ -273,9 +274,18 @@ const attachLogoutHandler = () => {
 		return;
 	}
 
-	logoutButton.addEventListener("click", () => {
-		clearAuthStorage();
-		window.location.href = "login.html";
+	logoutButton.addEventListener("click", async () => {
+		if (logoutButton.dataset.loading === "true") return;
+		logoutButton.dataset.loading = "true";
+
+		try {
+			await authApi.logout();
+		} catch (error) {
+			console.warn("Lỗi khi gọi API đăng xuất, vẫn tiến hành xóa session ở frontend:", error);
+		} finally {
+			clearAuthStorage();
+			window.location.href = "login.html";
+		}
 	});
 };
 

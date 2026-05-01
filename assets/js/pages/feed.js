@@ -2,8 +2,8 @@
 
 import { feedApi } from "../api/feed-api.js";
 import { postApi } from "../api/post-api.js";
-import { initCommentModal } from "./comment-modal.js";
-import { initCreatePostModal } from "./create-post-modal.js";
+import { initCommentModal } from "../components/comment-modal.js";
+import { initCreatePostModal } from "../components/create-post-modal.js";
 
 const SCROLL_BOTTOM_THRESHOLD = 220;
 const DEFAULT_PUBLISH_LABEL = "Đăng";
@@ -13,8 +13,8 @@ const FEED_MODE_FOLLOWING = "FOLLOWING";
 const feedState = {
 	posts: [],
 	lastId: "",
-	provinceCode: "",
-	topicCode: "",
+	provinceCode: "ALL",
+	topicCode: "ALL",
 	feedMode: FEED_MODE_EXPLORE,
 	hasMore: true,
 	isLoading: false,
@@ -40,6 +40,7 @@ let reportPostCancelButton;
 let reportPostSubmitButton;
 let reportPostFeedbackElement;
 let createPostModalController;
+let commentModalController;
 let createPostFormElement;
 let createPostFileInputElement;
 let createPostContentElement;
@@ -81,6 +82,14 @@ const toCssSelectorValue = (value) => {
 };
 
 const formatLikeCount = (likeCount) => new Intl.NumberFormat("vi-VN").format(normalizeNumber(likeCount, 0));
+
+const formatCompactNumber = (num) => {
+	const n = normalizeNumber(num, 0);
+	if (n === 0) return "";
+	if (n >= 1000000) return (n / 1000000).toFixed(1).replace(".", ",").replace(",0", "") + "M";
+	if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",").replace(",0", "") + "K";
+	return n.toString();
+};
 
 const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
 
@@ -176,45 +185,112 @@ const syncEmptyState = () => {
 	feedEmptyStateElement.classList.toggle("is-hidden", feedState.posts.length > 0);
 };
 
-const resolvePostMediaUrl = (post) => {
-	const directMediaUrl = normalizeString(post?.media_url || post?.mediaUrl || post?.image_url || post?.imageUrl);
-	if (directMediaUrl.length > 0) {
-		return directMediaUrl;
-	}
+const timeAgo = (dateString) => {
+	if (!dateString) return "";
+	const date = new Date(dateString);
+	if (isNaN(date.getTime())) return "";
 
-	const mediaUrls = toArray(post?.media_urls || post?.mediaUrls);
-	const firstMediaUrl = normalizeString(mediaUrls[0]);
-	return firstMediaUrl;
+	const seconds = Math.floor((new Date() - date) / 1000);
+	if (seconds < 0) return "Vừa xong";
+
+	let interval = seconds / 31536000;
+	if (interval >= 1) return Math.floor(interval) + " năm trước";
+
+	interval = seconds / 2592000;
+	if (interval >= 1) return Math.floor(interval) + " tháng trước";
+
+	interval = seconds / 86400;
+	if (interval >= 1) return Math.floor(interval) + " ngày trước";
+
+	interval = seconds / 3600;
+	if (interval >= 1) return Math.floor(interval) + " giờ trước";
+
+	interval = seconds / 60;
+	if (interval >= 1) return Math.floor(interval) + " phút trước";
+
+	return "Vừa xong";
+};
+
+const resolvePostMediaUrls = (post) => {
+	if (Array.isArray(post?.mediaList)) {
+		return post.mediaList.map(m => normalizeString(m?.mediaUrl)).filter(url => url.length > 0);
+	}
+	let media = post?.media_url || post?.mediaUrl || post?.image_url || post?.imageUrl || post?.media_urls || post?.mediaUrls;
+	if (!media) return [];
+	if (Array.isArray(media)) {
+		return media.map(normalizeString).filter(url => url.length > 0);
+	}
+	if (typeof media === "string") {
+		if (media.includes(",")) {
+			return media.split(",").map(url => normalizeString(url)).filter(url => url.length > 0);
+		}
+		const url = normalizeString(media);
+		return url.length > 0 ? [url] : [];
+	}
+	return [];
 };
 
 const createMediaHtml = (post, authorName) => {
-	const mediaUrl = resolvePostMediaUrl(post);
-	if (mediaUrl.length === 0) {
+	const mediaUrls = resolvePostMediaUrls(post);
+	if (mediaUrls.length === 0) {
 		return "";
 	}
 
-	if (isVideoUrl(mediaUrl)) {
-		return `
-			<div class="post-image">
-				<video src="${escapeHtml(mediaUrl)}" controls preload="metadata"></video>
-			</div>
-		`;
+	if (mediaUrls.length === 1) {
+		const mediaUrl = mediaUrls[0];
+		if (isVideoUrl(mediaUrl)) {
+			return `
+				<div class="post-image">
+					<video src="${escapeHtml(mediaUrl)}" controls preload="metadata"></video>
+				</div>
+			`;
+		}
+		return `<img class="post-image" src="${escapeHtml(mediaUrl)}" alt="Bài viết của ${escapeHtml(authorName)}">`;
 	}
 
-	return `<img class="post-image" src="${escapeHtml(mediaUrl)}" alt="Bài viết của ${escapeHtml(authorName)}">`;
+	const carouselItems = mediaUrls.map((url, index) => {
+		if (isVideoUrl(url)) {
+			return `
+				<div class="carousel-item">
+					<video src="${escapeHtml(url)}" controls preload="metadata"></video>
+				</div>
+			`;
+		}
+		return `
+			<div class="carousel-item">
+				<img src="${escapeHtml(url)}" alt="Bài viết của ${escapeHtml(authorName)} - phần ${index + 1}">
+			</div>
+		`;
+	}).join("");
+
+	return `
+		<div class="post-media-carousel">
+			<div class="carousel-inner">
+				${carouselItems}
+			</div>
+			<button class="carousel-btn prev-btn" type="button" aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
+			<button class="carousel-btn next-btn" type="button" aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
+		</div>
+	`;
 };
 
 const createPostCardHtml = (post) => {
 	const postId = normalizeString(post?.id);
-	const authorName = normalizeString(post?.author_name || post?.authorName || post?.username) || "Người dùng";
+	const authorName = normalizeString(post?.authorName || post?.author_name || post?.username) || "Người dùng";
 	const avatarUrl =
-		normalizeString(post?.avt_url || post?.avatar_url || post?.avatar) ||
+		normalizeString(post?.avtUrl || post?.avt_url || post?.avatar_url || post?.avatar) ||
 		"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
 	const content = normalizeString(post?.content || post?.caption);
 	const isLiked = isTruthyLike(post?.is_liked);
 	const isSaved = isTruthyLike(post?.is_saved || post?.isSaved);
-	const likeCount = normalizeNumber(post?.like_count || post?.likeCount, 0);
+	const likeCount = normalizeNumber(post?.likeCount || post?.like_count, 0);
+	const commentCount = normalizeNumber(post?.commentCount || post?.comment_count, 0);
 	const address = normalizeString(post?.address || post?.location);
+	const province = normalizeString(post?.province);
+	const topic = normalizeString(post?.topic);
+	const createdAt = normalizeString(post?.createAt || post?.create_at || post?.created_at);
+	const timeText = timeAgo(createdAt);
+
 	const mediaHtml = createMediaHtml(post, authorName);
 
 	return `
@@ -224,8 +300,15 @@ const createPostCardHtml = (post) => {
 					<img class="avatar" src="${escapeHtml(avatarUrl)}" alt="Avatar ${escapeHtml(authorName)}">
 					<div class="post-meta">
 						<div class="post-meta-row">
-							<h3>${escapeHtml(authorName)}</h3>
+							<h3>${escapeHtml(authorName)}${timeText ? `<span class="post-time"> &bull; ${escapeHtml(timeText)}</span>` : ""}</h3>
 						</div>
+						${(province || topic || address) ? `
+						<div class="post-tags-inline">
+							${province ? `<span class="post-tag-chip"><i class="bx bx-map"></i><span>${escapeHtml(province)}</span></span>` : ""}
+							${topic ? `<span class="post-tag-chip"><i class="bx bx-category"></i><span>${escapeHtml(topic)}</span></span>` : ""}
+							${address ? `<span class="post-tag-chip"><i class="bx bx-current-location"></i><span>${escapeHtml(address)}</span></span>` : ""}
+						</div>
+						` : ""}
 					</div>
 				</div>
 
@@ -246,31 +329,18 @@ const createPostCardHtml = (post) => {
 
 			<div class="post-actions">
 				<div class="left-actions">
-					<button class="icon-btn post-like-btn${isLiked ? " is-liked" : ""}" type="button" aria-label="${
-						isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"
-					}">
+					<button class="post-action-btn post-like-btn${isLiked ? " is-liked" : ""}" type="button" aria-label="${isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"}">
 						<i class="bx ${isLiked ? "bxs-heart" : "bx-heart"}"></i>
+						<span class="action-count" data-role="like-count">${escapeHtml(formatCompactNumber(likeCount))}</span>
 					</button>
-					<button class="icon-btn post-comment-btn" type="button" aria-label="Bình luận bài viết">
+					<button class="post-action-btn post-comment-btn" type="button" aria-label="Bình luận bài viết">
 						<i class="bx bx-message-rounded"></i>
-					</button>
-				</div>
-				<div class="right-actions">
-					<button class="icon-btn post-save-btn${isSaved ? " is-saved" : ""}" type="button" aria-label="${
-						isSaved ? "Bỏ lưu bài viết" : "Lưu bài viết"
-					}">
-						<i class="bx ${isSaved ? "bxs-bookmark" : "bx-bookmark"}"></i>
+						<span class="action-count">${escapeHtml(formatCompactNumber(commentCount))}</span>
 					</button>
 				</div>
 			</div>
 
 			<footer class="post-footer">
-				${
-					address.length > 0
-						? `<p class="post-location"><i class="bx bx-current-location"></i><span>${escapeHtml(address)}</span></p>`
-						: ""
-				}
-				<p class="likes"><span data-role="like-count">${escapeHtml(formatLikeCount(likeCount))}</span> lượt thích</p>
 				<p class="caption"><strong>${escapeHtml(authorName)}</strong>${escapeHtml(content)}</p>
 			</footer>
 		</article>
@@ -294,7 +364,7 @@ const renderPosts = (posts, shouldReplace = false) => {
 	syncEmptyState();
 };
 
-const renderSelectOptions = (selectElement, options, defaultLabel) => {
+const renderSelectOptions = (selectElement, options) => {
 	if (!selectElement) {
 		return;
 	}
@@ -314,7 +384,9 @@ const renderSelectOptions = (selectElement, options, defaultLabel) => {
 		})
 		.join("");
 
-	selectElement.innerHTML = `<option value="">${escapeHtml(defaultLabel)}</option>${optionHtml}`;
+	if (optionHtml) {
+		selectElement.innerHTML = optionHtml;
+	}
 };
 
 const appendUniquePosts = (incomingPosts, shouldReset) => {
@@ -405,12 +477,15 @@ const loadFeed = async (shouldReset = false) => {
 			return;
 		}
 
-		const receivedPosts = Array.isArray(response?.data?.posts) ? response.data.posts : [];
-		const receivedLastId = normalizeString(response?.data?.last_id);
+		const receivedPosts = Array.isArray(response?.data?.postList)
+			? response.data.postList
+			: (Array.isArray(response?.postList) ? response.postList : []);
+		const receivedLastId = normalizeString(response?.data?.respLastPostId || response?.respLastPostId);
+		const hasMore = response?.data?.hasMore !== undefined ? response.data.hasMore : response?.hasMore;
 		const appendedPosts = appendUniquePosts(receivedPosts, shouldReset);
 
 		feedState.lastId = receivedLastId;
-		feedState.hasMore = receivedLastId.length > 0 && receivedPosts.length > 0;
+		feedState.hasMore = hasMore === true;
 
 		if (feedState.posts.length === 0) {
 			setStatus("Không có bài viết phù hợp với bộ lọc hiện tại.");
@@ -418,7 +493,7 @@ const loadFeed = async (shouldReset = false) => {
 		}
 
 		if (appendedPosts.length === 0 || !feedState.hasMore) {
-			setStatus("Đã tải hết bài viết.");
+			setStatus("Đã tải hết bài đăng.");
 			return;
 		}
 
@@ -475,8 +550,8 @@ const loadDropdowns = async () => {
 		const provinces = Array.isArray(response?.data?.provinces) ? response.data.provinces : [];
 		const topics = Array.isArray(response?.data?.topics) ? response.data.topics : [];
 
-		renderSelectOptions(provinceSelectElement, provinces, "Tất cả tỉnh");
-		renderSelectOptions(topicSelectElement, topics, "Tất cả chủ đề");
+		renderSelectOptions(provinceSelectElement, provinces);
+		renderSelectOptions(topicSelectElement, topics);
 	} catch (error) {
 		setStatus(toMessage(error, "Không tải được dữ liệu bộ lọc."), "error");
 	}
@@ -513,12 +588,21 @@ const updatePostLikeState = (postId, newLikeCount, isLiked) => {
 	const postCard = feedPostListElement?.querySelector(`[data-post-id="${toCssSelectorValue(safePostId)}"]`);
 	if (postCard) {
 		const likeButton = postCard.querySelector(".post-like-btn");
-		const likeCountElement = postCard.querySelector('[data-role="like-count"]');
+		const likeCountElements = postCard.querySelectorAll('[data-role="like-count"]');
 
 		setLikeButtonVisualState(likeButton, normalizedIsLiked);
 
-		if (likeCountElement) {
-			likeCountElement.textContent = formatLikeCount(normalizedLikeCount);
+		likeCountElements.forEach((el) => {
+			el.textContent = formatCompactNumber(normalizedLikeCount);
+		});
+	}
+
+	const modalLikeBtn = document.getElementById("btn-like-comment-modal");
+	if (modalLikeBtn && normalizeString(modalLikeBtn.dataset.postId) === safePostId) {
+		setLikeButtonVisualState(modalLikeBtn, normalizedIsLiked);
+		const modalLikeCount = document.getElementById("comment-modal-like-count");
+		if (modalLikeCount) {
+			modalLikeCount.textContent = formatCompactNumber(normalizedLikeCount);
 		}
 	}
 
@@ -582,7 +666,11 @@ const updatePostSaveState = (postId, isSaved) => {
 
 const handleLikeButtonClick = async (likeButton) => {
 	const postCard = likeButton?.closest(".post-card");
-	const postId = normalizeString(postCard?.dataset.postId);
+	let postId = normalizeString(postCard?.dataset.postId);
+
+	if (postId.length === 0) {
+		postId = normalizeString(likeButton.dataset.postId);
+	}
 
 	if (postId.length === 0 || likeButton.dataset.loading === "true") {
 		return;
@@ -593,8 +681,8 @@ const handleLikeButtonClick = async (likeButton) => {
 
 	try {
 		const response = await postApi.toggleLike(postId);
-		const currentLikeText = postCard?.querySelector('[data-role="like-count"]')?.textContent;
-		const currentLikeCount = normalizeNumber(String(currentLikeText).replace(/[^\d]/g, ""), 0);
+		const post = feedState.posts.find(p => normalizeString(p?.id) === postId);
+		const currentLikeCount = normalizeNumber(post?.like_count || post?.likeCount, 0);
 
 		const resolvedLikeCount = normalizeNumber(response?.data?.new_like_count, currentLikeCount);
 		const resolvedIsLiked =
@@ -855,7 +943,7 @@ const initFeedPage = () => {
 	}
 
 	createPostModalController = initCreatePostModal({ closeOnPublish: false });
-	initCommentModal(".post-comment-btn");
+	commentModalController = initCommentModal();
 	createPostFormElement = document.getElementById("create-post-form");
 	createPostFileInputElement = createPostModalController?.elements?.postFileInput ?? null;
 	createPostContentElement = createPostModalController?.elements?.postCaptionInput ?? null;
@@ -911,6 +999,21 @@ const initFeedPage = () => {
 		if (saveButton && feedPostListElement.contains(saveButton)) {
 			event.preventDefault();
 			void handleSaveButtonClick(saveButton);
+			return;
+		}
+
+		const commentButton = event.target.closest(".post-comment-btn");
+		if (commentButton && feedPostListElement.contains(commentButton)) {
+			event.preventDefault();
+			const postCard = commentButton.closest(".post-card");
+			const postId = postCard?.dataset.postId;
+			if (postId) {
+				const post = feedState.posts.find(p => normalizeString(p?.id) === normalizeString(postId));
+				if (post && commentModalController) {
+					commentModalController.open(post);
+				}
+			}
+			return;
 		}
 	});
 
@@ -943,6 +1046,42 @@ const initFeedPage = () => {
 		}
 	});
 
+	const commentModalEl = document.getElementById("comment-modal");
+	commentModalEl?.addEventListener("click", (event) => {
+		const likeButton = event.target.closest(".post-like-btn");
+		if (likeButton) {
+			event.preventDefault();
+			void handleLikeButtonClick(likeButton);
+			return;
+		}
+
+		const reportActionButton = event.target.closest('[data-action="report-post"]');
+		if (reportActionButton) {
+			event.preventDefault();
+			event.stopPropagation();
+			const postId = normalizeString(reportActionButton.dataset.postId);
+			closeAllPostMenus();
+			openReportModal(postId);
+			const menuWrap = reportActionButton.closest(".post-menu-wrap");
+			if (menuWrap) menuWrap.classList.remove("open");
+			return;
+		}
+
+		const menuButton = event.target.closest(".post-menu-btn");
+		if (menuButton) {
+			event.preventDefault();
+			event.stopPropagation();
+			const menuWrap = menuButton.closest(".post-menu-wrap");
+			if (!menuWrap) return;
+			const shouldOpen = !menuWrap.classList.contains("open");
+			closeAllPostMenus();
+			if (shouldOpen) {
+				menuWrap.classList.add("open");
+			}
+			return;
+		}
+	});
+
 	document.addEventListener("click", (event) => {
 		if (!event.target.closest(".post-menu-wrap")) {
 			closeAllPostMenus();
@@ -957,6 +1096,21 @@ const initFeedPage = () => {
 	});
 
 	window.addEventListener("scroll", handleScrollToBottom, { passive: true });
+
+	document.addEventListener("click", (event) => {
+		const prevBtn = event.target.closest(".carousel-btn.prev-btn");
+		const nextBtn = event.target.closest(".carousel-btn.next-btn");
+
+		if (prevBtn) {
+			const carousel = prevBtn.closest(".post-media-carousel, .draft-preview-carousel");
+			const inner = carousel.querySelector(".carousel-inner, .draft-preview-inner");
+			if (inner) inner.scrollBy({ left: -inner.clientWidth, behavior: "smooth" });
+		} else if (nextBtn) {
+			const carousel = nextBtn.closest(".post-media-carousel, .draft-preview-carousel");
+			const inner = carousel.querySelector(".carousel-inner, .draft-preview-inner");
+			if (inner) inner.scrollBy({ left: inner.clientWidth, behavior: "smooth" });
+		}
+	});
 
 	updateFeedTabs();
 	void Promise.all([loadDropdowns(), loadFeed(true)]);

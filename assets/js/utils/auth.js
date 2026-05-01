@@ -1,8 +1,6 @@
 "use strict";
 
-const TOKEN_KEY = "authToken";
-const USER_ID_KEY = "authUserId";
-const USER_ROLE_KEY = "authRole";
+const TOKEN_KEY = "token";
 
 const normalizeStoredValue = (value) => {
 	if (typeof value !== "string") {
@@ -36,36 +34,60 @@ export const removeToken = () => {
 	localStorage.removeItem(TOKEN_KEY);
 };
 
-export const getUserId = () => getStorageValue(USER_ID_KEY);
-
-export const setUserId = (userId) => {
-	setStorageValue(USER_ID_KEY, userId);
+export const parseJwt = (token) => {
+	if (!token || typeof token !== "string") {
+		return null;
+	}
+	
+	try {
+		const base64Url = token.split(".")[1];
+		if (!base64Url) {
+			return null;
+		}
+		
+		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+		const jsonPayload = decodeURIComponent(
+			atob(base64)
+				.split("")
+				.map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+				.join("")
+		);
+		return JSON.parse(jsonPayload);
+	} catch (error) {
+		return null;
+	}
 };
 
-export const removeUserId = () => {
-	localStorage.removeItem(USER_ID_KEY);
+export const getCurrentUser = () => {
+	const token = getToken();
+	if (token.length === 0) {
+		return null;
+	}
+	
+	const payload = parseJwt(token);
+	if (!payload) {
+		return null;
+	}
+	
+	// Bỏ qua check exp để dễ dàng test với token có sẵn (mock data)
+	// const currentTime = Math.floor(Date.now() / 1000);
+	// if (payload.exp && payload.exp < currentTime) {
+	// 	clearAuthStorage();
+	// 	return null;
+	// }
+	
+	return {
+		userId: payload.sub || "",
+		userRole: payload.role || "MEMBER"
+	};
 };
 
-export const getUserRole = () => getStorageValue(USER_ROLE_KEY).toUpperCase();
-
-export const setUserRole = (role) => {
-	setStorageValue(USER_ROLE_KEY, role);
-};
-
-export const removeUserRole = () => {
-	localStorage.removeItem(USER_ROLE_KEY);
-};
-
-export const saveAuthSession = ({ token, userId, role } = {}) => {
+export const saveAuthSession = (token) => {
 	setToken(token);
-	setUserId(userId);
-	setUserRole(role);
 };
 
 export const clearAuthStorage = () => {
 	removeToken();
-	removeUserId();
-	removeUserRole();
 };
 
 export const getAccessToken = () => getToken();

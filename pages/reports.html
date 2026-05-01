@@ -4,6 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Quản lý báo cáo</title>
+
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,7 +14,36 @@
 </head>
 <body>
 	<div class="app-shell">
-		<aside id="app-sidebar" class="sidebar" aria-label="Sidebar navigation"></aside>
+<aside class="sidebar">
+			<h1 class="brand">DUTraveler</h1>
+
+			<nav class="side-nav" aria-label="Sidebar navigation">
+				<a class="nav-item active" href="feed.html">
+					<i class="bx bx-home-alt-2"></i>
+					<span class="nav-label">Trang chá»§</span>
+				</a>
+
+				<a class="nav-item create-post-link" href="feed.html">
+					<i class="bx bx-plus-circle"></i>
+					<span class="nav-label">Táº¡o bÃ i Ä‘Äƒng</span>
+				</a>
+
+				<a class="nav-item" href="profile.html">
+					<i class="bx bx-user"></i>
+					<span class="nav-label">Trang cÃ¡ nhÃ¢n</span>
+				</a>
+
+				<a class="nav-item" href="notifications.html">
+					<i class="bx bx-bell"></i>
+					<span class="nav-label">ThÃ´ng bÃ¡o</span>
+				</a>
+
+				<a class="nav-item" href="settings.html">
+					<i class="bx bx-cog"></i>
+					<span class="nav-label">CÃ i Ä‘áº·t</span>
+				</a>
+			</nav>
+		</aside>
 
 		<main class="main-content">
 			<header class="reports-header">
@@ -41,7 +71,145 @@
 		</main>
 	</div>
 
+<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
+		<div class="create-post-dialog split-layout">
+			<div class="create-preview-col">
+				<div class="upload-dropzone">
+					<i class="bx bx-images" aria-hidden="true"></i>
+					<p>Chá»n áº£nh hoáº·c video Ä‘á»ƒ báº¯t Ä‘áº§u táº¡o bÃ i Ä‘Äƒng má»›i</p>
+					<button id="choose-file-btn" class="choose-file-btn" type="button">Chá»n tá»« mÃ¡y tÃ­nh</button>
+					<input type="file" id="post-file-input" accept="image/*,video/*" multiple hidden>
+				</div>
+				<div id="draft-preview-container" class="draft-preview-container is-hidden">
+					<div id="post-draft-preview-carousel" class="draft-preview-carousel">
+						<div id="post-draft-preview-inner" class="draft-preview-inner"></div>
+						<button id="draft-prev-btn" class="carousel-btn prev-btn is-hidden" type="button"
+							aria-label="áº¢nh trÆ°á»›c"><i class="bx bx-chevron-left"></i></button>
+						<button id="draft-next-btn" class="carousel-btn next-btn is-hidden" type="button"
+							aria-label="áº¢nh tiáº¿p theo"><i class="bx bx-chevron-right"></i></button>
+					</div>
+					<button id="reselect-file-btn" class="reselect-btn" type="button"><i
+							class="bx bx-image-add"></i></button>
+				</div>
+			</div>
+
+			<div class="create-form-col">
+				<header class="create-modal-header">
+					<h2 id="create-post-title">Táº¡o bÃ i Ä‘Äƒng</h2>
+					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="ÄÃ³ng">
+						<i class="bx bx-x"></i>
+					</button>
+				</header>
+
+				<form id="create-post-form" class="create-modal-body" novalidate>
+					<div class="create-detail-top">
+						<img class="detail-avatar"
+							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar ngÆ°á»i dÃ¹ng">
+
+						<div class="detail-chips">
+							<label class="detail-chip detail-chip-select" for="create-post-visibility">
+								<i class="bx bx-lock-alt"></i>
+								<select id="create-post-visibility" aria-label="Quyá»n riÃªng tÆ° bÃ i Ä‘Äƒng" required>
+									<option value="PUBLIC">CÃ´ng khai</option>
+									<option value="PRIVATE">Chá»‰ mÃ¬nh tÃ´i</option>
+								</select>
+							</label>
+						</div>
+					</div>
+
+					<div class="post-caption-wrap">
+						<textarea id="post-caption-input" placeholder="Viáº¿t chÃº thÃ­ch cho bÃ i Ä‘Äƒng..."></textarea>
+					</div>
+
+					<div class="post-caption-wrap">
+						<input id="create-post-address" type="text" placeholder="Äá»‹a chá»‰ cá»¥ thá»ƒ" required
+							autocomplete="off">
+					</div>
+
+					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
+						aria-live="polite"></p>
+
+					<div class="create-modal-footer">
+						<button id="publish-post-btn" class="publish-btn" type="submit">ÄÄƒng</button>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
+		<button id="close-comment-modal" class="comment-modal-close" type="button"
+			aria-label="ÄÃ³ng há»™p thoáº¡i bÃ¬nh luáº­n">
+			<i class="bx bx-x"></i>
+		</button>
+
+		<div class="comment-modal-dialog">
+			<div class="comment-media-pane">
+				<div id="comment-modal-media-gallery" class="comment-media-gallery">
+					<!-- Media dynamically injected here -->
+				</div>
+			</div>
+
+			<div class="comment-panel">
+				<header class="comment-panel-header">
+					<div class="comment-header-user">
+						<img id="comment-modal-author-avatar" class="comment-header-avatar" src="" alt="Avatar">
+
+						<div class="comment-header-meta">
+							<strong id="comment-modal-author-name"></strong>
+							<span class="meta-divider">&bull;</span>
+							<span id="comment-modal-post-time" class="post-time"></span>
+						</div>
+					</div>
+
+					<div class="post-menu-wrap">
+						<button class="comment-header-menu post-menu-btn" type="button" aria-label="TÃ¹y chá»n bÃ i Ä‘Äƒng">
+							<i class="bx bx-dots-horizontal-rounded"></i>
+						</button>
+						<div class="post-dropdown-menu">
+							<button id="comment-modal-report-btn" class="post-dropdown-item" type="button"
+								data-action="report-post" data-post-id="">
+								<i class="bx bx-flag"></i>
+								<span>BÃ¡o cÃ¡o</span>
+							</button>
+						</div>
+					</div>
+				</header>
+
+				<section class="comment-post-info" aria-label="ThÃ´ng tin bÃ i viáº¿t">
+					<div id="comment-modal-post-tags" class="comment-post-tags">
+						<!-- Tags injected here -->
+					</div>
+					<p id="comment-modal-post-caption" class="comment-post-caption"></p>
+				</section>
+
+				<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sÃ¡ch bÃ¬nh luáº­n">
+					<!-- Mock comments for UI preview, no like buttons -->
+					<div class="comment-item">
+						<img class="comment-avatar"
+							src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar son.wander">
+
+						<div class="comment-content">
+							<p><strong>son.wander</strong>GÃ³c nÃ y Ä‘áº¹p quÃ¡, mÃ¬nh cÅ©ng muá»‘n Ä‘i Tam Cá»‘c vÃ o cuá»‘i tuáº§n.</p>
+							<span class="comment-time">1 giá» trÆ°á»›c</span>
+						</div>
+					</div>
+
+					<div class="comment-item">
+						<img class="comment-avatar"
+							src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar annie.go">
+
+						<div class="comment-content">
+							<p><strong>annie.go</strong>Cáº£nh Ä‘áº¹p quÃ¡! NhÃ¬n yÃªn bÃ¬nh tháº­t sá»±.</p>
+							<span class="comment-time">35 phÃºt trÆ°á»›c</span>
+						</div>
+					</div>
+				</div>
+
+	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/reports.js"></script>
 </body>
 </html>
-

@@ -1,7 +1,7 @@
 "use strict";
 
 import { authApi } from "../api/auth-api.js";
-import { getToken, getUserRole, saveAuthSession } from "../utils/auth.js";
+import { getToken, getCurrentUser, saveAuthSession } from "../utils/auth.js";
 
 const REDIRECT_DELAY_MS = 500;
 const ACCOUNT_LOCKED_STATUSES = new Set([403, 423, 429]);
@@ -238,7 +238,7 @@ const initLoginPage = () => {
 	});
 
 	if (getToken().length > 0) {
-		window.location.href = getRedirectPathByRole(getUserRole());
+		window.location.href = getRedirectPathByRole(getCurrentUser()?.userRole);
 		return;
 	}
 
@@ -262,18 +262,18 @@ const initLoginPage = () => {
 		try {
 			const response = await authApi.login(payload);
 			const token = response?.data?.token;
-			const userId = response?.data?.userId;
-			const role = response?.data?.role;
 
 			if (typeof token !== "string" || token.trim().length === 0) {
 				throw new Error("Không nhận được token từ hệ thống.");
 			}
 
-			saveAuthSession({ token, userId, role });
+			saveAuthSession(token);
+			const currentUser = getCurrentUser();
+			const userRole = currentUser?.userRole || "MEMBER";
 			setFeedback(feedbackElement, "Đăng nhập thành công. Đang chuyển trang...", "success");
 
 			window.setTimeout(() => {
-				window.location.href = getRedirectPathByRole(role);
+				window.location.href = getRedirectPathByRole(userRole);
 			}, REDIRECT_DELAY_MS);
 		} catch (error) {
 			if (isAccountLockedError(error)) {

@@ -1,6 +1,6 @@
 "use strict";
 
-import { initCreatePostModal } from "./create-post-modal.js";
+import { initCreatePostModal } from "../components/create-post-modal.js";
 
 const initNotificationsPage = () => {
 	initCreatePostModal();
