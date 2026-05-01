@@ -1,4 +1,4 @@
-﻿const fs = require('fs');
+const fs = require('fs');
 
 function cleanFile(fileName) {
   let content = fs.readFileSync(fileName, 'utf8');

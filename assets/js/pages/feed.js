@@ -2,6 +2,9 @@
 
 import { feedApi } from "../api/feed-api.js";
 import { postApi } from "../api/post-api.js";
+import { initSidebar } from "../components/sidebar.js";
+import { initPostInteractions } from "../components/post-interactions.js";
+import { initPostMenus } from "../components/post-menu.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 
@@ -924,6 +927,11 @@ const submitReportPost = async () => {
 };
 
 const initFeedPage = () => {
+	initSidebar();
+	initCreatePostModal();
+	initCommentModal(".post-list");
+	initPostInteractions();
+	initPostMenus();
 	provinceSelectElement = document.getElementById("province-filter");
 	topicSelectElement = document.getElementById("topic-filter");
 	feedPostListElement = document.getElementById("feed-post-list");

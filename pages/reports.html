@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 	<meta charset="UTF-8">
@@ -20,27 +20,27 @@
 			<nav class="side-nav" aria-label="Sidebar navigation">
 				<a class="nav-item active" href="feed.html">
 					<i class="bx bx-home-alt-2"></i>
-					<span class="nav-label">Trang chá»§</span>
+					<span class="nav-label">Trang chủ</span>
 				</a>
 
 				<a class="nav-item create-post-link" href="feed.html">
 					<i class="bx bx-plus-circle"></i>
-					<span class="nav-label">Táº¡o bÃ i Ä‘Äƒng</span>
+					<span class="nav-label">Tạo bài đăng</span>
 				</a>
 
 				<a class="nav-item" href="profile.html">
 					<i class="bx bx-user"></i>
-					<span class="nav-label">Trang cÃ¡ nhÃ¢n</span>
+					<span class="nav-label">Trang cá nhân</span>
 				</a>
 
 				<a class="nav-item" href="notifications.html">
 					<i class="bx bx-bell"></i>
-					<span class="nav-label">ThÃ´ng bÃ¡o</span>
+					<span class="nav-label">Thông báo</span>
 				</a>
 
 				<a class="nav-item" href="settings.html">
 					<i class="bx bx-cog"></i>
-					<span class="nav-label">CÃ i Ä‘áº·t</span>
+					<span class="nav-label">Cài đặt</span>
 				</a>
 			</nav>
 		</aside>
@@ -76,17 +76,17 @@
 			<div class="create-preview-col">
 				<div class="upload-dropzone">
 					<i class="bx bx-images" aria-hidden="true"></i>
-					<p>Chá»n áº£nh hoáº·c video Ä‘á»ƒ báº¯t Ä‘áº§u táº¡o bÃ i Ä‘Äƒng má»›i</p>
-					<button id="choose-file-btn" class="choose-file-btn" type="button">Chá»n tá»« mÃ¡y tÃ­nh</button>
+					<p>Chọn ảnh hoặc video để tải lên</p>
+					<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
 					<input type="file" id="post-file-input" accept="image/*,video/*" multiple hidden>
 				</div>
 				<div id="draft-preview-container" class="draft-preview-container is-hidden">
 					<div id="post-draft-preview-carousel" class="draft-preview-carousel">
 						<div id="post-draft-preview-inner" class="draft-preview-inner"></div>
 						<button id="draft-prev-btn" class="carousel-btn prev-btn is-hidden" type="button"
-							aria-label="áº¢nh trÆ°á»›c"><i class="bx bx-chevron-left"></i></button>
+							aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
 						<button id="draft-next-btn" class="carousel-btn next-btn is-hidden" type="button"
-							aria-label="áº¢nh tiáº¿p theo"><i class="bx bx-chevron-right"></i></button>
+							aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
 					</div>
 					<button id="reselect-file-btn" class="reselect-btn" type="button"><i
 							class="bx bx-image-add"></i></button>
@@ -95,8 +95,8 @@
 
 			<div class="create-form-col">
 				<header class="create-modal-header">
-					<h2 id="create-post-title">Táº¡o bÃ i Ä‘Äƒng</h2>
-					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="ÄÃ³ng">
+					<h2 id="create-post-title">Tạo bài đăng</h2>
+					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
 						<i class="bx bx-x"></i>
 					</button>
 				</header>
@@ -105,25 +105,25 @@
 					<div class="create-detail-top">
 						<img class="detail-avatar"
 							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar ngÆ°á»i dÃ¹ng">
+							alt="Avatar người dùng">
 
 						<div class="detail-chips">
 							<label class="detail-chip detail-chip-select" for="create-post-visibility">
 								<i class="bx bx-lock-alt"></i>
-								<select id="create-post-visibility" aria-label="Quyá»n riÃªng tÆ° bÃ i Ä‘Äƒng" required>
-									<option value="PUBLIC">CÃ´ng khai</option>
-									<option value="PRIVATE">Chá»‰ mÃ¬nh tÃ´i</option>
+								<select id="create-post-visibility" aria-label="Quyền riêng tư bài đăng" required>
+									<option value="PUBLIC">Công khai</option>
+									<option value="PRIVATE">Chỉ mình tôi</option>
 								</select>
 							</label>
 						</div>
 					</div>
 
 					<div class="post-caption-wrap">
-						<textarea id="post-caption-input" placeholder="Viáº¿t chÃº thÃ­ch cho bÃ i Ä‘Äƒng..."></textarea>
+						<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
 					</div>
 
 					<div class="post-caption-wrap">
-						<input id="create-post-address" type="text" placeholder="Äá»‹a chá»‰ cá»¥ thá»ƒ" required
+						<input id="create-post-address" type="text" placeholder="Thêm địa chỉ, vị trí" required
 							autocomplete="off">
 					</div>
 
@@ -131,16 +131,16 @@
 						aria-live="polite"></p>
 
 					<div class="create-modal-footer">
-						<button id="publish-post-btn" class="publish-btn" type="submit">ÄÄƒng</button>
+						<button id="publish-post-btn" class="publish-btn" type="submit">Đăng</button>
 					</div>
 				</form>
 			</div>
 		</div>
 	</div>
 
-<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
+	<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
 		<button id="close-comment-modal" class="comment-modal-close" type="button"
-			aria-label="ÄÃ³ng há»™p thoáº¡i bÃ¬nh luáº­n">
+			aria-label="Đóng hộp thoại bình luận">
 			<i class="bx bx-x"></i>
 		</button>
 
@@ -164,27 +164,27 @@
 					</div>
 
 					<div class="post-menu-wrap">
-						<button class="comment-header-menu post-menu-btn" type="button" aria-label="TÃ¹y chá»n bÃ i Ä‘Äƒng">
+						<button class="comment-header-menu post-menu-btn" type="button" aria-label="Tùy chọn bài đăng">
 							<i class="bx bx-dots-horizontal-rounded"></i>
 						</button>
 						<div class="post-dropdown-menu">
 							<button id="comment-modal-report-btn" class="post-dropdown-item" type="button"
 								data-action="report-post" data-post-id="">
 								<i class="bx bx-flag"></i>
-								<span>BÃ¡o cÃ¡o</span>
+								<span>Báo cáo</span>
 							</button>
 						</div>
 					</div>
 				</header>
 
-				<section class="comment-post-info" aria-label="ThÃ´ng tin bÃ i viáº¿t">
+				<section class="comment-post-info" aria-label="Thông tin bài viết">
 					<div id="comment-modal-post-tags" class="comment-post-tags">
 						<!-- Tags injected here -->
 					</div>
 					<p id="comment-modal-post-caption" class="comment-post-caption"></p>
 				</section>
 
-				<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sÃ¡ch bÃ¬nh luáº­n">
+				<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sách bình luận">
 					<!-- Mock comments for UI preview, no like buttons -->
 					<div class="comment-item">
 						<img class="comment-avatar"
@@ -192,8 +192,8 @@
 							alt="Avatar son.wander">
 
 						<div class="comment-content">
-							<p><strong>son.wander</strong>GÃ³c nÃ y Ä‘áº¹p quÃ¡, mÃ¬nh cÅ©ng muá»‘n Ä‘i Tam Cá»‘c vÃ o cuá»‘i tuáº§n.</p>
-							<span class="comment-time">1 giá» trÆ°á»›c</span>
+							<p><strong>son.wander</strong>Góc này đẹp quá, mình cũng muốn đi Tam Cốc vào cuối tuần.</p>
+							<span class="comment-time">1 giờ trước</span>
 						</div>
 					</div>
 
@@ -203,13 +203,17 @@
 							alt="Avatar annie.go">
 
 						<div class="comment-content">
-							<p><strong>annie.go</strong>Cáº£nh Ä‘áº¹p quÃ¡! NhÃ¬n yÃªn bÃ¬nh tháº­t sá»±.</p>
-							<span class="comment-time">35 phÃºt trÆ°á»›c</span>
+							<p><strong>annie.go</strong>Cảnh đẹp quá! Nhìn yên bình thật sự.</p>
+							<span class="comment-time">35 phút trước</span>
 						</div>
 					</div>
 				</div>
 
-	<script type="module" src="../assets/js/components/sidebar.js"></script>
-	<script type="module" src="../assets/js/pages/reports.js"></script>
+				</div>
+		</div>
+	</div>
+
+		<script type="module" src="../assets/js/components/sidebar.js" charset="UTF-8"></script>
+	<script type="module" src="../assets/js/pages/reports.js" charset="UTF-8"></script>
 </body>
 </html>
