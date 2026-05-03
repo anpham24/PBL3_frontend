@@ -103,13 +103,9 @@ const initRegisterPage = () => {
 		setSubmittingState(submitButton, true);
 
 		try {
-			const response = await authApi.register(payload);
-			const isSuccess = Number(response?.code) === 201;
+			await authApi.register(payload);
 
-			if (!isSuccess) {
-				throw new Error("Đăng ký thất bại. Vui lòng thử lại.");
-			}
-
+			// Nếu xuống được dòng này nghĩa là apiClient không throw error -> Thành công 100%
 			setFeedback(feedbackElement, "Đăng ký thành công. Đang chuyển sang trang đăng nhập...", "success");
 
 			window.setTimeout(() => {

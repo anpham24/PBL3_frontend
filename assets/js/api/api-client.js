@@ -2,6 +2,20 @@
 
 import { clearAuthStorage, getToken } from "../utils/auth.js";
 
+// Đặt link server Backend Java của bạn ở đây
+const BASE_URL = "http://localhost:8080/mxh";
+
+let isRefreshing = false;
+let failedQueue = [];
+
+const processQueue = (error, token = null) => {
+	failedQueue.forEach((prom) => {
+		if (error) prom.reject(error);
+		else prom.resolve(token);
+	});
+	failedQueue = [];
+};
+
 const isFormData = (value) => typeof FormData !== "undefined" && value instanceof FormData;
 
 const parseJsonSafely = async (response) => {
@@ -43,7 +57,7 @@ const handleUnauthorized = () => {
 	}
 };
 
-const createRequestHeaders = ({ headers = {}, requiresAuth = true, data }) => {
+const createRequestHeaders = ({ headers = {}, requiresAuth = true, data, forcedToken }) => {
 	const requestHeaders = new Headers(headers);
 
 	if (!isFormData(data) && data !== undefined && !requestHeaders.has("Content-Type")) {
@@ -51,7 +65,8 @@ const createRequestHeaders = ({ headers = {}, requiresAuth = true, data }) => {
 	}
 
 	if (requiresAuth && !requestHeaders.has("Authorization")) {
-		const token = getToken();
+		// SỬA ĐOẠN NÀY: Ưu tiên dùng forcedToken nếu có
+		const token = forcedToken || getToken();
 		if (token.length > 0) {
 			requestHeaders.set("Authorization", `Bearer ${token}`);
 		}
@@ -88,20 +103,60 @@ export const apiClient = {
 			headers,
 			requiresAuth = true,
 			skipAuthRedirect = false,
+			forcedToken, // THÊM DÒNG NÀY
 			...restOptions
 		} = options;
 
-		const response = await fetch(endpoint, {
+		const fullUrl = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
+
+		const response = await fetch(fullUrl, {
 			...restOptions,
 			method,
-			headers: createRequestHeaders({ headers, requiresAuth, data }),
-			body: createBody(data)
+			headers: createRequestHeaders({ headers, requiresAuth, data, forcedToken }),
+			body: createBody(data),
+			credentials: "include"
 		});
 
 		const responseData = await parseJsonSafely(response);
 
+		// ===== THAY THẾ TOÀN BỘ KHỐI IF 401 CŨ BẰNG ĐOẠN NÀY =====
 		if (response.status === 401 && !skipAuthRedirect) {
-			handleUnauthorized();
+			if (isRefreshing) {
+				return new Promise((resolve, reject) => {
+					failedQueue.push({ resolve, reject });
+				}).then((token) => {
+					return this.request(endpoint, { ...options, forcedToken: token });
+				}).catch((err) => {
+					throw err;
+				});
+			}
+
+			isRefreshing = true;
+
+			try {
+				const refreshRes = await fetch(`${BASE_URL}/api/auth/refresh`, {
+					method: "POST",
+					credentials: "include"
+				});
+
+				const refreshData = await parseJsonSafely(refreshRes);
+
+				if (!refreshRes.ok) throw buildApiError(refreshRes, refreshData);
+
+				const newToken = refreshData?.data?.token;
+				if (!newToken) throw new Error("Không có token mới.");
+
+				setAccessToken(newToken);
+				isRefreshing = false;
+				processQueue(null, newToken);
+
+				return this.request(endpoint, { ...options, forcedToken: newToken });
+			} catch (refreshError) {
+				isRefreshing = false;
+				processQueue(refreshError, null);
+				handleUnauthorized();
+				throw buildApiError(response, responseData);
+			}
 		}
 
 		if (!response.ok) {
