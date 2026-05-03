@@ -378,82 +378,9 @@
 	font-size: 0.9rem;
 }
 
-.post-media-carousel {
-	position: relative;
-	width: 100%;
-	border-top: 1px solid var(--border);
-	border-bottom: 1px solid var(--border);
-	background: #000;
-	overflow: hidden;
-}
-
-.carousel-inner {
-	display: flex;
-	overflow-x: auto;
-	scroll-snap-type: x mandatory;
-	scrollbar-width: none;
-	width: 100%;
-}
-
-.carousel-inner::-webkit-scrollbar {
-	display: none;
-}
-
-.carousel-item {
-	min-width: 100%;
-	width: 100%;
-	scroll-snap-align: center;
-	flex-shrink: 0;
-	aspect-ratio: 5 / 4;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-}
-
-.carousel-item img,
-.carousel-item video {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	display: block;
-}
-
-.carousel-btn {
-	position: absolute;
-	top: 50%;
-	transform: translateY(-50%);
-	width: 32px;
-	height: 32px;
-	border: none;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.85);
-	box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	cursor: pointer;
-	z-index: 2;
-	color: #111;
-	transition: background 0.2s, opacity 0.2s;
-	opacity: 0.7;
-}
-
-.carousel-btn:hover {
-	background: #fff;
-	opacity: 1;
-}
-
-.carousel-btn i {
-	font-size: 1.4rem;
-}
-
-.carousel-btn.prev-btn {
-	left: 12px;
-}
-
-.carousel-btn.next-btn {
-	right: 12px;
-}
+/* Các rule carousel (.post-media-carousel, .carousel-inner, .carousel-item,
+   .carousel-btn, .prev-btn, .next-btn) đã được chuyển sang global.css
+   để dùng chung trên tất cả các trang. */
 
 @media (max-width: 640px) {
 	.feed-filters {

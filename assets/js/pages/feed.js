@@ -1,12 +1,10 @@
 "use strict";
 
 import { feedApi } from "../api/feed-api.js";
-import { postApi } from "../api/post-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 
 const SCROLL_BOTTOM_THRESHOLD = 220;
-const DEFAULT_PUBLISH_LABEL = "Đăng";
 const FEED_MODE_EXPLORE = "EXPLORE";
 const FEED_MODE_FOLLOWING = "FOLLOWING";
 
@@ -41,13 +39,6 @@ let reportPostSubmitButton;
 let reportPostFeedbackElement;
 let createPostModalController;
 let commentModalController;
-let createPostFormElement;
-let createPostFileInputElement;
-let createPostContentElement;
-let createPostVisibilitySelectElement;
-let createPostAddressInputElement;
-let createPostFeedbackElement;
-let publishPostButtonElement;
 
 const normalizeString = (value) => {
 	if (typeof value !== "string") {
@@ -135,26 +126,6 @@ const clearStatus = () => {
 	if (feedStatusElement) {
 		feedStatusElement.style.color = "";
 	}
-};
-
-const setCreatePostFeedback = (message, variant = "error") => {
-	if (!createPostFeedbackElement) {
-		return;
-	}
-
-	createPostFeedbackElement.textContent = message;
-	createPostFeedbackElement.classList.remove("is-hidden");
-	createPostFeedbackElement.style.color = variant === "error" ? "#dc2626" : "#15803d";
-};
-
-const clearCreatePostFeedback = () => {
-	if (!createPostFeedbackElement) {
-		return;
-	}
-
-	createPostFeedbackElement.textContent = "";
-	createPostFeedbackElement.classList.add("is-hidden");
-	createPostFeedbackElement.style.color = "";
 };
 
 const setReportFeedback = (message, variant = "error") => {
@@ -726,87 +697,8 @@ const handleSaveButtonClick = async (saveButton) => {
 	}
 };
 
-const setPublishSubmittingState = (isSubmitting) => {
-	if (!publishPostButtonElement) {
-		return;
-	}
-
-	publishPostButtonElement.disabled = isSubmitting;
-
-	if (isSubmitting) {
-		publishPostButtonElement.innerHTML =
-			'<span class="btn-spinner" aria-hidden="true"></span><span>Đang đăng...</span>';
-		return;
-	}
-
-	publishPostButtonElement.textContent = DEFAULT_PUBLISH_LABEL;
-};
-
-const buildCreatePostFormData = ({ files, visibility, content, address }) => {
-	const formData = new FormData();
-
-	files.forEach((file) => {
-		formData.append("files", file);
-	});
-
-	formData.append("visibility", visibility);
-	formData.append("content", content);
-	formData.append("address", address);
-
-	return formData;
-};
-
-const handleCreatePostSubmit = async () => {
-	if (!createPostFileInputElement || !createPostContentElement) {
-		return;
-	}
-
-	clearCreatePostFeedback();
-
-	const selectedFiles = Array.from(createPostFileInputElement.files || []).filter((file) => {
-		if (!(file instanceof File)) {
-			return false;
-		}
-
-		return file.type.startsWith("image/") || file.type.startsWith("video/");
-	});
-
-	if (selectedFiles.length === 0) {
-		setCreatePostFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
-		return;
-	}
-
-	const address = normalizeString(createPostAddressInputElement?.value);
-	if (address.length === 0) {
-		setCreatePostFeedback("Vui lòng nhập địa chỉ cụ thể cho bài đăng.");
-		return;
-	}
-
-	const payload = {
-		files: selectedFiles,
-		visibility: normalizeString(createPostVisibilitySelectElement?.value) || "PUBLIC",
-		content: normalizeString(createPostContentElement.value),
-		address
-	};
-
-	setPublishSubmittingState(true);
-
-	try {
-		const response = await postApi.createPost(buildCreatePostFormData(payload));
-		const createdPost = response?.data?.post || response?.data;
-
-		if (createdPost && typeof createdPost === "object") {
-			prependPost(createdPost);
-		}
-
-		setStatus("Đăng bài thành công.", "success");
-		createPostModalController?.close();
-	} catch (error) {
-		setCreatePostFeedback(toMessage(error, "Đăng bài thất bại. Vui lòng thử lại."));
-	} finally {
-		setPublishSubmittingState(false);
-	}
-};
+// handleCreatePostSubmit đã được chuyển vào create-post-modal.js.
+// feed.js chỉ cần truyền onPublish callback để prepend bài mới vào danh sách.
 
 const updateFeedTabs = () => {
 	if (!feedTabExploreElement || !feedTabFollowingElement) {
@@ -942,20 +834,14 @@ const initFeedPage = () => {
 		return;
 	}
 
-	createPostModalController = initCreatePostModal({ closeOnPublish: false });
-	commentModalController = initCommentModal();
-	createPostFormElement = document.getElementById("create-post-form");
-	createPostFileInputElement = createPostModalController?.elements?.postFileInput ?? null;
-	createPostContentElement = createPostModalController?.elements?.postCaptionInput ?? null;
-	createPostVisibilitySelectElement = createPostModalController?.elements?.createPostVisibilityInput ?? null;
-	createPostAddressInputElement = createPostModalController?.elements?.createPostAddressInput ?? null;
-	createPostFeedbackElement = createPostModalController?.elements?.createPostFeedbackElement ?? null;
-	publishPostButtonElement = createPostModalController?.elements?.publishPostBtn ?? null;
-
-	createPostFormElement?.addEventListener("submit", (event) => {
-		event.preventDefault();
-		void handleCreatePostSubmit();
+	createPostModalController = initCreatePostModal({
+		closeOnPublish: true,
+		onPublish: (createdPost) => {
+			prependPost(createdPost);
+			setStatus("Đăng bài thành công.", "success");
+		}
 	});
+	commentModalController = initCommentModal();
 
 	feedPostListElement.addEventListener("click", (event) => {
 		const menuButton = event.target.closest(".post-menu-btn");
@@ -1097,20 +983,7 @@ const initFeedPage = () => {
 
 	window.addEventListener("scroll", handleScrollToBottom, { passive: true });
 
-	document.addEventListener("click", (event) => {
-		const prevBtn = event.target.closest(".carousel-btn.prev-btn");
-		const nextBtn = event.target.closest(".carousel-btn.next-btn");
-
-		if (prevBtn) {
-			const carousel = prevBtn.closest(".post-media-carousel, .draft-preview-carousel");
-			const inner = carousel.querySelector(".carousel-inner, .draft-preview-inner");
-			if (inner) inner.scrollBy({ left: -inner.clientWidth, behavior: "smooth" });
-		} else if (nextBtn) {
-			const carousel = nextBtn.closest(".post-media-carousel, .draft-preview-carousel");
-			const inner = carousel.querySelector(".carousel-inner, .draft-preview-inner");
-			if (inner) inner.scrollBy({ left: inner.clientWidth, behavior: "smooth" });
-		}
-	});
+	// Carousel handler đã được đăng ký bởi initCreatePostModal() ở trên.
 
 	updateFeedTabs();
 	void Promise.all([loadDropdowns(), loadFeed(true)]);
