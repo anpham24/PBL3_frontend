@@ -43,23 +43,8 @@ export const postApi = {
 		});
 	},
 
-	async saveCurrentPostFromCommentModal(saved) {
-		return apiClient.post("/api/posts/current/save", {
-			saved: toBoolean(saved),
-			source: "comment-modal"
-		});
-	},
-
 	async likePost(postId, liked) {
 		return this.toggleLike(postId, liked);
-	},
-
-	async savePost(postId, saved) {
-		const resolvedPostId = toSafeId(postId, "post-1");
-
-		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/save`, {
-			saved: toBoolean(saved)
-		});
 	},
 
 	async likeComment(commentId, liked) {

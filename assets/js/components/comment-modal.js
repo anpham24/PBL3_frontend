@@ -63,18 +63,11 @@ const resolvePostMediaUrls = (post) => {
 	return [];
 };
 
-let commentControllerCache = null;
-
 export const initCommentModal = () => {
 	const commentModal = document.getElementById("comment-modal");
 	if (!commentModal) {
 		return null;
 	}
-
-	if (commentModal.dataset.initialized === "true") {
-		return commentControllerCache;
-	}
-	commentModal.dataset.initialized = "true";
 
 	const closeCommentModalBtn = document.getElementById("close-comment-modal");
 	const authorNameEl = document.getElementById("comment-modal-author-name");
@@ -171,10 +164,8 @@ export const initCommentModal = () => {
 		}
 	});
 
-	commentControllerCache = {
+	return {
 		open: openCommentModal,
 		close: closeCommentModal
 	};
-
-	return commentControllerCache;
 };

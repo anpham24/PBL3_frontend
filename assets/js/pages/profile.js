@@ -1,8 +1,6 @@
 "use strict";
 
 import { userApi } from "../api/user-api.js";
-import { initSidebar } from "../components/sidebar.js";
-import { initPostMenus } from "../components/post-menu.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
@@ -162,11 +160,9 @@ const loadProfileData = async () => {
 };
 
 const initProfilePage = () => {
-	initSidebar();
 	initCreatePostModal();
 	initCommentModal(".profile-grid .grid-item");
 	initPostInteractions();
-	initPostMenus();
 	loadProfileData();
 };
 

@@ -68,8 +68,6 @@ const loadGooglePlacesSdk = () => {
 	return googlePlacesPromise;
 };
 
-let controllerCache = null;
-
 export const initCreatePostModal = (options = {}) => {
 	const { closeOnPublish = true } = options;
 
@@ -77,11 +75,6 @@ export const initCreatePostModal = (options = {}) => {
 	if (!createPostModal) {
 		return null;
 	}
-
-	if (createPostModal.dataset.initialized === "true") {
-		return controllerCache;
-	}
-	createPostModal.dataset.initialized = "true";
 
 	const uploadDropzone = document.querySelector(".upload-dropzone");
 	const draftPreviewContainer = document.getElementById("draft-preview-container");
@@ -305,7 +298,7 @@ export const initCreatePostModal = (options = {}) => {
 		}
 	});
 
-	controllerCache = {
+	return {
 		open: openCreateModal,
 		close: closeCreateModal,
 		reset: resetCreateModalState,
@@ -320,6 +313,4 @@ export const initCreatePostModal = (options = {}) => {
 			createPostFeedbackElement
 		}
 	};
-
-	return controllerCache;
 };
