@@ -134,84 +134,8 @@
 	cursor: wait;
 }
 
-.detail-chip-select {
-	padding-right: 10px;
-}
-
-.detail-chip-select select {
-	border: none;
-	outline: none;
-	background: transparent;
-	font: inherit;
-	color: var(--text);
-	min-width: 104px;
-	appearance: none;
-	cursor: pointer;
-}
-
-#create-post-address {
-	width: 100%;
-	border: none;
-	outline: none;
-	font-size: 0.94rem;
-	background: transparent;
-}
-
-.create-post-feedback {
-	font-size: 0.9rem;
-	font-weight: 500;
-	line-height: 1.4;
-}
-
-.draft-preview-grid {
-	display: grid;
-	grid-template-columns: repeat(3, minmax(0, 1fr));
-	gap: 8px;
-	min-height: 120px;
-	padding: 8px;
-}
-
-.draft-preview-item {
-	position: relative;
-	aspect-ratio: 1 / 1;
-	overflow: hidden;
-	border-radius: 10px;
-	background: #e5e7eb;
-}
-
-.draft-preview-item img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-	display: block;
-}
-
-.publish-btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-}
-
-.publish-btn:disabled {
-	opacity: 0.82;
-	cursor: wait;
-}
-
-.btn-spinner {
-	width: 14px;
-	height: 14px;
-	border-radius: 50%;
-	border: 2px solid rgba(255, 255, 255, 0.45);
-	border-top-color: #ffffff;
-	animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
+/* Các rule #create-post-address, .create-post-feedback, .draft-preview-*,
+   .publish-btn, .btn-spinner, .detail-chip-select đã có trong global.css. */
 
 .post-image video {
 	width: 100%;
@@ -385,11 +309,6 @@
 @media (max-width: 640px) {
 	.feed-filters {
 		flex-wrap: wrap;
-	}
-
-	.draft-preview-grid {
-		grid-template-columns: repeat(2, minmax(0, 1fr));
-		gap: 6px;
 	}
 
 	.report-post-form {
