@@ -106,17 +106,36 @@ const handleLikeClick = async (btn) => {
 	});
 
 	try {
-		const response = await postApi.toggleLikePost(postId);
+		const response = await postApi.toggleLike(postId);
 
-		const newLikeCount = normalizeNumber(response?.data?.new_like_count, undefined);
+		// Đọc đúng key theo API contract: newLikeCount và isLiked (camelCase)
+		const newLikeCount = normalizeNumber(response?.data?.newLikeCount, undefined);
 		const isLiked =
-			typeof response?.data?.is_liked === "boolean"
-				? response.data.is_liked
+			typeof response?.data?.isLiked === "boolean"
+				? response.data.isLiked
 				: btn.classList.contains("is-liked");
 
+		// 1. Cập nhật DOM: tất cả nút .btn-like cùng postId trên trang
 		syncAllLikeButtons(postId, isLiked, newLikeCount);
+
+		// 2. Ghi data-attribute lên .post-card (nguồn truth cho JS state khi mở modal)
+		const postCard = document.querySelector(`.post-card[data-post-id="${escapedId}"]`);
+		if (postCard) {
+			postCard.dataset.isLiked = String(isLiked);
+			if (newLikeCount !== undefined) {
+				postCard.dataset.newLikeCount = String(newLikeCount);
+			}
+		}
+
+		// 3. Dispatch CustomEvent để feed.js đồng bộ in-memory state
+		document.dispatchEvent(
+			new CustomEvent("postLikeUpdated", {
+				bubbles: false,
+				detail: { postId, newLikeCount, isLiked },
+			})
+		);
 	} catch (error) {
-		console.error("[post-interactions] toggleLikePost error:", error);
+		console.error("[post-interactions] toggleLike error:", error);
 	} finally {
 		relatedBtns.forEach((b) => {
 			delete b.dataset.loading;

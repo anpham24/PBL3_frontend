@@ -86,8 +86,8 @@ export const initCommentModal = () => {
 		const authorName = normalizeString(post.authorName || post.author_name || post.username) || "Người dùng";
 		const avatarUrl = normalizeString(post.avtUrl || post.avt_url || post.avatar_url || post.avatar) || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
 		const content = normalizeString(post.content || post.caption);
-		const isLiked = post.is_liked === true || post.is_liked === "true" || post.is_liked === 1;
-		const likeCount = normalizeNumber(post.likeCount || post.like_count, 0);
+		const isLiked = post.isLiked === true || post.isLiked === "true" || post.isLiked === 1;
+		const likeCount = normalizeNumber(post.newLikeCount ?? post.likeCount ?? post.like_count, 0);
 		const address = normalizeString(post.address || post.location);
 		const province = normalizeString(post.province);
 		const topic = normalizeString(post.topic);

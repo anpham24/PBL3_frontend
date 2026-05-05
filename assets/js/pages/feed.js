@@ -424,6 +424,34 @@ const prependPost = (post) => {
 	syncEmptyState();
 };
 
+/**
+ * Đọc trạng thái like mới nhất của một bài viết từ DOM.
+ * Được cập nhật bởi post-interactions.js qua data-attribute sau mọi lần toggle like.
+ * Trả về object merge với post gốc, đảm bảo comment-modal luôn nhận dữ liệu mới nhất.
+ */
+const readLatestPostDataFromDom = (post) => {
+	const postId = normalizeString(post?.id);
+	if (postId.length === 0) return post;
+
+	const postCard = feedPostListElement?.querySelector(
+		`[data-post-id="${toCssSelectorValue(postId)}"]`
+	);
+	if (!postCard) return post;
+
+	// Đọc data-attribute mà post-interactions.js đã ghi sau mọi toggle
+	const domIsLiked = postCard.dataset.isLiked;
+	const domNewLikeCount = postCard.dataset.newLikeCount;
+
+	return {
+		...post,
+		...(domIsLiked !== undefined ? { isLiked: domIsLiked === "true" } : {}),
+		...(domNewLikeCount !== undefined
+			? { newLikeCount: normalizeNumber(domNewLikeCount, post.newLikeCount ?? 0) }
+			: {}),
+	};
+};
+
+
 const resolveFeedRequest = (lastId, provinceCode, topicCode) => {
 	if (feedState.feedMode === FEED_MODE_FOLLOWING) {
 		return feedApi.getFollowingFeed(lastId, provinceCode, topicCode);
@@ -799,7 +827,9 @@ const initFeedPage = () => {
 			if (postId) {
 				const post = feedState.posts.find(p => normalizeString(p?.id) === normalizeString(postId));
 				if (post && commentModalController) {
-					commentModalController.open(post);
+					// Đọc lại trạng thái mới nhất từ DOM trước khi mở modal
+					// Đảm bảo modal không dùng dữ liệu cũ (stale) từ thời điểm load feed
+					commentModalController.open(readLatestPostDataFromDom(post));
 				}
 			}
 			return;
@@ -853,6 +883,26 @@ const initFeedPage = () => {
 	window.addEventListener("scroll", handleScrollToBottom, { passive: true });
 
 	// Carousel handler đã được đăng ký bởi initCreatePostModal() ở trên.
+
+	// Lắng nghe CustomEvent từ post-interactions.js để đồng bộ feedState.posts
+	// (in-memory state) sau mọi lần toggle like — giải quyết stale data khi mở modal lần sau.
+	document.addEventListener("postLikeUpdated", (event) => {
+		const { postId, newLikeCount, isLiked } = event.detail ?? {};
+		const safePostId = normalizeString(postId);
+		if (safePostId.length === 0) return;
+
+		feedState.posts = feedState.posts.map((post) => {
+			if (normalizeString(post?.id) !== safePostId) return post;
+
+			return {
+				...post,
+				isLiked: Boolean(isLiked),
+				...(newLikeCount !== undefined
+					? { newLikeCount: normalizeNumber(newLikeCount, 0) }
+					: {}),
+			};
+		});
+	});
 
 	updateFeedTabs();
 	void Promise.all([loadDropdowns(), loadFeed(true)]);
