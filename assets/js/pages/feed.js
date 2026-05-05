@@ -3,6 +3,7 @@
 import { feedApi } from "../api/feed-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
+import { initPostInteractions } from "../components/post-interactions.js";
 
 const SCROLL_BOTTOM_THRESHOLD = 220;
 const FEED_MODE_EXPLORE = "EXPLORE";
@@ -300,7 +301,12 @@ const createPostCardHtml = (post) => {
 
 			<div class="post-actions">
 				<div class="left-actions">
-					<button class="post-action-btn post-like-btn${isLiked ? " is-liked" : ""}" type="button" aria-label="${isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"}">
+					<button
+						class="post-action-btn btn-like${isLiked ? " active is-liked" : ""}"
+						type="button"
+						data-post-id="${escapeHtml(postId)}"
+						aria-label="${isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"}"
+					>
 						<i class="bx ${isLiked ? "bxs-heart" : "bx-heart"}"></i>
 						<span class="action-count" data-role="like-count">${escapeHtml(formatCompactNumber(likeCount))}</span>
 					</button>
@@ -528,68 +534,6 @@ const loadDropdowns = async () => {
 	}
 };
 
-const setLikeButtonVisualState = (likeButton, isLiked) => {
-	if (!likeButton) {
-		return;
-	}
-
-	const liked = Boolean(isLiked);
-	const iconElement = likeButton.querySelector("i");
-
-	likeButton.classList.toggle("is-liked", liked);
-	likeButton.setAttribute("aria-label", liked ? "Bỏ tim bài viết" : "Thả tim bài viết");
-
-	if (!iconElement) {
-		return;
-	}
-
-	iconElement.classList.toggle("bx-heart", !liked);
-	iconElement.classList.toggle("bxs-heart", liked);
-};
-
-const updatePostLikeState = (postId, newLikeCount, isLiked) => {
-	const safePostId = normalizeString(postId);
-	if (safePostId.length === 0) {
-		return;
-	}
-
-	const normalizedLikeCount = normalizeNumber(newLikeCount, 0);
-	const normalizedIsLiked = Boolean(isLiked);
-
-	const postCard = feedPostListElement?.querySelector(`[data-post-id="${toCssSelectorValue(safePostId)}"]`);
-	if (postCard) {
-		const likeButton = postCard.querySelector(".post-like-btn");
-		const likeCountElements = postCard.querySelectorAll('[data-role="like-count"]');
-
-		setLikeButtonVisualState(likeButton, normalizedIsLiked);
-
-		likeCountElements.forEach((el) => {
-			el.textContent = formatCompactNumber(normalizedLikeCount);
-		});
-	}
-
-	const modalLikeBtn = document.getElementById("btn-like-comment-modal");
-	if (modalLikeBtn && normalizeString(modalLikeBtn.dataset.postId) === safePostId) {
-		setLikeButtonVisualState(modalLikeBtn, normalizedIsLiked);
-		const modalLikeCount = document.getElementById("comment-modal-like-count");
-		if (modalLikeCount) {
-			modalLikeCount.textContent = formatCompactNumber(normalizedLikeCount);
-		}
-	}
-
-	feedState.posts = feedState.posts.map((post) => {
-		if (normalizeString(post?.id) !== safePostId) {
-			return post;
-		}
-
-		return {
-			...post,
-			like_count: normalizedLikeCount,
-			is_liked: normalizedIsLiked
-		};
-	});
-};
-
 const setSaveButtonVisualState = (saveButton, isSaved) => {
 	if (!saveButton) {
 		return;
@@ -633,41 +577,6 @@ const updatePostSaveState = (postId, isSaved) => {
 			is_saved: normalizedIsSaved
 		};
 	});
-};
-
-const handleLikeButtonClick = async (likeButton) => {
-	const postCard = likeButton?.closest(".post-card");
-	let postId = normalizeString(postCard?.dataset.postId);
-
-	if (postId.length === 0) {
-		postId = normalizeString(likeButton.dataset.postId);
-	}
-
-	if (postId.length === 0 || likeButton.dataset.loading === "true") {
-		return;
-	}
-
-	likeButton.dataset.loading = "true";
-	likeButton.disabled = true;
-
-	try {
-		const response = await postApi.toggleLike(postId);
-		const post = feedState.posts.find(p => normalizeString(p?.id) === postId);
-		const currentLikeCount = normalizeNumber(post?.like_count || post?.likeCount, 0);
-
-		const resolvedLikeCount = normalizeNumber(response?.data?.new_like_count, currentLikeCount);
-		const resolvedIsLiked =
-			typeof response?.data?.is_liked === "boolean"
-				? response.data.is_liked
-				: likeButton.classList.contains("is-liked");
-
-		updatePostLikeState(postId, resolvedLikeCount, resolvedIsLiked);
-	} catch (error) {
-		setStatus(toMessage(error, "Không thể cập nhật lượt thích. Vui lòng thử lại."), "error");
-	} finally {
-		delete likeButton.dataset.loading;
-		likeButton.disabled = false;
-	}
 };
 
 const handleSaveButtonClick = async (saveButton) => {
@@ -842,6 +751,7 @@ const initFeedPage = () => {
 		}
 	});
 	commentModalController = initCommentModal();
+	initPostInteractions();
 
 	feedPostListElement.addEventListener("click", (event) => {
 		const menuButton = event.target.closest(".post-menu-btn");
@@ -871,13 +781,6 @@ const initFeedPage = () => {
 			const postId = normalizeString(reportActionButton.dataset.postId);
 			closeAllPostMenus();
 			openReportModal(postId);
-			return;
-		}
-
-		const likeButton = event.target.closest(".post-like-btn");
-		if (likeButton && feedPostListElement.contains(likeButton)) {
-			event.preventDefault();
-			void handleLikeButtonClick(likeButton);
 			return;
 		}
 
@@ -932,41 +835,7 @@ const initFeedPage = () => {
 		}
 	});
 
-	const commentModalEl = document.getElementById("comment-modal");
-	commentModalEl?.addEventListener("click", (event) => {
-		const likeButton = event.target.closest(".post-like-btn");
-		if (likeButton) {
-			event.preventDefault();
-			void handleLikeButtonClick(likeButton);
-			return;
-		}
 
-		const reportActionButton = event.target.closest('[data-action="report-post"]');
-		if (reportActionButton) {
-			event.preventDefault();
-			event.stopPropagation();
-			const postId = normalizeString(reportActionButton.dataset.postId);
-			closeAllPostMenus();
-			openReportModal(postId);
-			const menuWrap = reportActionButton.closest(".post-menu-wrap");
-			if (menuWrap) menuWrap.classList.remove("open");
-			return;
-		}
-
-		const menuButton = event.target.closest(".post-menu-btn");
-		if (menuButton) {
-			event.preventDefault();
-			event.stopPropagation();
-			const menuWrap = menuButton.closest(".post-menu-wrap");
-			if (!menuWrap) return;
-			const shouldOpen = !menuWrap.classList.contains("open");
-			closeAllPostMenus();
-			if (shouldOpen) {
-				menuWrap.classList.add("open");
-			}
-			return;
-		}
-	});
 
 	document.addEventListener("click", (event) => {
 		if (!event.target.closest(".post-menu-wrap")) {

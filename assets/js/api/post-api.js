@@ -36,6 +36,10 @@ export const postApi = {
 		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/like`);
 	},
 
+	async toggleLikePost(postId) {
+		return this.toggleLike(postId);
+	},
+
 	async likeCurrentPostFromCommentModal(liked) {
 		return apiClient.post("/api/posts/current/like", {
 			liked: toBoolean(liked),

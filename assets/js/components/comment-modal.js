@@ -126,6 +126,9 @@ export const initCommentModal = () => {
 
 		if (likeBtnEl) {
 			likeBtnEl.dataset.postId = postId;
+			// Đảm bảo nút có class .btn-like để Event Delegation trong post-interactions.js bắt được
+			likeBtnEl.classList.add("btn-like");
+			likeBtnEl.classList.toggle("active", isLiked);
 			likeBtnEl.classList.toggle("is-liked", isLiked);
 			likeBtnEl.setAttribute("aria-label", isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết");
 			const icon = likeBtnEl.querySelector("i");

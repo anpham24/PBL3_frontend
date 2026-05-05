@@ -1,38 +1,180 @@
 "use strict";
 
 import { postApi } from "../api/post-api.js";
-import { toArray, toSafeId } from "../utils/helpers.js";
+import { toSafeId } from "../utils/helpers.js";
 
-const toggleActionIcon = (button, outlinedClass, solidClass) => {
-	if (!button) {
-		return false;
-	}
+// ---------------------------------------------------------------------------
+// Helpers nội bộ
+// ---------------------------------------------------------------------------
 
-	const icon = button.querySelector("i");
-	if (!icon) {
-		return false;
-	}
-
-	const isActive = button.classList.toggle("active");
-	icon.classList.toggle(outlinedClass, !isActive);
-	icon.classList.toggle(solidClass, isActive);
-	return isActive;
+const normalizeString = (value) => {
+	if (typeof value !== "string") return "";
+	const trimmed = value.trim();
+	return trimmed.length > 0 ? trimmed : "";
 };
 
-const syncInteraction = async (requestAction) => {
+const normalizeNumber = (value, fallback = 0) => {
+	const n = Number(value);
+	return Number.isFinite(n) ? n : fallback;
+};
+
+const formatCompactNumber = (num) => {
+	const n = normalizeNumber(num, 0);
+	if (n === 0) return "";
+	if (n >= 1000000) return (n / 1000000).toFixed(1).replace(".", ",").replace(",0", "") + "M";
+	if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",").replace(",0", "") + "K";
+	return n.toString();
+};
+
+// ---------------------------------------------------------------------------
+// Cập nhật visual state cho MỘT nút .btn-like
+// ---------------------------------------------------------------------------
+
+const applyLikeVisualState = (btn, isLiked, newLikeCount) => {
+	if (!btn) return;
+
+	const liked = Boolean(isLiked);
+	btn.classList.toggle("active", liked);
+	btn.classList.toggle("is-liked", liked);
+	btn.setAttribute("aria-label", liked ? "Bỏ tim bài viết" : "Thả tim bài viết");
+
+	const icon = btn.querySelector("i");
+	if (icon) {
+		icon.classList.toggle("bx-heart", !liked);
+		icon.classList.toggle("bxs-heart", liked);
+	}
+
+	if (newLikeCount !== undefined) {
+		const countEl = btn.querySelector('[data-role="like-count"]');
+		if (countEl) {
+			countEl.textContent = formatCompactNumber(newLikeCount);
+		}
+	}
+};
+
+// ---------------------------------------------------------------------------
+// Đồng bộ TẤT CẢ các nút .btn-like[data-post-id="<id>"] trên trang
+// (bao gồm cả nút trong feed lẫn trong comment-modal)
+// ---------------------------------------------------------------------------
+
+const syncAllLikeButtons = (postId, isLiked, newLikeCount) => {
+	const safePostId = normalizeString(postId);
+	if (safePostId.length === 0) return;
+
+	// Dùng CSS.escape nếu có (tránh lỗi với id chứa ký tự đặc biệt)
+	const escapedId =
+		typeof CSS !== "undefined" && typeof CSS.escape === "function"
+			? CSS.escape(safePostId)
+			: safePostId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+
+	const allLikeBtns = document.querySelectorAll(`.btn-like[data-post-id="${escapedId}"]`);
+	allLikeBtns.forEach((btn) => {
+		applyLikeVisualState(btn, isLiked, newLikeCount);
+	});
+
+	// Đồng bộ riêng phần tử hiển thị like count ngoài nút (comment-modal)
+	const modalLikeCountEl = document.getElementById("comment-modal-like-count");
+	if (modalLikeCountEl) {
+		const modalLikeBtn = document.getElementById("btn-like-comment-modal");
+		const modalPostId = normalizeString(modalLikeBtn?.dataset.postId);
+		if (modalPostId === safePostId && newLikeCount !== undefined) {
+			modalLikeCountEl.textContent = formatCompactNumber(newLikeCount);
+		}
+	}
+};
+
+// ---------------------------------------------------------------------------
+// Xử lý click like (được gọi từ Event Delegation)
+// ---------------------------------------------------------------------------
+
+const handleLikeClick = async (btn) => {
+	const postId = toSafeId(btn.dataset.postId, "");
+	if (postId.length === 0) return;
+
+	// Chống spam double-click
+	if (btn.dataset.loading === "true") return;
+
+	// Disable tạm tất cả nút cùng postId để tránh race condition
+	const escapedId =
+		typeof CSS !== "undefined" && typeof CSS.escape === "function"
+			? CSS.escape(postId)
+			: postId;
+	const relatedBtns = document.querySelectorAll(`.btn-like[data-post-id="${escapedId}"]`);
+	relatedBtns.forEach((b) => {
+		b.dataset.loading = "true";
+		b.disabled = true;
+	});
+
 	try {
-		await requestAction();
+		const response = await postApi.toggleLikePost(postId);
+
+		const newLikeCount = normalizeNumber(response?.data?.new_like_count, undefined);
+		const isLiked =
+			typeof response?.data?.is_liked === "boolean"
+				? response.data.is_liked
+				: btn.classList.contains("is-liked");
+
+		syncAllLikeButtons(postId, isLiked, newLikeCount);
 	} catch (error) {
-		console.error("AJAX interaction error:", error);
+		console.error("[post-interactions] toggleLikePost error:", error);
+	} finally {
+		relatedBtns.forEach((b) => {
+			delete b.dataset.loading;
+			b.disabled = false;
+		});
 	}
 };
+
+// ---------------------------------------------------------------------------
+// Report modal helpers (giữ nguyên logic cũ, không thay đổi)
+// ---------------------------------------------------------------------------
+
+const clearReportFeedback = (reportPostFeedback) => {
+	if (!reportPostFeedback) return;
+	reportPostFeedback.textContent = "";
+	reportPostFeedback.classList.add("is-hidden");
+	reportPostFeedback.style.color = "";
+};
+
+const setReportFeedback = (reportPostFeedback, message, variant = "error") => {
+	if (!reportPostFeedback) return;
+	reportPostFeedback.textContent = message;
+	reportPostFeedback.classList.remove("is-hidden");
+	reportPostFeedback.style.color = variant === "error" ? "#dc2626" : "#15803d";
+};
+
+const closeReportModal = (reportPostModal, reportPostFeedback, stateRef) => {
+	if (!reportPostModal) return;
+	reportPostModal.classList.add("is-hidden");
+	reportPostModal.setAttribute("aria-hidden", "true");
+	stateRef.activeReportPostId = "";
+	clearReportFeedback(reportPostFeedback);
+	document.body.style.overflow = "";
+};
+
+const openReportModal = (reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId) => {
+	if (
+		!reportPostModal ||
+		!reportPostForm ||
+		typeof postId !== "string" ||
+		postId.trim().length === 0
+	) {
+		return;
+	}
+
+	stateRef.activeReportPostId = postId.trim();
+	reportPostForm.reset();
+	clearReportFeedback(reportPostFeedback);
+	reportPostModal.classList.remove("is-hidden");
+	reportPostModal.setAttribute("aria-hidden", "false");
+	document.body.style.overflow = "hidden";
+};
+
+// ---------------------------------------------------------------------------
+// Export chính: init với Event Delegation trên document
+// ---------------------------------------------------------------------------
 
 export const initPostInteractions = () => {
-	const likeCommentModalBtn = document.getElementById("btn-like-comment-modal");
-	const saveCommentModalBtn = document.getElementById("btn-save-comment-modal");
-	const postLikeButtons = toArray(document.querySelectorAll(".post-like-btn"));
-	const postSaveButtons = toArray(document.querySelectorAll(".post-save-btn"));
-	const commentLikeButtons = toArray(document.querySelectorAll(".comment-like-btn"));
 	const reportPostModal = document.getElementById("report-post-modal");
 	const reportPostForm = document.getElementById("report-post-form");
 	const reportPostCloseButton = document.getElementById("report-post-close");
@@ -40,114 +182,44 @@ export const initPostInteractions = () => {
 	const reportPostSubmitButton = document.getElementById("report-post-submit");
 	const reportPostFeedback = document.getElementById("report-post-feedback");
 
-	let activeReportPostId = "";
+	const stateRef = { activeReportPostId: "" };
 
-	const clearReportFeedback = () => {
-		if (!reportPostFeedback) {
+	// ------------------------------------------------------------------
+	// Event Delegation trên document — lắng nghe TẤT CẢ nút .btn-like
+	// Hoạt động với cả bài viết render động (feed) và bên trong modal
+	// ------------------------------------------------------------------
+	document.addEventListener("click", (event) => {
+		const likeBtn = event.target.closest(".btn-like");
+		if (likeBtn) {
+			event.preventDefault();
+			void handleLikeClick(likeBtn);
 			return;
 		}
 
-		reportPostFeedback.textContent = "";
-		reportPostFeedback.classList.add("is-hidden");
-		reportPostFeedback.style.color = "";
-	};
-
-	const setReportFeedback = (message, variant = "error") => {
-		if (!reportPostFeedback) {
-			return;
-		}
-
-		reportPostFeedback.textContent = message;
-		reportPostFeedback.classList.remove("is-hidden");
-		reportPostFeedback.style.color = variant === "error" ? "#dc2626" : "#15803d";
-	};
-
-	const closeReportModal = () => {
-		if (!reportPostModal) {
-			return;
-		}
-
-		reportPostModal.classList.add("is-hidden");
-		reportPostModal.setAttribute("aria-hidden", "true");
-		activeReportPostId = "";
-		clearReportFeedback();
-		document.body.style.overflow = "";
-	};
-
-	const openReportModal = (postId) => {
-		if (!reportPostModal || !reportPostForm || typeof postId !== "string" || postId.trim().length === 0) {
-			return;
-		}
-
-		activeReportPostId = postId.trim();
-		reportPostForm.reset();
-		clearReportFeedback();
-
-		reportPostModal.classList.remove("is-hidden");
-		reportPostModal.setAttribute("aria-hidden", "false");
-		document.body.style.overflow = "hidden";
-	};
-
-	likeCommentModalBtn?.addEventListener("click", async () => {
-		const isActive = toggleActionIcon(likeCommentModalBtn, "bx-heart", "bxs-heart");
-
-		await syncInteraction(() => postApi.likeCurrentPostFromCommentModal(isActive));
-	});
-
-	saveCommentModalBtn?.addEventListener("click", async () => {
-		const isActive = toggleActionIcon(saveCommentModalBtn, "bx-bookmark", "bxs-bookmark");
-
-		await syncInteraction(() => postApi.saveCurrentPostFromCommentModal(isActive));
-	});
-
-	postLikeButtons.forEach((button, index) => {
-		button.addEventListener("click", async () => {
-			const isActive = toggleActionIcon(button, "bx-heart", "bxs-heart");
-			const postCard = button.closest(".post-card");
-			const postId = toSafeId(postCard?.dataset.postId, `post-${index + 1}`);
-
-			await syncInteraction(() => postApi.likePost(postId, isActive));
-		});
-	});
-
-	postSaveButtons.forEach((button, index) => {
-		button.addEventListener("click", async () => {
-			const isActive = toggleActionIcon(button, "bx-bookmark", "bxs-bookmark");
-			const postCard = button.closest(".post-card");
-			const postId = toSafeId(postCard?.dataset.postId, `post-${index + 1}`);
-
-			await syncInteraction(() => postApi.savePost(postId, isActive));
-		});
-	});
-
-	commentLikeButtons.forEach((button, index) => {
-		button.addEventListener("click", async () => {
-			const isActive = toggleActionIcon(button, "bx-heart", "bxs-heart");
-			const commentId = toSafeId(button.dataset.commentId, `comment-${index + 1}`);
-
-			await syncInteraction(() => postApi.likeComment(commentId, isActive));
-		});
-	});
-
-	if (reportPostModal && reportPostForm) {
-		document.addEventListener("click", (event) => {
+		// Report post (backward-compatible với nút data-action="report-post")
+		if (reportPostModal && reportPostForm) {
 			const reportButton = event.target.closest('[data-action="report-post"]');
-			if (!reportButton) {
+			if (reportButton) {
+				event.preventDefault();
+				const postId = toSafeId(reportButton.dataset.postId, "");
+				openReportModal(reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId);
 				return;
 			}
+		}
+	});
 
-			event.preventDefault();
-			const postId = toSafeId(reportButton.dataset.postId, "");
-			openReportModal(postId);
-		});
+	// ------------------------------------------------------------------
+	// Report modal: đóng / submit (giữ nguyên)
+	// ------------------------------------------------------------------
+	if (reportPostModal && reportPostForm) {
+		const doClose = () =>
+			closeReportModal(reportPostModal, reportPostFeedback, stateRef);
 
-		reportPostCloseButton?.addEventListener("click", closeReportModal);
-		reportPostCancelButton?.addEventListener("click", closeReportModal);
+		reportPostCloseButton?.addEventListener("click", doClose);
+		reportPostCancelButton?.addEventListener("click", doClose);
 
 		reportPostModal.addEventListener("click", (event) => {
-			if (event.target === reportPostModal) {
-				closeReportModal();
-			}
+			if (event.target === reportPostModal) doClose();
 		});
 
 		reportPostForm.addEventListener("submit", async (event) => {
@@ -156,31 +228,28 @@ export const initPostInteractions = () => {
 			const reasonInput = reportPostForm.querySelector('input[name="report-reason"]:checked');
 			const reasonCode = toSafeId(reasonInput?.value, "");
 
-			if (activeReportPostId.length === 0) {
-				setReportFeedback("Không xác định được bài đăng cần báo cáo.");
+			if (stateRef.activeReportPostId.length === 0) {
+				setReportFeedback(reportPostFeedback, "Không xác định được bài đăng cần báo cáo.");
 				return;
 			}
 
 			if (reasonCode.length === 0) {
-				setReportFeedback("Vui lòng chọn lý do báo cáo.");
+				setReportFeedback(reportPostFeedback, "Vui lòng chọn lý do báo cáo.");
 				return;
 			}
 
-			reportPostSubmitButton && (reportPostSubmitButton.disabled = true);
-			clearReportFeedback();
+			if (reportPostSubmitButton) reportPostSubmitButton.disabled = true;
+			clearReportFeedback(reportPostFeedback);
 
 			try {
-				await postApi.reportPost(activeReportPostId, reasonCode);
-				setReportFeedback("Đã gửi báo cáo thành công.", "success");
-
-				window.setTimeout(() => {
-					closeReportModal();
-				}, 500);
+				await postApi.reportPost(stateRef.activeReportPostId, reasonCode);
+				setReportFeedback(reportPostFeedback, "Đã gửi báo cáo thành công.", "success");
+				window.setTimeout(() => doClose(), 500);
 			} catch (error) {
-				console.error("Report post error:", error);
-				setReportFeedback("Không thể gửi báo cáo. Vui lòng thử lại.");
+				console.error("[post-interactions] reportPost error:", error);
+				setReportFeedback(reportPostFeedback, "Không thể gửi báo cáo. Vui lòng thử lại.");
 			} finally {
-				reportPostSubmitButton && (reportPostSubmitButton.disabled = false);
+				if (reportPostSubmitButton) reportPostSubmitButton.disabled = false;
 			}
 		});
 	}
