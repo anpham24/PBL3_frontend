@@ -238,3 +238,78 @@
 		gap: 3px;
 	}
 }
+
+/* ---------------------------------------------------------------------------
+   Skeleton loading state — applied while getMyProfile() is pending
+   --------------------------------------------------------------------------- */
+
+@keyframes skeleton-shimmer {
+	0%   { background-position: -400px 0; }
+	100% { background-position:  400px 0; }
+}
+
+.is-skeleton {
+	color: transparent !important;
+	background: linear-gradient(
+		90deg,
+		#e5e7eb 25%,
+		#f3f4f6 50%,
+		#e5e7eb 75%
+	) !important;
+	background-size: 800px 100% !important;
+	animation: skeleton-shimmer 1.4s ease-in-out infinite;
+	border-radius: 6px;
+	pointer-events: none;
+	user-select: none;
+}
+
+/* Giữ nguyên hình tròn cho avatar khi skeleton */
+#profile-avatar.is-skeleton {
+	border-radius: 50%;
+}
+
+/* Ẩn text con bên trong các phần tử skeleton */
+.is-skeleton * {
+	visibility: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Error state — hiển thị khi không tìm thấy người dùng (HTTP 404)
+   --------------------------------------------------------------------------- */
+
+.error-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 65vh;
+	gap: 12px;
+	text-align: center;
+	padding: 40px 24px;
+	animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(10px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+.error-state__icon {
+	font-size: 4rem;
+	color: #d1d5db;
+	line-height: 1;
+	margin-bottom: 4px;
+}
+
+.error-state__icon i {
+	display: block;
+}
+
+.error-state__title {
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: #1f2937;
+	margin: 0;
+	letter-spacing: -0.01em;
+}
+

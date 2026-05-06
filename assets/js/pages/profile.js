@@ -69,11 +69,96 @@ const getTargetUserIdFromQuery = () => {
 	return safeText(query.get("id"));
 };
 
+// ---------------------------------------------------------------------------
+// Loading skeleton helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Danh sách các phần tử hồ sơ cần hiển thị trạng thái skeleton
+ * trong khi chờ API phản hồi.
+ */
+const SKELETON_SELECTORS = [
+	"#profile-avatar",
+	"#profile-nickname",
+	"#profile-bio",
+	"#profile-posts-count",
+	"#profile-followers-count",
+	"#profile-following-count",
+];
+
+const showSkeleton = () => {
+	SKELETON_SELECTORS.forEach((selector) => {
+		const el = document.querySelector(selector);
+		if (el) {
+			el.classList.add("is-skeleton");
+		}
+	});
+};
+
+const hideSkeleton = () => {
+	SKELETON_SELECTORS.forEach((selector) => {
+		const el = document.querySelector(selector);
+		if (el) {
+			el.classList.remove("is-skeleton");
+		}
+	});
+};
+
+// ---------------------------------------------------------------------------
+// Redirect helpers
+// ---------------------------------------------------------------------------
+
+const resolveLoginPath = () => {
+	const currentPath = window.location.pathname.toLowerCase();
+	return currentPath.includes("/pages/") ? "login.html" : "./pages/login.html";
+};
+
+const redirectToLogin = () => {
+	window.location.href = resolveLoginPath();
+};
+
+// ---------------------------------------------------------------------------
+// Error state helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Ẩn toàn bộ nội dung hồ sơ và render khối lỗi ở giữa màn hình.
+ * @param {string} message - Thông điệp lỗi hiển thị cho người dùng.
+ */
+const showErrorState = (message) => {
+	// Ẩn toàn bộ container chứa thông tin hồ sơ + danh sách bài viết
+	const profilePage = document.querySelector(".profile-page");
+	if (profilePage) {
+		profilePage.style.display = "none";
+	}
+
+	// Tạo khối error-state và chèn vào .main-inner
+	const container = document.querySelector(".main-inner");
+	const errorDiv = document.createElement("div");
+	errorDiv.className = "error-state";
+	errorDiv.innerHTML = `
+		<span class="error-state__icon" aria-hidden="true">
+			<i class="bx bx-user-x"></i>
+		</span>
+		<p class="error-state__title">Không tìm thấy người dùng</p>
+	`;
+
+	if (container) {
+		container.appendChild(errorDiv);
+	} else {
+		document.body.appendChild(errorDiv);
+	}
+};
+
+// ---------------------------------------------------------------------------
+// Render helpers
+// ---------------------------------------------------------------------------
+
 const renderProfile = (response) => {
 	const user = response?.data?.user;
 
 	if (!user) {
-		throw new Error("Khong tim thay thong tin nguoi dung.");
+		throw new Error("Không tìm thấy thông tin người dùng.");
 	}
 
 	const avatarElement = document.getElementById("profile-avatar");
@@ -85,9 +170,9 @@ const renderProfile = (response) => {
 	const followButton = document.getElementById("profile-follow-button");
 	const linkElement = document.getElementById("profile-link");
 
-	const nickname = safeText(user.nickname, "Nguoi dung");
+	const nickname = safeText(user.nickname, "Người dùng");
 	const avatar = safeText(user.avatar, DEFAULT_AVATAR_URL);
-	const bio = safeText(user.bio, "Chua cap nhat bio.");
+	const bio = safeText(user.bio, "Chưa cập nhật bio.");
 	const website = safeText(user.website || user.link);
 
 	if (avatarElement) {
@@ -142,12 +227,32 @@ const renderProfile = (response) => {
 	}
 };
 
+// ---------------------------------------------------------------------------
+// Core data-loading function
+// ---------------------------------------------------------------------------
+
+/**
+ * Gọi API GET /api/users/me/profile và cập nhật DOM.
+ *
+ * Flow:
+ * 1. Hiển thị skeleton loading trên các phần tử hồ sơ.
+ * 2. Gọi userApi.getMyProfile() (hoặc getProfileById nếu có ?id=...).
+ * 3. Nếu thành công → renderProfile() cập nhật toàn bộ DOM.
+ * 4. Nếu HTTP 401 → token hết hạn, redirect về trang đăng nhập (xử lý bởi apiClient).
+ * 5. Nếu HTTP 404 → hiển thị inline "Lỗi: Không tìm thấy người dùng.".
+ * 6. Lỗi mạng / server → hiển thị thông báo lỗi inline qua #profile-feedback.
+ * 7. Luôn ẩn skeleton trong khối finally.
+ */
 const loadProfileData = async () => {
 	const feedbackElement = document.getElementById("profile-feedback");
 	clearFeedback(feedbackElement);
+	showSkeleton();
 
 	try {
 		const targetUserId = getTargetUserIdFromQuery();
+
+		// Không có ?id → xem hồ sơ của chính mình (GET /api/users/me/profile)
+		// Có ?id=xxx   → xem hồ sơ người khác
 		const response =
 			targetUserId.length > 0
 				? await userApi.getProfileById(targetUserId)
@@ -155,9 +260,35 @@ const loadProfileData = async () => {
 
 		renderProfile(response);
 	} catch (error) {
-		setFeedback(feedbackElement, toMessage(error, "Khong the tai thong tin ho so."), "error");
+		const httpStatus = Number(error?.status);
+
+		if (httpStatus === 401) {
+			// Token hết hạn hoặc không hợp lệ → chuyển về trang đăng nhập
+			redirectToLogin();
+			return;
+		}
+
+		if (httpStatus === 404) {
+			// Không tìm thấy người dùng → ẩn khung profile, hiển thị error-state ở giữa màn hình
+			showErrorState("Lỗi: Không tìm thấy người dùng.");
+			return;
+		}
+
+		// Lỗi mạng hoặc lỗi server → hiển thị inline
+		setFeedback(
+			feedbackElement,
+			toMessage(error, "Không thể tải thông tin hồ sơ."),
+			"error"
+		);
+	} finally {
+		// Luôn ẩn skeleton dù thành công hay thất bại
+		hideSkeleton();
 	}
 };
+
+// ---------------------------------------------------------------------------
+// Page initializer — chạy sau khi DOM sẵn sàng
+// ---------------------------------------------------------------------------
 
 const initProfilePage = () => {
 	initCreatePostModal();

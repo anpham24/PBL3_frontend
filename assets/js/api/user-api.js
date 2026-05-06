@@ -126,7 +126,13 @@ export const userApi = {
 		return apiClient.get(`/api/users/profile?${query.toString()}`);
 	},
 
+	/**
+	 * Lấy hồ sơ cá nhân của người dùng đang đăng nhập.
+	 * GET /api/users/me/profile
+	 * Yêu cầu Authorization header (được inject tự động bởi apiClient).
+	 * @returns {Promise<{code: number, data: {user: object}}>}
+	 */
 	async getMyProfile() {
-		return apiClient.get("/api/users/profile/me");
-	}
+		return apiClient.get("/api/users/me/profile");
+	},
 };
