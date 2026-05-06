@@ -14,26 +14,32 @@ const initAddressAutocomplete = () => {
 	const translateAddressToVietnamese = (displayName) => {
 		if (!displayName) return "";
 
-		// 1. Tách địa chỉ thành từng phần nhỏ qua dấu phẩy
+		// Tách địa chỉ thành từng phần nhỏ qua dấu phẩy
 		let parts = displayName.split(',').map(p => p.trim());
 		let resultParts = [];
 
-		// 2. Danh sách 63 tỉnh/thành phố chuẩn để tự động nhận dạng
-		const twCities = ["Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ"];
+		// Danh sách 34 Tỉnh/Thành phố theo kịch bản sáp nhập mới nhất
+		const twCities = [
+			"Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Huế"
+		];
 		const provinces = [
-			"An Giang", "Bà Rịa - Vũng Tàu", "Bắc Giang", "Bắc Kạn", "Bạc Liêu", "Bắc Ninh", "Bến Tre", "Bình Định", "Bình Dương", "Bình Phước", "Bình Thuận", "Cà Mau", "Cao Bằng", "Đắk Lắk", "Đắk Nông", "Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Giang", "Hà Nam", "Hà Tĩnh", "Hải Dương", "Hậu Giang", "Hòa Bình", "Hưng Yên", "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu", "Lâm Đồng", "Lạng Sơn", "Lào Cai", "Long An", "Nam Định", "Nghệ An", "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên", "Quảng Bình", "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sóc Trăng", "Sơn La", "Tây Ninh", "Thái Bình", "Thái Nguyên", "Thanh Hóa", "Thừa Thiên Huế", "Tiền Giang", "Trà Vinh", "Tuyên Quang", "Vĩnh Long", "Vĩnh Phúc", "Yên Bái"
+			"An Giang", "Bắc Ninh", "Cà Mau", "Cao Bằng", "Đắk Lắk", 
+			"Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Tĩnh", 
+			"Hưng Yên", "Khánh Hòa", "Lai Châu", "Lâm Đồng", "Lạng Sơn", 
+			"Lào Cai", "Nghệ An", "Ninh Bình", "Phú Thọ", "Quảng Ngãi", 
+			"Quảng Ninh", "Quảng Trị", "Sơn La", "Tây Ninh", "Thái Nguyên", 
+			"Thanh Hóa", "Tuyên Quang", "Vĩnh Long"
 		];
 
 		for (let part of parts) {
-			// Loại bỏ mã bưu điện (chỉ chứa số, 4-6 ký tự)
+			// Loại bỏ mã bưu điện
 			if (/^\d{4,6}$/.test(part)) continue;
-
 			// Loại bỏ chữ Vietnam/Việt Nam để tránh lặp
 			if (/vi[êe]t\s*nam/i.test(part)) continue;
 
 			let text = part;
 
-			// 3. Sửa các lỗi dịch bậy cố hữu của bản đồ
+			// Sửa các lỗi dịch bậy cố hữu của bản đồ
 			text = text.replace(/Hồ Chí Thành phố Minh/i, 'Hồ Chí Minh');
 			text = text.replace(/Ho Chi Minh/i, 'Hồ Chí Minh');
 			text = text.replace(/Ha Noi/i, 'Hà Nội');
@@ -41,7 +47,7 @@ const initAddressAutocomplete = () => {
 			text = text.replace(/Da Nang/i, 'Đà Nẵng');
 			text = text.replace(/Can Tho/i, 'Cần Thơ');
 
-			// 4. Dịch các hậu tố tiếng Anh (Đưa Unit lên trước Name)
+			// Dịch các hậu tố tiếng Anh (Đưa Unit lên trước Name)
 			text = text.replace(/^(.*?)\s+City$/i, 'Thành phố $1');
 			text = text.replace(/^(.*?)\s+Province$/i, 'Tỉnh $1');
 			text = text.replace(/^(.*?)\s+District$/i, 'Huyện $1');
@@ -50,31 +56,27 @@ const initAddressAutocomplete = () => {
 			text = text.replace(/^(.*?)\s+Town$/i, 'Thị trấn $1');
 			text = text.replace(/^(.*?)\s+(Street|Road|Alley)$/i, 'Đường $1');
 
-			// 5. Cải thiện logic tiếng Việt (vd: Huyện Quận -> Quận, Huyện 1 -> Quận 1)
+			// Cải thiện logic tiếng Việt
 			text = text.replace(/^Huyện\s+Quận\s+/i, 'Quận ');
 			text = text.replace(/^Huyện\s+(\d+.*)$/i, 'Quận $1');
 			text = text.replace(/^Xã\s+Phường\s+/i, 'Phường ');
 
-			// 6. Tự động gắn thêm Tỉnh/Thành phố nếu API chỉ nhả về tên trần
+			// Tự động gắn thêm Tỉnh/Thành phố
 			if (twCities.includes(text)) {
 				text = "Thành phố " + text;
 			} else if (provinces.includes(text)) {
 				text = "Tỉnh " + text;
 			}
 
-			// Viết hoa chữ cái đầu tiên cho đẹp
 			text = text.charAt(0).toUpperCase() + text.slice(1);
-
 			if (text) resultParts.push(text);
 		}
 
-		// Gộp các phần lại và lọc bỏ những thành phần trùng lặp
 		return [...new Set(resultParts)].join(', ');
 	};
 
 	const parseAddressQuery = (query) => {
 		const cleaned = query.replace(/\s+/g, ' ').trim();
-
 		let streetNumber = '';
 		let streetName = cleaned;
 
@@ -83,7 +85,6 @@ const initAddressAutocomplete = () => {
 			streetNumber = numberMatch[1];
 			streetName = cleaned.substring(numberMatch[0].length).trim();
 		}
-
 		return { streetNumber, streetName, full: cleaned };
 	};
 
@@ -96,33 +97,63 @@ const initAddressAutocomplete = () => {
 
 		const parsed = parseAddressQuery(query);
 		const results = [];
+		const MAX_RESULTS = 8; // Cho phép hiển thị lên tới 8 kết quả
+
+		const fetchNominatim = async (searchQuery) => {
+			try {
+				const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(searchQuery)}&format=json&addressdetails=1&countrycodes=vn&limit=${MAX_RESULTS}`;
+				const res = await fetch(url, { signal });
+				return await res.json();
+			} catch (e) {
+				return [];
+			}
+		};
 
 		try {
-			const url1 = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(parsed.full)},+Việt+Nam&format=json&addressdetails=1&countrycodes=vn&limit=5`;
-			const res1 = await fetch(url1, { signal });
-			const data1 = await res1.json();
-			if (data1.length > 0) results.push(...data1);
+			// TRƯỜNG HỢP 1: Tìm chính xác (Kèm Việt Nam)
+			let data = await fetchNominatim(`${parsed.full}, Việt Nam`);
+			if (data.length > 0) results.push(...data);
 
-			if (results.length === 0 && parsed.streetName && parsed.streetName !== parsed.full) {
-				const url2 = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(parsed.streetName)},+Việt+Nam&format=json&addressdetails=1&countrycodes=vn&limit=5`;
-				const res2 = await fetch(url2, { signal });
-				const data2 = await res2.json();
-				if (data2.length > 0) results.push(...data2);
+			// TRƯỜNG HỢP 2: Tìm chính xác (Bỏ Việt Nam)
+			if (results.length === 0) {
+				data = await fetchNominatim(`${parsed.full}`);
+				if (data.length > 0) results.push(...data);
 			}
 
-			if (results.length === 0 && parsed.streetName.includes(' ')) {
-				const broadSearch = parsed.streetName.split(' ').slice(0, 2).join(' ');
-				if (broadSearch !== parsed.streetName) {
-					const url3 = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(broadSearch)},+Việt+Nam&format=json&addressdetails=1&countrycodes=vn&limit=5`;
-					try {
-						const res3 = await fetch(url3, { signal });
-						const data3 = await res3.json();
-						if (data3.length > 0) results.push(...data3);
-					} catch (e) {
-					}
+			// TRƯỜNG HỢP 3: Chỉ tìm tên đường (Bỏ số nhà)
+			if (results.length === 0 && parsed.streetName && parsed.streetName !== parsed.full) {
+				data = await fetchNominatim(`${parsed.streetName}, Việt Nam`);
+				if (data.length > 0) results.push(...data);
+			}
+
+			// TRƯỜNG HỢP 4: Bỏ các tiền tố đường phố chuẩn
+			if (results.length === 0 && parsed.streetName) {
+				const cleanPrefix = parsed.streetName.replace(/^(Đường|Phố|Ngõ|Hẻm|Kiệt|Đại lộ)\s+/i, '').trim();
+				if (cleanPrefix !== parsed.streetName) {
+					data = await fetchNominatim(`${cleanPrefix}, Việt Nam`);
+					if (data.length > 0) results.push(...data);
 				}
 			}
 
+			// TRƯỜNG HỢP 5: Nếu có dấu phẩy, tìm khu vực phía sau dấu phẩy (Quận/Huyện/Tỉnh)
+			if (results.length === 0 && parsed.full.includes(',')) {
+				const afterComma = parsed.full.substring(parsed.full.indexOf(',') + 1).trim();
+				if (afterComma.length > 2) {
+					data = await fetchNominatim(`${afterComma}, Việt Nam`);
+					if (data.length > 0) results.push(...data);
+				}
+			}
+
+			// TRƯỜNG HỢP 6: Dùng 2 từ đầu tiên của tên đường để quét rộng
+			if (results.length === 0 && parsed.streetName.includes(' ')) {
+				const broadSearch = parsed.streetName.split(' ').slice(0, 2).join(' ');
+				if (broadSearch !== parsed.streetName) {
+					data = await fetchNominatim(`${broadSearch}, Việt Nam`);
+					if (data.length > 0) results.push(...data);
+				}
+			}
+
+			// Lọc trùng lặp bằng Set
 			const seen = new Set();
 			const uniqueResults = results.filter(place => {
 				const key = place.display_name;
@@ -131,11 +162,9 @@ const initAddressAutocomplete = () => {
 				return true;
 			});
 
-			return uniqueResults.slice(0, 5);
+			return uniqueResults.slice(0, MAX_RESULTS);
 		} catch (error) {
-			if (error.name === 'AbortError') {
-				return [];
-			}
+			if (error.name === 'AbortError') return [];
 			console.error("Lỗi khi tìm địa chỉ:", error);
 			return [];
 		}
@@ -143,7 +172,6 @@ const initAddressAutocomplete = () => {
 
 	const highlightMatch = (text, query) => {
 		if (!query || query.length < 2) return text;
-
 		try {
 			const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 			const regex = new RegExp(`(${escapedQuery})`, 'gi');
@@ -202,7 +230,6 @@ const initAddressAutocomplete = () => {
 
 	addressInput.addEventListener("input", (e) => {
 		const query = e.target.value.trim();
-
 		clearTimeout(debounceTimer);
 
 		if (query.length < 2) {
