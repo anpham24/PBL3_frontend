@@ -88,5 +88,27 @@ export const postApi = {
 
 			return apiClient.post(`/api/reports/posts/${encodeURIComponent(resolvedPostId)}`, payload);
 		}
+	},
+
+	/**
+	 * Lấy danh sách bài viết của người dùng đang đăng nhập (cursor-based pagination).
+	 * GET /api/users/me/posts?last_id={lastId}
+	 * @param {string|null} lastId - ID bài cuối đã tải. Null = lần đầu tiên.
+	 * @returns {Promise<{data: {postList: object[], respLastPostId: string, hasMore: boolean}}>}
+	 */
+	async getMyPosts(lastId = null) {
+		const params = new URLSearchParams();
+
+		const resolvedLastId = toSafeId(lastId, "");
+		if (resolvedLastId.length > 0) {
+			params.set("last_id", resolvedLastId);
+		}
+
+		const queryString = params.toString();
+		const endpoint = queryString.length > 0
+			? `/api/users/me/posts?${queryString}`
+			: "/api/users/me/posts";
+
+		return apiClient.get(endpoint);
 	}
 };

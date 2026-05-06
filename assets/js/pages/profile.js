@@ -1,6 +1,7 @@
 "use strict";
 
 import { userApi } from "../api/user-api.js";
+import { postApi } from "../api/post-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
@@ -287,6 +288,184 @@ const loadProfileData = async () => {
 };
 
 // ---------------------------------------------------------------------------
+// Post grid — state & rendering
+// ---------------------------------------------------------------------------
+
+/** Cursor-based pagination state cho danh sách bài viết */
+let currentLastId = null;
+let isLoadingPosts = false;
+let hasMorePosts = true;
+
+/** IntersectionObserver theo dõi sentinel element ở cuối lưới ảnh */
+let postsObserver = null;
+
+/**
+ * Tạo phần tử <a class="grid-item"> từ dữ liệu một bài viết.
+ * - Nếu media đầu tiên là IMAGE → dùng mediaUrl.
+ * - Nếu media đầu tiên là VIDEO → dùng thumbnailUrl + icon Play.
+ * @param {object} post - Dữ liệu bài viết từ API.
+ * @returns {HTMLElement}
+ */
+const createGridItem = (post) => {
+	const firstMedia = Array.isArray(post.mediaList) ? post.mediaList[0] : null;
+
+	const item = document.createElement("a");
+	item.className = "grid-item";
+	item.href = "#";
+	item.setAttribute("aria-label", `Bài đăng của ${post.authorName || ""}`);
+	item.dataset.postId = post.id ?? "";
+
+	if (firstMedia) {
+		const isVideo = firstMedia.mediaType === "VIDEO";
+		const imgSrc = isVideo
+			? (firstMedia.thumbnailUrl || "")
+			: (firstMedia.mediaUrl || "");
+
+		const img = document.createElement("img");
+		img.src = imgSrc;
+		img.alt = "";
+		img.loading = "lazy";
+		item.appendChild(img);
+
+		if (isVideo) {
+			item.classList.add("grid-item--video");
+			const playIcon = document.createElement("span");
+			playIcon.className = "grid-item__play-icon";
+			playIcon.setAttribute("aria-hidden", "true");
+			playIcon.innerHTML = `<i class="bx bx-play-circle"></i>`;
+			item.appendChild(playIcon);
+		}
+	} else {
+		// Bài viết không có media → hiển thị placeholder
+		const placeholder = document.createElement("div");
+		placeholder.className = "grid-item__placeholder";
+		placeholder.innerHTML = `<i class="bx bx-image-alt"></i>`;
+		item.appendChild(placeholder);
+	}
+
+	return item;
+};
+
+/**
+ * Render thêm các bài viết mới vào lưới ảnh.
+ * @param {object[]} posts - Mảng bài viết từ API.
+ */
+const renderPostGrid = (posts) => {
+	const grid = document.querySelector(".profile-grid");
+	if (!grid) {
+		return;
+	}
+
+	const sentinel = document.getElementById("posts-sentinel");
+
+	posts.forEach((post) => {
+		const item = createGridItem(post);
+		// Chèn trước sentinel (nếu đã có), để sentinel luôn ở cuối
+		if (sentinel) {
+			grid.insertBefore(item, sentinel);
+		} else {
+			grid.appendChild(item);
+		}
+	});
+};
+
+/**
+ * Render dòng "Đã tải hết bài đăng" và gỡ observer.
+ */
+const showEndOfFeedMessage = () => {
+	const grid = document.querySelector(".profile-grid");
+	if (!grid) {
+		return;
+	}
+
+	// Xóa sentinel khỏi DOM
+	const sentinel = document.getElementById("posts-sentinel");
+	if (sentinel) {
+		sentinel.remove();
+	}
+
+	// Dừng observer
+	if (postsObserver) {
+		postsObserver.disconnect();
+		postsObserver = null;
+	}
+
+	// Chỉ render thông báo nếu chưa có
+	if (!document.getElementById("posts-end-message")) {
+		const msg = document.createElement("p");
+		msg.id = "posts-end-message";
+		msg.className = "posts-end-message";
+		msg.textContent = "Bạn đã xem hết bài đăng.";
+		grid.after(msg);
+	}
+};
+
+/**
+ * GỌi API getMyPosts() và render kết quả vào lưới.
+ * An toàn khi gọi nhiều lần — guard bằng isLoadingPosts / hasMorePosts.
+ */
+const loadPosts = async () => {
+	if (isLoadingPosts || !hasMorePosts) {
+		return;
+	}
+
+	isLoadingPosts = true;
+
+	try {
+		const response = await postApi.getMyPosts(currentLastId);
+		const data = response?.data;
+		const posts = Array.isArray(data?.postList) ? data.postList : [];
+
+		if (posts.length > 0) {
+			renderPostGrid(posts);
+		}
+
+		currentLastId = data?.respLastPostId ?? currentLastId;
+		hasMorePosts = data?.hasMore === true;
+
+		if (!hasMorePosts) {
+			showEndOfFeedMessage();
+		}
+	} catch (error) {
+		// Lỗi khi tải bài — không block toàn trang, chỉ log
+		console.error("[profile] Lỗi khi tải danh sách bài viết:", error);
+	} finally {
+		isLoadingPosts = false;
+	}
+};
+
+/**
+ * Khởi tạo IntersectionObserver theo dõi sentinel element.
+ * Khi sentinel xuất hiện trong viewport, gọi loadPosts().
+ */
+const initPostsInfiniteScroll = () => {
+	const grid = document.querySelector(".profile-grid");
+	if (!grid) {
+		return;
+	}
+
+	// Xóa các grid-item cứ (mock HTML) trước khi API render
+	grid.innerHTML = "";
+
+	// Tạo sentinel element ở cuối lưới
+	const sentinel = document.createElement("div");
+	sentinel.id = "posts-sentinel";
+	sentinel.style.cssText = "height:1px;width:100%;grid-column:1/-1;";
+	grid.appendChild(sentinel);
+
+	postsObserver = new IntersectionObserver(
+		(entries) => {
+			if (entries[0].isIntersecting) {
+				loadPosts();
+			}
+		},
+		{ rootMargin: "200px" }  // Bắt đầu tải trước khi còn cách 200px
+	);
+
+	postsObserver.observe(sentinel);
+};
+
+// ---------------------------------------------------------------------------
 // Page initializer — chạy sau khi DOM sẵn sàng
 // ---------------------------------------------------------------------------
 
@@ -295,6 +474,7 @@ const initProfilePage = () => {
 	initCommentModal(".profile-grid .grid-item");
 	initPostInteractions();
 	loadProfileData();
+	initPostsInfiniteScroll();
 };
 
 document.addEventListener("DOMContentLoaded", initProfilePage);
