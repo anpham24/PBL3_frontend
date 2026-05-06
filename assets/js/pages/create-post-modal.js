@@ -14,7 +14,6 @@ const initAddressAutocomplete = () => {
 	const translateAddressToVietnamese = (displayName) => {
 		if (!displayName) return "";
 
-		// Tách địa chỉ thành từng phần nhỏ qua dấu phẩy
 		let parts = displayName.split(',').map(p => p.trim());
 		let resultParts = [];
 
@@ -23,11 +22,11 @@ const initAddressAutocomplete = () => {
 			"Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Huế"
 		];
 		const provinces = [
-			"An Giang", "Bắc Ninh", "Cà Mau", "Cao Bằng", "Đắk Lắk", 
-			"Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Tĩnh", 
-			"Hưng Yên", "Khánh Hòa", "Lai Châu", "Lâm Đồng", "Lạng Sơn", 
-			"Lào Cai", "Nghệ An", "Ninh Bình", "Phú Thọ", "Quảng Ngãi", 
-			"Quảng Ninh", "Quảng Trị", "Sơn La", "Tây Ninh", "Thái Nguyên", 
+			"An Giang", "Bắc Ninh", "Cà Mau", "Cao Bằng", "Đắk Lắk",
+			"Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Tĩnh",
+			"Hưng Yên", "Khánh Hòa", "Lai Châu", "Lâm Đồng", "Lạng Sơn",
+			"Lào Cai", "Nghệ An", "Ninh Bình", "Phú Thọ", "Quảng Ngãi",
+			"Quảng Ninh", "Quảng Trị", "Sơn La", "Tây Ninh", "Thái Nguyên",
 			"Thanh Hóa", "Tuyên Quang", "Vĩnh Long"
 		];
 
@@ -39,7 +38,6 @@ const initAddressAutocomplete = () => {
 
 			let text = part;
 
-			// Sửa các lỗi dịch bậy cố hữu của bản đồ
 			text = text.replace(/Hồ Chí Thành phố Minh/i, 'Hồ Chí Minh');
 			text = text.replace(/Ho Chi Minh/i, 'Hồ Chí Minh');
 			text = text.replace(/Ha Noi/i, 'Hà Nội');
@@ -47,7 +45,6 @@ const initAddressAutocomplete = () => {
 			text = text.replace(/Da Nang/i, 'Đà Nẵng');
 			text = text.replace(/Can Tho/i, 'Cần Thơ');
 
-			// Dịch các hậu tố tiếng Anh (Đưa Unit lên trước Name)
 			text = text.replace(/^(.*?)\s+City$/i, 'Thành phố $1');
 			text = text.replace(/^(.*?)\s+Province$/i, 'Tỉnh $1');
 			text = text.replace(/^(.*?)\s+District$/i, 'Huyện $1');
@@ -56,7 +53,6 @@ const initAddressAutocomplete = () => {
 			text = text.replace(/^(.*?)\s+Town$/i, 'Thị trấn $1');
 			text = text.replace(/^(.*?)\s+(Street|Road|Alley)$/i, 'Đường $1');
 
-			// Cải thiện logic tiếng Việt
 			text = text.replace(/^Huyện\s+Quận\s+/i, 'Quận ');
 			text = text.replace(/^Huyện\s+(\d+.*)$/i, 'Quận $1');
 			text = text.replace(/^Xã\s+Phường\s+/i, 'Phường ');
@@ -97,7 +93,7 @@ const initAddressAutocomplete = () => {
 
 		const parsed = parseAddressQuery(query);
 		const results = [];
-		const MAX_RESULTS = 8; // Cho phép hiển thị lên tới 8 kết quả
+		const MAX_RESULTS = 8;
 
 		const fetchNominatim = async (searchQuery) => {
 			try {
@@ -153,7 +149,6 @@ const initAddressAutocomplete = () => {
 				}
 			}
 
-			// Lọc trùng lặp bằng Set
 			const seen = new Set();
 			const uniqueResults = results.filter(place => {
 				const key = place.display_name;
@@ -287,12 +282,189 @@ const initAddressAutocomplete = () => {
 	});
 };
 
+const initCustomDropdowns = () => {
+	const provinces34 = [
+		"Hà Nội", "Hồ Chí Minh", "Đà Nẵng", "Hải Phòng", "Cần Thơ", "Huế",
+		"An Giang", "Bắc Ninh", "Cà Mau", "Cao Bằng", "Đắk Lắk",
+		"Điện Biên", "Đồng Nai", "Đồng Tháp", "Gia Lai", "Hà Tĩnh",
+		"Hưng Yên", "Khánh Hòa", "Lai Châu", "Lâm Đồng", "Lạng Sơn",
+		"Lào Cai", "Nghệ An", "Ninh Bình", "Phú Thọ", "Quảng Ngãi",
+		"Quảng Ninh", "Quảng Trị", "Sơn La", "Tây Ninh", "Thái Nguyên",
+		"Thanh Hóa", "Tuyên Quang", "Vĩnh Long"
+	].sort((a, b) => a.localeCompare(b, 'vi'));
+
+	const visibilityOptions = [
+		{ value: "PUBLIC", label: "Công khai", icon: "bx-globe" },
+		{ value: "FRIENDS", label: "Bạn bè", icon: "bx-group" },
+		{ value: "PRIVATE", label: "Chỉ mình tôi", icon: "bx-lock-alt" }
+	];
+
+	// 1. Chuyển đổi Dropdown Tỉnh/Thành
+	const oldProvSelect = document.getElementById("create-post-province");
+	const provLabel = oldProvSelect?.closest('.detail-chip');
+	let hiddenProvInput = oldProvSelect;
+
+	if (oldProvSelect && oldProvSelect.tagName === 'SELECT' && provLabel) {
+		hiddenProvInput = document.createElement("input");
+		hiddenProvInput.type = "hidden";
+		hiddenProvInput.id = "create-post-province";
+		oldProvSelect.replaceWith(hiddenProvInput);
+
+		provLabel.classList.add("custom-select-active");
+		provLabel.innerHTML = `
+			<i class="bx bx-map"></i>
+			<div class="custom-dropdown-trigger">
+				<span class="selected-text" id="prov-selected-text">Chọn tỉnh</span>
+				<i class="bx bx-chevron-down"></i>
+			</div>
+			<div class="custom-dropdown-menu is-hidden" id="prov-dropdown">
+				<div class="custom-dropdown-search" onclick="event.stopPropagation()">
+					<i class="bx bx-search"></i>
+					<input type="text" id="prov-search-input" placeholder="Gõ tìm nhanh...">
+				</div>
+				<ul class="custom-dropdown-list" id="prov-list"></ul>
+			</div>
+		`;
+		provLabel.appendChild(hiddenProvInput);
+
+		const dropdown = document.getElementById("prov-dropdown");
+		const searchInput = document.getElementById("prov-search-input");
+		const list = document.getElementById("prov-list");
+		const selectedText = document.getElementById("prov-selected-text");
+
+		const renderProvList = (filter = "") => {
+			list.innerHTML = "";
+			const filtered = provinces34.filter(p => p.toLowerCase().includes(filter.toLowerCase()));
+
+			if (filtered.length === 0) {
+				list.innerHTML = `<li class="no-result">Không tìm thấy</li>`;
+				return;
+			}
+
+			filtered.forEach(prov => {
+				const li = document.createElement("li");
+				li.textContent = prov;
+				if (hiddenProvInput.value === prov) li.classList.add("selected");
+
+				li.addEventListener("click", (e) => {
+					e.stopPropagation();
+					hiddenProvInput.value = prov;
+					selectedText.textContent = prov;
+					dropdown.classList.add("is-hidden");
+				});
+				list.appendChild(li);
+			});
+		};
+
+		renderProvList();
+
+		provLabel.addEventListener("click", (e) => {
+			e.preventDefault();
+			const isHidden = dropdown.classList.contains("is-hidden");
+			document.querySelectorAll(".custom-dropdown-menu").forEach(el => el.classList.add("is-hidden"));
+
+			if (isHidden) {
+				dropdown.classList.remove("is-hidden");
+				searchInput.value = "";
+				renderProvList();
+				setTimeout(() => searchInput.focus(), 50);
+			}
+		});
+
+		searchInput.addEventListener("input", (e) => {
+			renderProvList(e.target.value);
+		});
+	}
+
+	// 2. Chuyển đổi Dropdown Quyền Riêng Tư
+	const oldVisSelect = document.getElementById("create-post-visibility");
+	const visLabel = oldVisSelect?.closest('.detail-chip');
+	let hiddenVisInput = oldVisSelect;
+
+	if (oldVisSelect && oldVisSelect.tagName === 'SELECT' && visLabel) {
+		hiddenVisInput = document.createElement("input");
+		hiddenVisInput.type = "hidden";
+		hiddenVisInput.id = "create-post-visibility";
+		hiddenVisInput.value = "PUBLIC";
+		oldVisSelect.replaceWith(hiddenVisInput);
+
+		visLabel.classList.add("custom-select-active");
+		visLabel.innerHTML = `
+			<i class="bx bx-globe" id="vis-icon"></i>
+			<div class="custom-dropdown-trigger">
+				<span class="selected-text" id="vis-selected-text">Công khai</span>
+				<i class="bx bx-chevron-down"></i>
+			</div>
+			<div class="custom-dropdown-menu is-hidden" id="vis-dropdown">
+				<ul class="custom-dropdown-list" id="vis-list"></ul>
+			</div>
+		`;
+		visLabel.appendChild(hiddenVisInput);
+
+		const dropdown = document.getElementById("vis-dropdown");
+		const list = document.getElementById("vis-list");
+		const selectedText = document.getElementById("vis-selected-text");
+		const visIcon = document.getElementById("vis-icon");
+
+		const renderVisList = () => {
+			list.innerHTML = "";
+			visibilityOptions.forEach(opt => {
+				const li = document.createElement("li");
+				li.innerHTML = `<i class='bx ${opt.icon}'></i> <span>${opt.label}</span>`;
+				if (hiddenVisInput.value === opt.value) li.classList.add("selected");
+
+				li.addEventListener("click", (e) => {
+					e.stopPropagation();
+					hiddenVisInput.value = opt.value;
+					selectedText.textContent = opt.label;
+					visIcon.className = `bx ${opt.icon}`;
+					dropdown.classList.add("is-hidden");
+				});
+				list.appendChild(li);
+			});
+		};
+
+		renderVisList();
+
+		visLabel.addEventListener("click", (e) => {
+			e.preventDefault();
+			const isHidden = dropdown.classList.contains("is-hidden");
+			document.querySelectorAll(".custom-dropdown-menu").forEach(el => el.classList.add("is-hidden"));
+
+			if (isHidden) {
+				dropdown.classList.remove("is-hidden");
+				renderVisList();
+			}
+		});
+	}
+
+	document.addEventListener("click", (e) => {
+		if (!e.target.closest(".custom-select-active")) {
+			document.querySelectorAll(".custom-dropdown-menu").forEach(el => el.classList.add("is-hidden"));
+		}
+	});
+
+	return {
+		provinceInput: hiddenProvInput,
+		visibilityInput: hiddenVisInput
+	};
+};
+
 export const initCreatePostModal = (options = {}) => {
 	const { closeOnPublish = true } = options;
 
 	const createPostModal = document.getElementById("create-post-modal");
 	if (!createPostModal) {
 		return null;
+	}
+
+	let createPostProvinceInput = document.getElementById("create-post-province");
+	let createPostVisibilityInput = document.getElementById("create-post-visibility");
+
+	const customInputs = initCustomDropdowns();
+	if (customInputs) {
+		createPostProvinceInput = customInputs.provinceInput;
+		createPostVisibilityInput = customInputs.visibilityInput;
 	}
 
 	const step1Upload = document.getElementById("step-1-upload");
@@ -303,31 +475,27 @@ export const initCreatePostModal = (options = {}) => {
 	const publishPostBtn = document.getElementById("publish-post-btn");
 	const postCaptionInput = document.getElementById("post-caption-input");
 	const postDraftPreview = document.getElementById("post-draft-preview");
-	const createPostProvinceInput = document.getElementById("create-post-province");
-	const createPostVisibilityInput = document.getElementById("create-post-visibility");
 	const createPostAddressInput = document.getElementById("create-post-address");
 	const createPostFeedbackElement = document.getElementById("create-post-feedback");
 	const createPostLinks = toArray(document.querySelectorAll(".create-post-link"));
 
 	const resetCreateModalState = () => {
-		if (postFileInput) {
-			postFileInput.value = "";
-		}
-
-		if (postCaptionInput) {
-			postCaptionInput.value = "";
-		}
-
-		if (createPostAddressInput) {
-			createPostAddressInput.value = "";
-		}
+		if (postFileInput) postFileInput.value = "";
+		if (postCaptionInput) postCaptionInput.value = "";
+		if (createPostAddressInput) createPostAddressInput.value = "";
 
 		if (createPostProvinceInput) {
-			createPostProvinceInput.selectedIndex = 0;
+			createPostProvinceInput.value = "";
+			const provText = document.getElementById("prov-selected-text");
+			if (provText) provText.textContent = "Chọn tỉnh";
 		}
 
 		if (createPostVisibilityInput) {
-			createPostVisibilityInput.selectedIndex = 0;
+			createPostVisibilityInput.value = "PUBLIC";
+			const visText = document.getElementById("vis-selected-text");
+			const visIcon = document.getElementById("vis-icon");
+			if (visText) visText.textContent = "Công khai";
+			if (visIcon) visIcon.className = "bx bx-globe";
 		}
 
 		if (createPostFeedbackElement) {
@@ -335,17 +503,14 @@ export const initCreatePostModal = (options = {}) => {
 			createPostFeedbackElement.classList.add("is-hidden");
 			createPostFeedbackElement.style.color = "";
 		}
-
 		if (postDraftPreview) {
 			postDraftPreview.removeAttribute("src");
 			postDraftPreview.alt = "Ảnh bản nháp bài đăng";
 		}
-
 		const suggestionsBox = document.getElementById("address-suggestions");
 		if (suggestionsBox) {
 			suggestionsBox.classList.add("is-hidden");
 		}
-
 		step1Upload?.classList.remove("is-hidden");
 		step2Details?.classList.add("is-hidden");
 	};
@@ -377,16 +542,12 @@ export const initCreatePostModal = (options = {}) => {
 
 	postFileInput?.addEventListener("change", (event) => {
 		const selectedFile = event.target.files?.[0];
-		if (!selectedFile) {
-			return;
-		}
+		if (!selectedFile) return;
 
 		const reader = new FileReader();
 		reader.onload = (loadEvent) => {
 			const dataUrl = loadEvent.target?.result;
-			if (typeof dataUrl !== "string" || !postDraftPreview) {
-				return;
-			}
+			if (typeof dataUrl !== "string" || !postDraftPreview) return;
 
 			postDraftPreview.src = dataUrl;
 			postDraftPreview.alt = selectedFile.name || "Ảnh bản nháp bài đăng";
@@ -394,7 +555,6 @@ export const initCreatePostModal = (options = {}) => {
 			step1Upload?.classList.add("is-hidden");
 			step2Details?.classList.remove("is-hidden");
 		};
-
 		reader.readAsDataURL(selectedFile);
 	});
 

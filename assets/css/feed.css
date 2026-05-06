@@ -202,3 +202,128 @@
 .address-dropdown.is-hidden {
 	display: none !important;
 }
+
+/* Đoạn drop down cho tỉnh và chọn chế độ cách xem */
+.detail-chip.custom-select-active {
+	position: relative;
+	padding-right: 12px;
+	overflow: visible;
+	user-select: none;
+}
+
+.detail-chip.custom-select-active>i:first-child {
+	margin-right: 2px;
+}
+
+.custom-dropdown-trigger {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	pointer-events: none;
+	/* Nhường sự kiện click cho label cha */
+}
+
+.custom-dropdown-trigger i.bx-chevron-down {
+	font-size: 1.15rem;
+	color: #6b7280;
+}
+
+.custom-dropdown-menu {
+	position: absolute;
+	top: calc(100% + 10px);
+	left: 0;
+	min-width: 240px;
+	background: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 12px;
+	box-shadow: 0 12px 30px -5px rgba(0, 0, 0, 0.15);
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	overflow: hidden;
+	cursor: default;
+}
+
+.custom-dropdown-menu.is-hidden {
+	display: none !important;
+}
+
+.custom-dropdown-search {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 14px;
+	border-bottom: 1px solid #e5e7eb;
+	background: #f9fafb;
+}
+
+.custom-dropdown-search i {
+	color: #6b7280;
+	font-size: 1.15rem;
+}
+
+.custom-dropdown-search input {
+	border: none;
+	background: transparent;
+	outline: none;
+	width: 100%;
+	font-size: 0.92rem;
+	color: #111827;
+}
+
+.custom-dropdown-list {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	max-height: 260px;
+	overflow-y: auto;
+}
+
+.custom-dropdown-list::-webkit-scrollbar {
+	width: 6px;
+}
+
+.custom-dropdown-list::-webkit-scrollbar-thumb {
+	background-color: #cbd5e1;
+	border-radius: 4px;
+}
+
+.custom-dropdown-list li {
+	padding: 12px 16px;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-size: 0.92rem;
+	color: #374151;
+	cursor: pointer;
+	transition: background-color 0.2s;
+}
+
+.custom-dropdown-list li i {
+	font-size: 1.15rem;
+	color: #6b7280;
+}
+
+.custom-dropdown-list li:hover {
+	background-color: #f3f4f6;
+}
+
+.custom-dropdown-list li.selected {
+	background-color: #eff6ff;
+	color: #1d4ed8;
+	font-weight: 600;
+}
+
+.custom-dropdown-list li.selected i {
+	color: #1d4ed8;
+}
+
+.custom-dropdown-list li.no-result {
+	justify-content: center;
+	color: #9ca3af;
+	cursor: default;
+}
+
+.custom-dropdown-list li.no-result:hover {
+	background-color: transparent;
+}
