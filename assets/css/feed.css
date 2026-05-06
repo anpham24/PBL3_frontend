@@ -128,3 +128,77 @@
 		flex-wrap: wrap;
 	}
 }
+
+.address-autocomplete-wrap {
+	position: relative;
+	width: 100%;
+	border: 1px solid var(--border);
+	border-radius: 14px;
+	background: #ffffff;
+}
+
+.address-autocomplete-wrap input {
+	width: 100%;
+	border: none !important;
+	outline: none;
+	padding: 10px 12px;
+	font-size: 0.94rem;
+	background: transparent;
+	border-radius: 14px;
+}
+
+.address-dropdown {
+	position: absolute;
+	top: 100%;
+	left: 0;
+	width: 100%;
+	background-color: #ffffff;
+	border: 1px solid #e5e7eb;
+	border-radius: 8px;
+	box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+	max-height: 250px;
+	overflow-y: auto;
+	z-index: 10000;
+	list-style: none;
+	padding: 0;
+	margin: 4px 0 0 0;
+}
+
+/* Tùy chỉnh thanh cuộn cho đẹp */
+.address-dropdown::-webkit-scrollbar {
+	width: 6px;
+}
+
+.address-dropdown::-webkit-scrollbar-thumb {
+	background-color: #cbd5e1;
+	border-radius: 4px;
+}
+
+.address-dropdown li {
+	padding: 12px 16px;
+	cursor: pointer;
+	border-bottom: 1px solid #f3f4f6;
+	font-size: 14px;
+	color: #374151;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	transition: background-color 0.2s ease;
+}
+
+.address-dropdown li:last-child {
+	border-bottom: none;
+}
+
+.address-dropdown li i {
+	color: #6b7280;
+	font-size: 18px;
+}
+
+.address-dropdown li:hover {
+	background-color: #f3f4f6;
+}
+
+.address-dropdown.is-hidden {
+	display: none !important;
+}

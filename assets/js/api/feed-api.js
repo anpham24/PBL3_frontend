@@ -36,10 +36,13 @@ const buildFeedUrl = (lastId, provinceCode, topicCode) => {
 
 export const feedApi = {
 	async getDropdownData() {
-		return apiClient.get("/api/master-data", {
-			requiresAuth: false,
-			skipAuthRedirect: true
-		});
+		console.warn("API master-data đã bị xóa, dùng dữ liệu mặc định.");
+		return {
+			data: {
+				provinces: [],  // Có thể thêm tỉnh mẫu vào đây nếu cần
+				topics: []      // Có thể thêm chủ đề mẫu vào đây nếu cần
+			}
+		};
 	},
 
 	async getFeed(lastId, provinceCode, topicCode) {

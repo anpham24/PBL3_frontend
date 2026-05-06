@@ -1,5 +1,6 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,6 +12,7 @@
 	<link rel="stylesheet" href="../assets/css/global.css">
 	<link rel="stylesheet" href="../assets/css/feed.css">
 </head>
+
 <body>
 	<div class="app-shell">
 		<aside class="sidebar">
@@ -55,7 +57,8 @@
 					</div>
 
 					<button class="header-avatar" type="button" aria-label="Trang cá nhân">
-						<img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="User avatar">
+						<img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
+							alt="User avatar">
 					</button>
 				</div>
 			</header>
@@ -79,7 +82,8 @@
 					</div>
 
 					<div id="feed-post-list" class="post-list"></div>
-					<p id="feed-empty-state" class="placeholder-card empty is-hidden">Không có bài viết phù hợp với bộ lọc hiện tại.</p>
+					<p id="feed-empty-state" class="placeholder-card empty is-hidden">Không có bài viết phù hợp với bộ
+						lọc hiện tại.</p>
 					<p id="feed-status" class="feed-status is-hidden" role="status" aria-live="polite"></p>
 				</div>
 			</section>
@@ -103,12 +107,15 @@
 						<i class="bx bx-x"></i>
 					</button>
 					<h2 id="create-post-title">Tạo bài đăng</h2>
-					<button id="publish-post-btn" class="publish-btn" type="submit" form="create-post-form">Đăng</button>
+					<button id="publish-post-btn" class="publish-btn" type="submit"
+						form="create-post-form">Đăng</button>
 				</header>
 
 				<form id="create-post-form" class="create-modal-body" novalidate>
 					<div class="create-detail-top">
-						<img class="detail-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar người dùng">
+						<img class="detail-avatar"
+							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar người dùng">
 
 						<div class="detail-chips">
 							<label class="detail-chip detail-chip-select" for="create-post-province">
@@ -133,34 +140,42 @@
 						<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
 					</div>
 
-					<div class="post-caption-wrap">
-						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể (nếu có)">
+					<div class="address-autocomplete-wrap">
+						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể (nếu có)"
+							autocomplete="off">
+
+						<ul id="address-suggestions" class="address-dropdown is-hidden"></ul>
 					</div>
 
 					<div class="draft-preview">
 						<img id="post-draft-preview" alt="Ảnh bản nháp bài đăng">
 					</div>
 
-					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status" aria-live="polite"></p>
+					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
+						aria-live="polite"></p>
 				</form>
 			</div>
 		</div>
 	</div>
 
 	<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
-		<button id="close-comment-modal" class="comment-modal-close" type="button" aria-label="Đóng hộp thoại bình luận">
+		<button id="close-comment-modal" class="comment-modal-close" type="button"
+			aria-label="Đóng hộp thoại bình luận">
 			<i class="bx bx-x"></i>
 		</button>
 
 		<div class="comment-modal-dialog">
 			<div class="comment-media-pane">
-				<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=80" alt="Ảnh du lịch trong bài đăng">
+				<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=80"
+					alt="Ảnh du lịch trong bài đăng">
 			</div>
 
 			<div class="comment-panel">
 				<header class="comment-panel-header">
 					<div class="comment-header-user">
-						<img class="comment-header-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar duyen.travels">
+						<img class="comment-header-avatar"
+							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar duyen.travels">
 
 						<div class="comment-header-meta">
 							<strong>duyen.travels</strong>
@@ -176,10 +191,12 @@
 
 				<div class="comment-action-bar">
 					<div class="comment-action-right">
-						<button id="btn-like-comment-modal" class="comment-action-btn" type="button" aria-label="Thả tim bài đăng">
+						<button id="btn-like-comment-modal" class="comment-action-btn" type="button"
+							aria-label="Thả tim bài đăng">
 							<i class="bx bx-heart"></i>
 						</button>
-						<button id="btn-save-comment-modal" class="comment-action-btn" type="button" aria-label="Lưu bài đăng">
+						<button id="btn-save-comment-modal" class="comment-action-btn" type="button"
+							aria-label="Lưu bài đăng">
 							<i class="bx bx-bookmark"></i>
 						</button>
 					</div>
@@ -187,10 +204,13 @@
 
 				<div class="comment-list" aria-label="Danh sách bình luận">
 					<div class="comment-item">
-						<img class="comment-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60" alt="Avatar duyen.travels">
+						<img class="comment-avatar"
+							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar duyen.travels">
 
 						<div class="comment-content">
-							<p><strong>duyen.travels</strong>Sương sớm phủ kín dòng sông, chèo thuyền qua núi đá vôi thật sự rất chill.</p>
+							<p><strong>duyen.travels</strong>Sương sớm phủ kín dòng sông, chèo thuyền qua núi đá vôi
+								thật sự rất chill.</p>
 							<span class="comment-time">2 giờ trước</span>
 						</div>
 
@@ -200,7 +220,9 @@
 					</div>
 
 					<div class="comment-item">
-						<img class="comment-avatar" src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=96&q=60" alt="Avatar son.wander">
+						<img class="comment-avatar"
+							src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar son.wander">
 
 						<div class="comment-content">
 							<p><strong>son.wander</strong>Góc này đẹp quá, mình cũng muốn đi Tam Coc vào cuối tuần.</p>
@@ -213,7 +235,9 @@
 					</div>
 
 					<div class="comment-item">
-						<img class="comment-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=60" alt="Avatar annie.go">
+						<img class="comment-avatar"
+							src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=60"
+							alt="Avatar annie.go">
 
 						<div class="comment-content">
 							<p><strong>annie.go</strong>Cảnh đẹp quá! Nhìn yên bình thật sự.</p>
@@ -236,5 +260,5 @@
 
 	<script type="module" src="../assets/js/pages/feed.js"></script>
 </body>
-</html>
 
+</html>
