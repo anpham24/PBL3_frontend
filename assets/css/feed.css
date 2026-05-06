@@ -80,59 +80,10 @@
 	text-align: center;
 }
 
-.post-like-btn.is-liked i {
-	color: #ef4444;
-}
+/* .post-action-btn, .post-like-btn, .post-save-btn rules đã chuyển sang global.css
+   để dùng chung trên tất cả trang (feed, profile, ...). */
 
-.post-action-btn {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	background: transparent;
-	border: none;
-	padding: 6px 10px;
-	border-radius: 18px;
-	cursor: pointer;
-	color: #4b5563;
-	font-weight: 600;
-	font-size: 0.95rem;
-	transition: background-color 0.2s;
-}
 
-.post-action-btn:hover {
-	background: #f3f4f6;
-}
-
-.post-action-btn i {
-	font-size: 1.4rem;
-	color: #1f2937;
-}
-
-.post-action-btn.is-liked i {
-	color: #ef4444;
-}
-
-.post-save-btn.is-saved i {
-	color: #111827;
-}
-
-.post-location {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	font-size: 0.84rem;
-	color: #2563eb;
-	font-weight: 600;
-}
-
-.post-location i {
-	font-size: 1rem;
-}
-
-.post-like-btn:disabled {
-	opacity: 0.7;
-	cursor: wait;
-}
 
 /* Các rule #create-post-address, .create-post-feedback, .draft-preview-*,
    .publish-btn, .btn-spinner, .detail-chip-select đã có trong global.css. */

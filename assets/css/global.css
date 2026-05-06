@@ -662,6 +662,8 @@ img {
 .comment-media-pane {
 	background: #000000;
 	min-height: 560px;
+	max-height: 90vh;
+	overflow: hidden;
 }
 
 .comment-media-gallery {
@@ -698,6 +700,8 @@ img {
 	flex-direction: column;
 	background: #ffffff;
 	min-height: 0;
+	max-height: 90vh;
+	overflow: hidden;
 }
 
 .comment-panel-header {
@@ -784,6 +788,66 @@ img {
 .comment-action-btn:hover {
 	background: #f3f4f6;
 }
+
+/* ---------------------------------------------------------------------------
+   Post action buttons — dùng chung trên feed, profile, comment-modal
+   --------------------------------------------------------------------------- */
+
+.post-action-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: transparent;
+	border: none;
+	padding: 6px 10px;
+	border-radius: 18px;
+	cursor: pointer;
+	color: #4b5563;
+	font-weight: 600;
+	font-size: 0.95rem;
+	transition: background-color 0.2s;
+}
+
+.post-action-btn:hover {
+	background: #f3f4f6;
+}
+
+.post-action-btn i {
+	font-size: 1.4rem;
+	color: #1f2937;
+}
+
+.post-action-btn.is-liked i,
+.post-like-btn.is-liked i {
+	color: #ef4444;
+}
+
+.post-action-btn.active i {
+	color: #ef4444;
+}
+
+.post-save-btn.is-saved i {
+	color: #111827;
+}
+
+.post-like-btn:disabled {
+	opacity: 0.7;
+	cursor: wait;
+}
+
+.post-location {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.84rem;
+	color: #2563eb;
+	font-weight: 600;
+}
+
+.post-location i {
+	font-size: 1rem;
+}
+
 
 .comment-post-info {
 	padding: 12px 14px;

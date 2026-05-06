@@ -48,20 +48,38 @@ const formatCompactNumber = (num) => {
 
 const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
 
-const resolvePostMediaUrls = (post) => {
+/**
+ * Giải quyết danh sách media từ dữ liệu bài viết.
+ * Trả về mảng các object {url, isVideo, thumbnailUrl}.
+ * @param {object} post
+ * @returns {{url: string, isVideo: boolean, thumbnailUrl: string}[]}
+ */
+const resolvePostMediaItems = (post) => {
 	if (Array.isArray(post?.mediaList)) {
-		return post.mediaList.map(m => normalizeString(m?.mediaUrl)).filter(url => url.length > 0);
+		return post.mediaList.reduce((acc, m) => {
+			const url = normalizeString(m?.mediaUrl);
+			if (url.length === 0) return acc;
+
+			const isVideo = normalizeString(m?.mediaType).toUpperCase() === "VIDEO";
+			const thumbnailUrl = normalizeString(m?.thumbnailUrl);
+			acc.push({ url, isVideo, thumbnailUrl });
+			return acc;
+		}, []);
 	}
+
+	// Fallback: plain URL list (legacy)
 	let media = post?.media_url || post?.mediaUrl || post?.image_url || post?.imageUrl || post?.media_urls || post?.mediaUrls;
 	if (!media) return [];
-	if (Array.isArray(media)) return media.map(normalizeString).filter(url => url.length > 0);
-	if (typeof media === "string") {
-		if (media.includes(",")) return media.split(",").map(url => normalizeString(url)).filter(url => url.length > 0);
-		const url = normalizeString(media);
-		return url.length > 0 ? [url] : [];
-	}
-	return [];
+	const urls = Array.isArray(media)
+		? media.map(normalizeString).filter(u => u.length > 0)
+		: typeof media === "string"
+			? (media.includes(",") ? media.split(",").map(normalizeString).filter(u => u.length > 0) : [normalizeString(media)].filter(u => u.length > 0))
+			: [];
+
+	return urls.map(url => ({ url, isVideo: isVideoUrl(url), thumbnailUrl: "" }));
 };
+
+const resolvePostMediaUrls = (post) => resolvePostMediaItems(post).map(item => item.url);
 
 export const initCommentModal = () => {
 	const commentModal = document.getElementById("comment-modal");
@@ -111,12 +129,15 @@ export const initCommentModal = () => {
 		}
 
 		if (mediaGalleryEl) {
-			const mediaUrls = resolvePostMediaUrls(post);
-			mediaGalleryEl.innerHTML = mediaUrls.map(url => {
-				if (isVideoUrl(url)) {
-					return `<video src="${escapeHtml(url)}" controls preload="metadata"></video>`;
+			const mediaItems = resolvePostMediaItems(post);
+			mediaGalleryEl.innerHTML = mediaItems.map(item => {
+				if (item.isVideo) {
+					const posterAttr = item.thumbnailUrl.length > 0
+						? ` poster="${escapeHtml(item.thumbnailUrl)}"`
+						: "";
+					return `<video src="${escapeHtml(item.url)}" controls preload="metadata"${posterAttr}></video>`;
 				}
-				return `<img src="${escapeHtml(url)}" alt="Media của bài đăng">`;
+				return `<img src="${escapeHtml(item.url)}" alt="Media của bài đăng">`;
 			}).join("");
 		}
 

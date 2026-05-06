@@ -241,7 +241,7 @@
 					<p id="comment-modal-post-caption" class="comment-post-caption"></p>
 				</section>
 
-				<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sách bình luận">
+					<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sách bình luận">
 					<!-- Mock comments for UI preview, no like buttons -->
 					<div class="comment-item">
 						<img class="comment-avatar"
@@ -265,6 +265,22 @@
 						</div>
 					</div>
 				</div>
+
+				<div class="comment-action-bar">
+					<button id="btn-like-comment-modal" class="comment-action-btn post-action-btn post-like-btn"
+						type="button" aria-label="Thả tim bài đăng">
+						<i class="bx bx-heart"></i>
+						<span id="comment-modal-like-count" class="action-count" data-role="like-count"></span>
+					</button>
+				</div>
+
+				<footer class="comment-input-bar">
+					<textarea id="comment-input" rows="1" placeholder="Thêm bình luận..."></textarea>
+					<button class="comment-post-btn" type="button">Đăng</button>
+				</footer>
+			</div>
+		</div>
+	</div>
 
 	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/profile.js"></script>

@@ -296,6 +296,15 @@ let currentLastId = null;
 let isLoadingPosts = false;
 let hasMorePosts = true;
 
+/** Controller trả về từ initCommentModal() — dùng để mở modal */
+let commentModalController = null;
+
+/**
+ * Mảng các bài viết đã tải — duy trì in-memory để tra cứu khi click vào grid item.
+ * Tương tự feedState.posts trong feed.js.
+ */
+const cachedPosts = [];
+
 /** IntersectionObserver theo dõi sentinel element ở cuối lưới ảnh */
 let postsObserver = null;
 
@@ -348,6 +357,7 @@ const createGridItem = (post) => {
 
 /**
  * Render thêm các bài viết mới vào lưới ảnh.
+ * Đồng thời lưu bài vào cachedPosts[] để dùng khi mở modal.
  * @param {object[]} posts - Mảng bài viết từ API.
  */
 const renderPostGrid = (posts) => {
@@ -359,6 +369,8 @@ const renderPostGrid = (posts) => {
 	const sentinel = document.getElementById("posts-sentinel");
 
 	posts.forEach((post) => {
+		cachedPosts.push(post);
+
 		const item = createGridItem(post);
 		// Chèn trước sentinel (nếu đã có), để sentinel luôn ở cuối
 		if (sentinel) {
@@ -466,15 +478,53 @@ const initPostsInfiniteScroll = () => {
 };
 
 // ---------------------------------------------------------------------------
+// Grid click handler — mở Comment Modal khi click vào bài viết
+// ---------------------------------------------------------------------------
+
+/**
+ * Gắn Event Delegation lên .profile-grid.
+ * Khi người dùng click vào một grid-item, tìm bài viết tương ứng
+ * trong cachedPosts[] theo data-post-id, rồi mở comment modal.
+ */
+const initGridClickHandler = () => {
+	const grid = document.querySelector(".profile-grid");
+	if (!grid) {
+		return;
+	}
+
+	grid.addEventListener("click", (event) => {
+		event.preventDefault();
+
+		const gridItem = event.target.closest(".grid-item");
+		if (!gridItem) {
+			return;
+		}
+
+		const postId = safeText(gridItem.dataset.postId);
+		if (postId.length === 0) {
+			return;
+		}
+
+		const post = cachedPosts.find((p) => safeText(p?.id) === postId);
+		if (!post || !commentModalController) {
+			return;
+		}
+
+		commentModalController.open(post);
+	});
+};
+
+// ---------------------------------------------------------------------------
 // Page initializer — chạy sau khi DOM sẵn sàng
 // ---------------------------------------------------------------------------
 
 const initProfilePage = () => {
 	initCreatePostModal();
-	initCommentModal(".profile-grid .grid-item");
+	commentModalController = initCommentModal();
 	initPostInteractions();
 	loadProfileData();
 	initPostsInfiniteScroll();
+	initGridClickHandler();
 };
 
 document.addEventListener("DOMContentLoaded", initProfilePage);

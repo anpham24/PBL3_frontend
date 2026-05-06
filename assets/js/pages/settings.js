@@ -256,7 +256,7 @@ const attachChangePasswordHandler = () => {
 		setSubmittingState(submitButton, true, "Cập nhật mật khẩu", "Đang cập nhật...");
 
 		try {
-			const response = await userApi.changePassword({ oldPassword, newPassword });
+			const response = await userApi.changePassword(oldPassword, newPassword);
 
 			form.reset();
 			setFeedback(feedbackElement, safeText(response?.message) || "Đổi mật khẩu thành công.", "success");

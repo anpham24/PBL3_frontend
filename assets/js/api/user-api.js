@@ -23,9 +23,17 @@ const normalizeKeyword = (keyword) => {
 };
 
 export const userApi = {
-	async changePassword(payload) {
-		return apiClient.put("/api/users/change-password", payload);
+	/**
+	 * Đổi mật khẩu của người dùng đang đăng nhập.
+	 * PUT /api/users/me/password
+	 * @param {string} oldPassword - Mật khẩu hiện tại.
+	 * @param {string} newPassword - Mật khẩu mới muốn đặt.
+	 * @returns {Promise<{code: number, message: string}>}
+	 */
+	async changePassword(oldPassword, newPassword) {
+		return apiClient.put("/api/users/me/password", { oldPassword, newPassword });
 	},
+
 
 	async updateProfile(payload) {
 		if (payload instanceof FormData) {

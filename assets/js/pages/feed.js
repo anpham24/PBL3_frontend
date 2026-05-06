@@ -183,57 +183,73 @@ const timeAgo = (dateString) => {
 	return "Vừa xong";
 };
 
-const resolvePostMediaUrls = (post) => {
+/**
+ * Giải quyết danh sách media từ dữ liệu bài viết.
+ * Trả về mảng các object {url, isVideo, thumbnailUrl} để giữ đủ thông tin render.
+ * @param {object} post
+ * @returns {{url: string, isVideo: boolean, thumbnailUrl: string}[]}
+ */
+const resolvePostMediaItems = (post) => {
 	if (Array.isArray(post?.mediaList)) {
-		return post.mediaList.map(m => normalizeString(m?.mediaUrl)).filter(url => url.length > 0);
+		return post.mediaList.reduce((acc, m) => {
+			const url = normalizeString(m?.mediaUrl);
+			if (url.length === 0) return acc;
+
+			const isVideo = normalizeString(m?.mediaType).toUpperCase() === "VIDEO";
+			const thumbnailUrl = normalizeString(m?.thumbnailUrl);
+			acc.push({ url, isVideo, thumbnailUrl });
+			return acc;
+		}, []);
 	}
+
+	// Fallback: plain URL list (legacy)
 	let media = post?.media_url || post?.mediaUrl || post?.image_url || post?.imageUrl || post?.media_urls || post?.mediaUrls;
 	if (!media) return [];
-	if (Array.isArray(media)) {
-		return media.map(normalizeString).filter(url => url.length > 0);
-	}
-	if (typeof media === "string") {
-		if (media.includes(",")) {
-			return media.split(",").map(url => normalizeString(url)).filter(url => url.length > 0);
-		}
-		const url = normalizeString(media);
-		return url.length > 0 ? [url] : [];
-	}
-	return [];
+	const urls = Array.isArray(media)
+		? media.map(normalizeString).filter(u => u.length > 0)
+		: typeof media === "string"
+			? (media.includes(",") ? media.split(",").map(normalizeString).filter(u => u.length > 0) : [normalizeString(media)].filter(u => u.length > 0))
+			: [];
+
+	return urls.map(url => ({ url, isVideo: isVideoUrl(url), thumbnailUrl: "" }));
 };
 
+// Giữ alias để không phá vỡ code ngoài file này nếu có import
+const resolvePostMediaUrls = (post) => resolvePostMediaItems(post).map(item => item.url);
+
 const createMediaHtml = (post, authorName) => {
-	const mediaUrls = resolvePostMediaUrls(post);
-	if (mediaUrls.length === 0) {
+	const mediaItems = resolvePostMediaItems(post);
+	if (mediaItems.length === 0) {
 		return "";
 	}
 
-	if (mediaUrls.length === 1) {
-		const mediaUrl = mediaUrls[0];
-		if (isVideoUrl(mediaUrl)) {
+	const renderMediaItem = (item, altSuffix = "") => {
+		if (item.isVideo) {
+			const posterAttr = item.thumbnailUrl.length > 0
+				? ` poster="${escapeHtml(item.thumbnailUrl)}"`
+				: "";
+			return `<video src="${escapeHtml(item.url)}" controls preload="metadata"${posterAttr}></video>`;
+		}
+		return `<img src="${escapeHtml(item.url)}" alt="Bài viết của ${escapeHtml(authorName)}${altSuffix}">`;
+	};
+
+	if (mediaItems.length === 1) {
+		const item = mediaItems[0];
+		if (item.isVideo) {
 			return `
 				<div class="post-image">
-					<video src="${escapeHtml(mediaUrl)}" controls preload="metadata"></video>
+					${renderMediaItem(item)}
 				</div>
 			`;
 		}
-		return `<img class="post-image" src="${escapeHtml(mediaUrl)}" alt="Bài viết của ${escapeHtml(authorName)}">`;
+		return `<img class="post-image" src="${escapeHtml(item.url)}" alt="Bài viết của ${escapeHtml(authorName)}">`;
 	}
 
-	const carouselItems = mediaUrls.map((url, index) => {
-		if (isVideoUrl(url)) {
-			return `
-				<div class="carousel-item">
-					<video src="${escapeHtml(url)}" controls preload="metadata"></video>
-				</div>
-			`;
-		}
-		return `
-			<div class="carousel-item">
-				<img src="${escapeHtml(url)}" alt="Bài viết của ${escapeHtml(authorName)} - phần ${index + 1}">
-			</div>
-		`;
-	}).join("");
+	const carouselItems = mediaItems.map((item, index) => `
+		<div class="carousel-item">
+			${renderMediaItem(item, ` - phần ${index + 1}`)}
+		</div>
+	`).join("");
 
 	return `
 		<div class="post-media-carousel">
