@@ -1,5 +1,11 @@
 "use strict";
 
+import { postApi } from "../api/post-api.js";
+
+// ---------------------------------------------------------------------------
+// Utility helpers (module-scoped)
+// ---------------------------------------------------------------------------
+
 const normalizeString = (value) => {
 	if (typeof value !== "string") return "";
 	const trimmedValue = value.trim();
@@ -48,6 +54,10 @@ const formatCompactNumber = (num) => {
 
 const isVideoUrl = (url) => /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
 
+// ---------------------------------------------------------------------------
+// Media helpers
+// ---------------------------------------------------------------------------
+
 /**
  * Giải quyết danh sách media từ dữ liệu bài viết.
  * Trả về mảng các object {url, isVideo, thumbnailUrl}.
@@ -79,7 +89,96 @@ const resolvePostMediaItems = (post) => {
 	return urls.map(url => ({ url, isVideo: isVideoUrl(url), thumbnailUrl: "" }));
 };
 
+// Alias giữ backward-compat
 const resolvePostMediaUrls = (post) => resolvePostMediaItems(post).map(item => item.url);
+
+// ---------------------------------------------------------------------------
+// Comment state (module-scoped — reset mỗi khi mở bài viết mới)
+// ---------------------------------------------------------------------------
+
+/** ID bài viết đang hiển thị trong modal */
+let currentPostId = null;
+
+/** Cursor: ID bình luận cuối cùng đã tải, null = lần đầu */
+let currentLastCmtId = null;
+
+/** Guard chống gọi API đồng thời */
+let isLoadingCmts = false;
+
+/** Còn bình luận để tải không */
+let hasMoreCmts = true;
+
+// ---------------------------------------------------------------------------
+// Comment render helpers
+// ---------------------------------------------------------------------------
+
+const COMMENT_LOADING_ID = "cmt-loading-indicator";
+const COMMENT_END_ID = "cmt-end-message";
+const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
+
+/**
+ * Tạo HTML cho một bình luận từ API response.
+ */
+const createCommentHtml = (comment) => {
+	const authorName = escapeHtml(normalizeString(comment.authorName) || "Người dùng");
+	const avatarUrl = escapeHtml(normalizeString(comment.avtUrl) || DEFAULT_AVATAR);
+	const content = escapeHtml(normalizeString(comment.content));
+	const timeText = escapeHtml(timeAgo(normalizeString(comment.createAt)));
+
+	return `
+		<div class="comment-item">
+			<img class="comment-avatar" src="${avatarUrl}" alt="Avatar ${authorName}">
+			<div class="comment-content">
+				<p><strong>${authorName}</strong>${content}</p>
+				${timeText ? `<span class="comment-time">${timeText}</span>` : ""}
+			</div>
+		</div>
+	`;
+};
+
+/**
+ * Chèn skeleton loading vào cuối danh sách bình luận.
+ */
+const showCommentLoading = (container) => {
+	if (!container || container.querySelector(`#${COMMENT_LOADING_ID}`)) return;
+	const el = document.createElement("div");
+	el.id = COMMENT_LOADING_ID;
+	el.className = "comment-loading";
+	el.setAttribute("aria-live", "polite");
+	el.innerHTML = `
+		<div class="comment-item">
+			<div class="comment-avatar is-skeleton"></div>
+			<div class="comment-content">
+				<div class="is-skeleton" style="height:12px;width:60%;border-radius:6px;margin-bottom:6px;"></div>
+				<div class="is-skeleton" style="height:10px;width:85%;border-radius:6px;"></div>
+			</div>
+		</div>
+	`;
+	container.appendChild(el);
+};
+
+/**
+ * Xóa skeleton loading khỏi container.
+ */
+const hideCommentLoading = (container) => {
+	container?.querySelector(`#${COMMENT_LOADING_ID}`)?.remove();
+};
+
+/**
+ * Render dòng "Đã hiển thị tất cả bình luận" ở cuối.
+ */
+const showCommentEndMessage = (container) => {
+	if (!container || container.querySelector(`#${COMMENT_END_ID}`)) return;
+	const el = document.createElement("p");
+	el.id = COMMENT_END_ID;
+	el.className = "comments-end-message";
+	el.textContent = "Đã hiển thị tất cả bình luận.";
+	container.appendChild(el);
+};
+
+// ---------------------------------------------------------------------------
+// Main export
+// ---------------------------------------------------------------------------
 
 export const initCommentModal = () => {
 	const commentModal = document.getElementById("comment-modal");
@@ -87,6 +186,7 @@ export const initCommentModal = () => {
 		return null;
 	}
 
+	// Các element trong modal (cached một lần)
 	const closeCommentModalBtn = document.getElementById("close-comment-modal");
 	const authorNameEl = document.getElementById("comment-modal-author-name");
 	const authorAvatarEl = document.getElementById("comment-modal-author-avatar");
@@ -98,11 +198,76 @@ export const initCommentModal = () => {
 	const likeCountEl = document.getElementById("comment-modal-like-count");
 	const likeBtnEl = document.getElementById("btn-like-comment-modal");
 
+	/** Container có scrollbar chứa danh sách bình luận */
+	const commentListEl = document.getElementById("comment-modal-comment-list");
+
+	// ---------------------------------------------------------------------------
+	// loadComments — gọi API & render
+	// ---------------------------------------------------------------------------
+
+	/**
+	 * Tải một trang bình luận và append vào commentListEl.
+	 * An toàn khi gọi nhiều lần — guard bằng isLoadingCmts / hasMoreCmts.
+	 */
+	const loadComments = async () => {
+		// Guard: không tải khi đang loading hoặc đã hết bình luận
+		if (isLoadingCmts || !hasMoreCmts || !currentPostId) return;
+
+		isLoadingCmts = true;
+		showCommentLoading(commentListEl);
+
+		try {
+			const response = await postApi.getComments(currentPostId, currentLastCmtId);
+			const data = response?.data;
+			const comments = Array.isArray(data?.commentList) ? data.commentList : [];
+
+			// Render các bình luận mới vào cuối danh sách
+			if (comments.length > 0) {
+				const html = comments.map(createCommentHtml).join("");
+				commentListEl?.insertAdjacentHTML("beforeend", html);
+			}
+
+			// Cập nhật cursor và flag
+			currentLastCmtId = data?.respLastCommentId ?? currentLastCmtId;
+			hasMoreCmts = data?.hasMore === true;
+
+			// Nếu đã hết → hiện thông báo
+			if (!hasMoreCmts) {
+				showCommentEndMessage(commentListEl);
+			}
+		} catch (error) {
+			// Lỗi tải bình luận — không block toàn modal, chỉ log
+			console.error("[comment-modal] Lỗi khi tải bình luận:", error);
+		} finally {
+			hideCommentLoading(commentListEl);
+			isLoadingCmts = false;
+		}
+	};
+
+	// ---------------------------------------------------------------------------
+	// Infinite scroll — lắng nghe scroll trên commentListEl
+	// ---------------------------------------------------------------------------
+
+	if (commentListEl) {
+		commentListEl.addEventListener("scroll", () => {
+			const { scrollTop, clientHeight, scrollHeight } = commentListEl;
+			// Khi cuộn còn cách đáy 50px → tải thêm
+			if (scrollTop + clientHeight >= scrollHeight - 50) {
+				void loadComments();
+			}
+		}, { passive: true });
+	}
+
+	// ---------------------------------------------------------------------------
+	// openCommentModal — bind dữ liệu bài viết + reset + load comments
+	// ---------------------------------------------------------------------------
+
 	const openCommentModal = (post) => {
 		if (!post) return;
 
+		// --- Bind thông tin bài viết ---
 		const authorName = normalizeString(post.authorName || post.author_name || post.username) || "Người dùng";
-		const avatarUrl = normalizeString(post.avtUrl || post.avt_url || post.avatar_url || post.avatar) || "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
+		const avatarUrl = normalizeString(post.avtUrl || post.avt_url || post.avatar_url || post.avatar) || DEFAULT_AVATAR;
 		const content = normalizeString(post.content || post.caption);
 		const isLiked = post.isLiked === true || post.isLiked === "true" || post.isLiked === 1;
 		const likeCount = normalizeNumber(post.newLikeCount ?? post.likeCount ?? post.like_count, 0);
@@ -162,17 +327,48 @@ export const initCommentModal = () => {
 			likeCountEl.textContent = formatCompactNumber(likeCount);
 		}
 
+		// --- QUAN TRỌNG: Reset state bình luận trước khi mở bài viết mới ---
+		currentPostId = postId;
+		currentLastCmtId = null;
+		hasMoreCmts = true;
+		isLoadingCmts = false;
+
+		// Xóa sạch bình luận cũ (bao gồm mock data và bình luận trang trước)
+		if (commentListEl) {
+			commentListEl.innerHTML = "";
+		}
+
+		// Hiện modal
 		commentModal.classList.add("open");
 		commentModal.setAttribute("aria-hidden", "false");
 		document.body.style.overflow = "hidden";
+
+		// Tải bình luận trang đầu tiên
+		void loadComments();
 	};
+
+	// ---------------------------------------------------------------------------
+	// closeCommentModal
+	// ---------------------------------------------------------------------------
 
 	const closeCommentModal = () => {
 		commentModal.classList.remove("open");
 		commentModal.setAttribute("aria-hidden", "true");
 		document.body.style.overflow = "";
-		if (mediaGalleryEl) mediaGalleryEl.innerHTML = ""; // Clear media to stop videos playing
+
+		// Xóa media để dừng video đang phát
+		if (mediaGalleryEl) mediaGalleryEl.innerHTML = "";
+
+		// Reset comment state khi đóng
+		currentPostId = null;
+		currentLastCmtId = null;
+		hasMoreCmts = true;
+		isLoadingCmts = false;
 	};
+
+	// ---------------------------------------------------------------------------
+	// Event listeners
+	// ---------------------------------------------------------------------------
 
 	closeCommentModalBtn?.addEventListener("click", closeCommentModal);
 

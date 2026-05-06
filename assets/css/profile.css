@@ -295,30 +295,13 @@
 	100% { background-position:  400px 0; }
 }
 
-.is-skeleton {
-	color: transparent !important;
-	background: linear-gradient(
-		90deg,
-		#e5e7eb 25%,
-		#f3f4f6 50%,
-		#e5e7eb 75%
-	) !important;
-	background-size: 800px 100% !important;
-	animation: skeleton-shimmer 1.4s ease-in-out infinite;
-	border-radius: 6px;
-	pointer-events: none;
-	user-select: none;
-}
+/* .is-skeleton đã chuyển sang global.css để dùng chung trên mọi trang */
 
 /* Giữ nguyên hình tròn cho avatar khi skeleton */
 #profile-avatar.is-skeleton {
 	border-radius: 50%;
 }
 
-/* Ẩn text con bên trong các phần tử skeleton */
-.is-skeleton * {
-	visibility: hidden;
-}
 
 /* ---------------------------------------------------------------------------
    Error state — hiển thị khi không tìm thấy người dùng (HTTP 404)

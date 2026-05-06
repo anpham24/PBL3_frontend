@@ -110,5 +110,29 @@ export const postApi = {
 			: "/api/users/me/posts";
 
 		return apiClient.get(endpoint);
+	},
+
+	/**
+	 * Lấy danh sách bình luận của một bài đăng (cursor-based pagination).
+	 * GET /api/posts/{postId}/comments?last_id={lastId}
+	 * @param {string} postId - ID bài đăng cần lấy bình luận.
+	 * @param {string|null} lastId - ID bình luận cuối đã tải. Null = lần đầu tiên.
+	 * @returns {Promise<{data: {commentList: object[], respLastCommentId: string, hasMore: boolean}}>}
+	 */
+	async getComments(postId, lastId = null) {
+		const resolvedPostId = normalizePostId(postId);
+		const params = new URLSearchParams();
+
+		const resolvedLastId = toSafeId(lastId, "");
+		if (resolvedLastId.length > 0) {
+			params.set("last_id", resolvedLastId);
+		}
+
+		const queryString = params.toString();
+		const endpoint = queryString.length > 0
+			? `/api/posts/${encodeURIComponent(resolvedPostId)}/comments?${queryString}`
+			: `/api/posts/${encodeURIComponent(resolvedPostId)}/comments`;
+
+		return apiClient.get(endpoint);
 	}
 };
