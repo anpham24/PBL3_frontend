@@ -131,10 +131,6 @@
 
 				<form id="create-post-form" class="create-modal-body" novalidate>
 					<div class="create-detail-top">
-						<img class="detail-avatar"
-							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar người dùng">
-
 						<div class="detail-chips">
 							<label class="detail-chip detail-chip-select" for="create-post-visibility">
 								<i class="bx bx-lock-alt"></i>
@@ -151,8 +147,14 @@
 					</div>
 
 					<div class="post-caption-wrap">
-						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể" required
-							autocomplete="off">
+						<div class="location-suggest-wrap">
+							<i class="bx bx-map-pin" aria-hidden="true"></i>
+							<input id="create-post-address" type="text" placeholder="Tìm địa điểm..." required
+								autocomplete="off" aria-label="Địa chỉ địa điểm"
+								aria-autocomplete="list" aria-controls="location-suggest-list" aria-expanded="false">
+							<ul id="location-suggest-list" class="location-suggest-list is-hidden"
+								role="listbox" aria-label="Gợi ý địa điểm"></ul>
+						</div>
 					</div>
 
 					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
