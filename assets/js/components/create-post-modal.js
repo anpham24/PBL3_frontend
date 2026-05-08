@@ -444,42 +444,9 @@ export const initCreatePostModal = (options = {}) => {
 		locationSuggestInitialized = true;
 	};
 
-	// ── Load User Avatar & Nickname from localStorage ──────────────────────
-
-	const loadUserInfo = () => {
-		const createPostUserAvatar = document.getElementById("create-post-user-avatar");
-		const createPostUserNickname = document.getElementById("create-post-user-nickname");
-
-		// Get data from localStorage
-		const avtUrl = localStorage.getItem("avtUrl") || "";
-		const nickname = localStorage.getItem("nickname") || "";
-
-		// Set avatar
-		if (createPostUserAvatar) {
-			const normalizedAvtUrl = String(avtUrl).trim();
-			if (normalizedAvtUrl.length > 0) {
-				createPostUserAvatar.src = normalizedAvtUrl;
-				// Ensure onerror fallback works
-				createPostUserAvatar.onerror = function() {
-					this.src = "/assets/images/default-avatar.png";
-				};
-			} else {
-				createPostUserAvatar.src = "/assets/images/default-avatar.png";
-			}
-		}
-
-		// Set nickname
-		if (createPostUserNickname) {
-			const normalizedNickname = String(nickname).trim();
-			createPostUserNickname.textContent = 
-				normalizedNickname.length > 0 ? normalizedNickname : "Người dùng";
-		}
-	};
-
 	// ── Open / Close ──────────────────────────────────────────────────────────
 
 	const openCreateModal = () => {
-		loadUserInfo();
 		resetCreateModalState();
 
 		createPostModal.classList.add("open");

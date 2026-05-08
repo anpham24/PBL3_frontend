@@ -1,7 +1,7 @@
 "use strict";
 
 import { authApi } from "../api/auth-api.js";
-import { getToken, getCurrentUser, saveAuthSession, saveAuthData } from "../utils/auth.js";
+import { getToken, getCurrentUser, saveAuthSession } from "../utils/auth.js";
 
 const REDIRECT_DELAY_MS = 500;
 const ACCOUNT_LOCKED_STATUSES = new Set([403, 423, 429]);
@@ -261,15 +261,13 @@ const initLoginPage = () => {
 
 		try {
 			const response = await authApi.login(payload);
-			const { token, userId, avtUrl, nickname } = response?.data || {};
+			const token = response?.data?.token;
 
 			if (typeof token !== "string" || token.trim().length === 0) {
 				throw new Error("Không nhận được token từ hệ thống.");
 			}
 
-			// Save all auth data to localStorage
-			saveAuthData({ token, userId, avtUrl, nickname });
-
+			saveAuthSession(token);
 			const currentUser = getCurrentUser();
 			const userRole = currentUser?.userRole || "MEMBER";
 			setFeedback(feedbackElement, "Đăng nhập thành công. Đang chuyển trang...", "success");

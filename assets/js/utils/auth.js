@@ -1,9 +1,6 @@
 "use strict";
 
 const TOKEN_KEY = "token";
-const USER_ID_KEY = "userId";
-const AVT_URL_KEY = "avtUrl";
-const NICKNAME_KEY = "nickname";
 
 const normalizeStoredValue = (value) => {
 	if (typeof value !== "string") {
@@ -35,24 +32,6 @@ export const setToken = (token) => {
 
 export const removeToken = () => {
 	localStorage.removeItem(TOKEN_KEY);
-};
-
-export const getUserId = () => getStorageValue(USER_ID_KEY);
-
-export const setUserId = (userId) => {
-	setStorageValue(USER_ID_KEY, userId);
-};
-
-export const getAvtUrl = () => getStorageValue(AVT_URL_KEY);
-
-export const setAvtUrl = (avtUrl) => {
-	setStorageValue(AVT_URL_KEY, avtUrl);
-};
-
-export const getNickname = () => getStorageValue(NICKNAME_KEY);
-
-export const setNickname = (nickname) => {
-	setStorageValue(NICKNAME_KEY, nickname);
 };
 
 export const parseJwt = (token) => {
@@ -106,26 +85,8 @@ export const saveAuthSession = (token) => {
 	setToken(token);
 };
 
-export const saveAuthData = ({ token, userId, avtUrl, nickname }) => {
-	if (token) {
-		setToken(token);
-	}
-	if (userId) {
-		setUserId(userId);
-	}
-	if (avtUrl) {
-		setAvtUrl(avtUrl);
-	}
-	if (nickname) {
-		setNickname(nickname);
-	}
-};
-
 export const clearAuthStorage = () => {
 	removeToken();
-	localStorage.removeItem(USER_ID_KEY);
-	localStorage.removeItem(AVT_URL_KEY);
-	localStorage.removeItem(NICKNAME_KEY);
 };
 
 export const getAccessToken = () => getToken();

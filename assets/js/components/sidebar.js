@@ -149,6 +149,8 @@ const syncSidebarItems = () => {
 	});
 };
 
+export const refreshSidebarItems = syncSidebarItems;
+
 if (document.readyState === "loading") {
 	document.addEventListener("DOMContentLoaded", syncSidebarItems);
 } else {
