@@ -1,6 +1,7 @@
 "use strict";
 
 import { postApi } from "../api/post-api.js";
+import { getAvtUrl, getNickname } from "../utils/auth.js";
 
 const DEFAULT_PUBLISH_LABEL = "Đăng";
 
@@ -448,6 +449,7 @@ export const initCreatePostModal = (options = {}) => {
 
 	const openCreateModal = () => {
 		resetCreateModalState();
+		populateAuthorInfo();
 
 		createPostModal.classList.add("open");
 		createPostModal.setAttribute("aria-hidden", "false");
@@ -457,6 +459,42 @@ export const initCreatePostModal = (options = {}) => {
 	// Gọi initLocationSuggest() một lần ngay khi khởi tạo component
 	// (không gọi lại trong openCreateModal để tránh duplicate listeners)
 	initLocationSuggest();
+
+	// ── Điền thông tin tác giả từ localStorage ────────────────────────────────
+
+	const DEFAULT_AVATAR = "../assets/images/225-default-avatar.png";
+
+	/**
+	 * Lấy avtUrl và nickname từ localStorage (qua auth helpers)
+	 * và gán vào các phần tử tương ứng trong modal.
+	 * - Avatar fallback về ảnh mặc định nếu avtUrl trống/null/undefined.
+	 * - Nickname fallback về "Người dùng" nếu rỗng.
+	 */
+	const populateAuthorInfo = () => {
+		const avatarEl = createPostModal.querySelector("#create-post-author-avatar");
+		const nicknameEl = createPostModal.querySelector(".create-post-author-nickname");
+
+		if (avatarEl) {
+			const rawAvtUrl = getAvtUrl();
+			avatarEl.src =
+				typeof rawAvtUrl === "string" && rawAvtUrl.trim().length > 0
+					? rawAvtUrl.trim()
+					: DEFAULT_AVATAR;
+			// Đặt lại fallback nếu URL ảnh bị lỗi khi tải
+			avatarEl.onerror = () => {
+				avatarEl.onerror = null;
+				avatarEl.src = DEFAULT_AVATAR;
+			};
+		}
+
+		if (nicknameEl) {
+			const rawNickname = getNickname();
+			nicknameEl.textContent =
+				typeof rawNickname === "string" && rawNickname.trim().length > 0
+					? rawNickname.trim()
+					: "Người dùng";
+		}
+	};
 
 	const closeCreateModal = () => {
 		createPostModal.classList.remove("open");
