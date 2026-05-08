@@ -2,44 +2,73 @@
 
 import { postApi } from "../api/post-api.js";
 
+const GOOGLE_SCRIPT_ID = "google-maps-places-sdk";
 const DEFAULT_PUBLISH_LABEL = "Đăng";
+let googlePlacesPromise = null;
 
-// ─── Debounce utility ────────────────────────────────────────────────────────
+// ─── Google Places ────────────────────────────────────────────────────────────
 
-/**
- * Trả về phiên bản debounce của fn, chỉ thực thi sau khi
- * không có lần gọi mới nào trong vòng `delay` ms.
- * @param {Function} fn
- * @param {number} delay - ms
- */
-const debounce = (fn, delay) => {
-	let timerId = null;
-	return (...args) => {
-		clearTimeout(timerId);
-		timerId = setTimeout(() => fn(...args), delay);
-	};
+const getGoogleMapsApiKey = () => {
+	if (typeof window.GOOGLE_MAPS_API_KEY === "string" && window.GOOGLE_MAPS_API_KEY.trim().length > 0) {
+		return window.GOOGLE_MAPS_API_KEY.trim();
+	}
+
+	const bodyKey = document.body?.dataset?.googleMapsApiKey;
+	if (typeof bodyKey === "string" && bodyKey.trim().length > 0) {
+		return bodyKey.trim();
+	}
+
+	const htmlKey = document.documentElement?.dataset?.googleMapsApiKey;
+	if (typeof htmlKey === "string" && htmlKey.trim().length > 0) {
+		return htmlKey.trim();
+	}
+
+	return "";
 };
 
-// ─── Nominatim Location Auto-suggest ─────────────────────────────────────────
+const loadGooglePlacesSdk = () => {
+	if (window.google?.maps?.places) {
+		return Promise.resolve(window.google.maps);
+	}
 
-const NOMINATIM_URL =
-	"https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=vn&q=";
+	if (googlePlacesPromise) {
+		return googlePlacesPromise;
+	}
 
-/**
- * Bóc tách tỉnh/thành từ object address trả về bởi Nominatim.
- * Thứ tự ưu tiên: state → city → province → county → ""
- * @param {object} address
- * @returns {string}
- */
-const extractProvince = (address) => {
-	if (!address || typeof address !== "object") return "";
-	return (
-		address.state ||
-		address.city ||
-		address.province ||
-		address.county ||
-		""
-	);
+	const apiKey = getGoogleMapsApiKey();
+	if (apiKey.length === 0) {
+		return Promise.resolve(null);
+	}
+
+	googlePlacesPromise = new Promise((resolve) => {
+		const existingScript = document.getElementById(GOOGLE_SCRIPT_ID);
+		if (existingScript) {
+			existingScript.addEventListener(
+				"load",
+				() => resolve(window.google?.maps?.places ? window.google.maps : null),
+				{ once: true }
+			);
+			existingScript.addEventListener("error", () => resolve(null), { once: true });
+			return;
+		}
+
+		const script = document.createElement("script");
+		script.id = GOOGLE_SCRIPT_ID;
+		script.async = true;
+		script.defer = true;
+		script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&libraries=places&language=vi`;
+
+		script.addEventListener("load", () => {
+			resolve(window.google?.maps?.places ? window.google.maps : null);
+		});
+		script.addEventListener("error", () => {
+			resolve(null);
+		});
+
+		document.head.appendChild(script);
+	});
+
+	return googlePlacesPromise;
 };
 
 // ─── Carousel (dùng chung cho feed card và draft preview) ────────────────────
@@ -79,91 +108,6 @@ const normalizeString = (value) => {
 	return trimmed.length > 0 ? trimmed : "";
 };
 
-/**
- * Xóa postal code (mã bưu điện) khỏi chuỗi địa chỉ.
- * Postal code Việt Nam thường là chuỗi 5-6 chữ số đứng riêng biệt
- * (ví dụ: "54 Nguyễn Lương Bằng, 550000, Đà Nẵng" → "54 Nguyễn Lương Bằng, Đà Nẵng").
- * @param {string} address
- * @returns {string}
- */
-const removePostalCode = (address) => {
-	if (typeof address !== "string") return "";
-	// Xóa chuỗi 5-6 chữ số được bao quanh bởi dấu phẩy/khoảng trắng
-	// và dọn dẹp dấu phẩy/khoảng trắng thừa sau khi xóa
-	return address
-		.replace(/,?\s*\b\d{5,6}\b\s*,?/g, ",")
-		.replace(/,\s*,/g, ",")
-		.replace(/^\s*,\s*/, "")
-		.replace(/\s*,\s*$/, "")
-		.replace(/\s{2,}/g, " ")
-		.trim();
-};
-
-/**
- * Bản đồ chuyển đổi tên tỉnh/thành sang mã provinceCode.
- * Sử dụng Unicode normalization (NFD) để loại bỏ dấu tiếng Việt,
- * sau đó chuyển sang UPPER_SNAKE_CASE.
- *
- * Ví dụ:
- *   "Thành phố Đà Nẵng" → "DA_NANG"
- *   "Hà Nội"             → "HA_NOI"
- *   "Hồ Chí Minh"        → "HO_CHI_MINH"
- *
- * @param {string} provinceName - Tên tỉnh/thành từ Nominatim (extractProvince)
- * @returns {string} Mã provinceCode dạng UPPER_SNAKE_CASE hoặc "" nếu không xác định
- */
-const PROVINCE_ALIASES = {
-	"tp. ho chi minh": "HO_CHI_MINH",
-	"tp ho chi minh": "HO_CHI_MINH",
-	"tp.hcm": "HO_CHI_MINH",
-	"tphcm": "HO_CHI_MINH",
-	"ho chi minh city": "HO_CHI_MINH",
-	"saigon": "HO_CHI_MINH",
-	"sai gon": "HO_CHI_MINH",
-	"ha noi capital": "HA_NOI",
-	"thu do ha noi": "HA_NOI",
-	"hanoi": "HA_NOI",
-	"danang": "DA_NANG",
-	"da nang city": "DA_NANG",
-	"hue": "THUA_THIEN_HUE",
-	"thua thien-hue": "THUA_THIEN_HUE",
-	"ba ria - vung tau": "BA_RIA_VUNG_TAU",
-	"ba ria-vung tau": "BA_RIA_VUNG_TAU",
-};
-
-const provinceToCode = (provinceName) => {
-	if (typeof provinceName !== "string" || provinceName.trim().length === 0) return "";
-
-	// Bước 1: Chuẩn hóa chuỗi — loại bỏ dấu tiếng Việt, chuyển thường
-	const normalized = provinceName
-		.normalize("NFD")
-		.replace(/[\u0300-\u036f]/g, "")
-		.replace(/đ/gi, "d")
-		.toLowerCase()
-		.trim();
-
-	// Bước 2: Kiểm tra alias trước
-	if (PROVINCE_ALIASES[normalized]) {
-		return PROVINCE_ALIASES[normalized];
-	}
-
-	// Bước 3: Xóa tiền tố "tinh", "thanh pho", "tp.", "tp"
-	const cleaned = normalized
-		.replace(/^(tinh|thanh pho|tp\.?\s*)\s*/i, "")
-		.trim();
-
-	// Bước 4: Kiểm tra alias một lần nữa sau khi xóa tiền tố
-	if (PROVINCE_ALIASES[cleaned]) {
-		return PROVINCE_ALIASES[cleaned];
-	}
-
-	// Bước 5: Chuyển sang UPPER_SNAKE_CASE
-	return cleaned
-		.replace(/[^a-z0-9\s]/g, "")
-		.replace(/\s+/g, "_")
-		.toUpperCase();
-};
-
 // ─── Khởi tạo component ──────────────────────────────────────────────────────
 
 /**
@@ -200,21 +144,13 @@ export const initCreatePostModal = (options = {}) => {
 	const closeCreateModalBtn = document.getElementById("close-create-modal");
 	const publishPostBtn = document.getElementById("publish-post-btn");
 	const postCaptionInput = document.getElementById("post-caption-input");
-
+	const createPostProvinceInput = document.getElementById("create-post-province");
 	const createPostVisibilityInput = document.getElementById("create-post-visibility");
 	const createPostAddressInput = document.getElementById("create-post-address");
 	const createPostFeedbackElement = document.getElementById("create-post-feedback");
 	const createPostFormElement = document.getElementById("create-post-form");
-	const locationSuggestList = document.getElementById("location-suggest-list");
 
 	const previewObjectUrls = [];
-
-	// ── State địa điểm đã chọn ───────────────────────────────────────────────
-	// Lưu province được bóc tách khi người dùng click chọn gợi ý
-	let selectedProvince = "";
-
-	// Bug 3 fix: flag idempotent — đảm bảo listeners chỉ gắn một lần
-	let locationSuggestInitialized = false;
 
 	// ── Preview ảnh/video ─────────────────────────────────────────────────────
 
@@ -306,157 +242,54 @@ export const initCreatePostModal = (options = {}) => {
 		if (postFileInput) postFileInput.value = "";
 		if (postCaptionInput) postCaptionInput.value = "";
 		if (createPostAddressInput) createPostAddressInput.value = "";
-
+		if (createPostProvinceInput) createPostProvinceInput.selectedIndex = 0;
 		if (createPostVisibilityInput) createPostVisibilityInput.selectedIndex = 0;
-
-		// Xóa province đã chọn và đóng dropdown
-		selectedProvince = "";
-		hideSuggestList();
 
 		clearFeedback();
 		resetPreviewGrid();
 	};
 
-	// ── Nominatim Location Auto-suggest ───────────────────────────────────────
+	// ── Google Places Autocomplete ────────────────────────────────────────────
 
-	/** Hiện / ẩn dropdown gợi ý */
-	const showSuggestList = () => {
-		if (!locationSuggestList || !createPostAddressInput) return;
+	const initAddressAutocomplete = async () => {
+		if (!createPostAddressInput) return;
+		if (createPostAddressInput.dataset.googleAutocompleteReady === "true") return;
 
-		// Bug 1+2 fix: Dùng position:fixed + getBoundingClientRect()
-		// để dropdown thoát khỏi mọi overflow container.
-		const rect = createPostAddressInput.getBoundingClientRect();
-		locationSuggestList.style.top = `${rect.bottom + 6}px`;
-		locationSuggestList.style.left = `${rect.left}px`;
-		locationSuggestList.style.width = `${rect.width}px`;
+		const maps = await loadGooglePlacesSdk();
+		if (!maps?.places) return;
 
-		locationSuggestList.classList.remove("is-hidden");
-		createPostAddressInput.setAttribute("aria-expanded", "true");
-	};
-
-	const hideSuggestList = () => {
-		locationSuggestList?.classList.add("is-hidden");
-		createPostAddressInput?.setAttribute("aria-expanded", "false");
-	};
-
-	/** Render danh sách gợi ý từ kết quả Nominatim */
-	const renderSuggestions = (results) => {
-		if (!locationSuggestList) return;
-
-		locationSuggestList.innerHTML = "";
-
-		if (!results || results.length === 0) {
-			const emptyMsg = document.createElement("li");
-			emptyMsg.className = "location-suggest-msg";
-			emptyMsg.textContent = "Không tìm thấy địa điểm phù hợp.";
-			locationSuggestList.appendChild(emptyMsg);
-			showSuggestList();
-			return;
-		}
-
-		results.forEach((place) => {
-			const cleanedDisplayName = removePostalCode(place.display_name);
-
-			const item = document.createElement("li");
-			item.className = "location-suggest-item";
-			item.setAttribute("role", "option");
-			item.setAttribute("tabindex", "-1");
-			item.innerHTML = `<i class="bx bx-map-pin" aria-hidden="true"></i><span>${cleanedDisplayName}</span>`;
-
-			item.addEventListener("mousedown", (e) => {
-				// mousedown thay vì click để chạy trước blur của input
-				e.preventDefault();
-				createPostAddressInput.value = cleanedDisplayName;
-				selectedProvince = extractProvince(place.address);
-				hideSuggestList();
-			});
-
-			locationSuggestList.appendChild(item);
+		const autocomplete = new maps.places.Autocomplete(createPostAddressInput, {
+			fields: ["formatted_address", "name"],
+			types: ["address"]
 		});
 
-		showSuggestList();
-	};
+		autocomplete.addListener("place_changed", () => {
+			const place = autocomplete.getPlace();
+			const fullAddress =
+				typeof place?.formatted_address === "string" && place.formatted_address.trim().length > 0
+					? place.formatted_address.trim()
+					: typeof place?.name === "string"
+						? place.name.trim()
+						: "";
 
-	/** Gọi Nominatim API, xử lý lỗi và cập nhật UI */
-	const fetchSuggestions = async (query) => {
-		if (!locationSuggestList) return;
-
-		// Hiện trạng thái đang tải
-		locationSuggestList.innerHTML =
-			'<li class="location-suggest-msg">Đang tìm kiếm...</li>';
-		showSuggestList();
-
-		try {
-			const response = await fetch(`${NOMINATIM_URL}${encodeURIComponent(query)}`, {
-				headers: { "Accept-Language": "vi,en" }
-			});
-
-			if (!response.ok) {
-				throw new Error(`HTTP ${response.status}`);
-			}
-
-			const data = await response.json();
-			renderSuggestions(Array.isArray(data) ? data : []);
-		} catch {
-			locationSuggestList.innerHTML =
-				'<li class="location-suggest-msg">Lỗi kết nối. Vui lòng thử lại.</li>';
-			showSuggestList();
-		}
-	};
-
-	/** Phiên bản debounce 500ms của fetchSuggestions */
-	const debouncedFetch = debounce(fetchSuggestions, 500);
-
-	/** Gắn sự kiện input cho ô địa chỉ (idempotent — chỉ gắn 1 lần) */
-	const initLocationSuggest = () => {
-		// Bug 3 fix: kiểm tra flag trước để không gắn listener trùng
-		if (locationSuggestInitialized) return;
-		if (!createPostAddressInput || !locationSuggestList) return;
-
-		createPostAddressInput.addEventListener("input", () => {
-			const query = createPostAddressInput.value.trim();
-
-			// Nếu người dùng thay đổi nội dung thủ công → xóa province đã chọn trước
-			selectedProvince = "";
-
-			if (query.length === 0) {
-				hideSuggestList();
-				locationSuggestList.innerHTML = "";
-				return;
-			}
-
-			debouncedFetch(query);
-		});
-
-		// Ẩn dropdown khi click ra ngoài khu vực tìm kiếm
-		createPostAddressInput.addEventListener("blur", () => {
-			// Dùng setTimeout để blur chạy sau mousedown của item
-			setTimeout(hideSuggestList, 150);
-		});
-
-		// Cho phép điều hướng bằng bàn phím (Escape)
-		createPostAddressInput.addEventListener("keydown", (event) => {
-			if (event.key === "Escape") {
-				hideSuggestList();
+			if (fullAddress.length > 0) {
+				createPostAddressInput.value = fullAddress;
 			}
 		});
 
-		locationSuggestInitialized = true;
+		createPostAddressInput.dataset.googleAutocompleteReady = "true";
 	};
 
 	// ── Open / Close ──────────────────────────────────────────────────────────
 
 	const openCreateModal = () => {
 		resetCreateModalState();
+		void initAddressAutocomplete();
 
 		createPostModal.classList.add("open");
 		createPostModal.setAttribute("aria-hidden", "false");
 		document.body.style.overflow = "hidden";
 	};
-
-	// Gọi initLocationSuggest() một lần ngay khi khởi tạo component
-	// (không gọi lại trong openCreateModal để tránh duplicate listeners)
-	initLocationSuggest();
 
 	const closeCreateModal = () => {
 		createPostModal.classList.remove("open");
@@ -480,13 +313,12 @@ export const initCreatePostModal = (options = {}) => {
 		publishPostBtn.textContent = DEFAULT_PUBLISH_LABEL;
 	};
 
-	const buildFormData = ({ files, visibility, content, address, provinceCode }) => {
+	const buildFormData = ({ files, visibility, content, address }) => {
 		const formData = new FormData();
 		files.forEach((file) => formData.append("files", file));
 		formData.append("visibility", visibility);
 		formData.append("content", content);
 		formData.append("address", address);
-		formData.append("provinceCode", provinceCode);
 		return formData;
 	};
 
@@ -522,15 +354,11 @@ export const initCreatePostModal = (options = {}) => {
 			return;
 		}
 
-		const cleanedAddress = removePostalCode(address);
-		const resolvedProvinceCode = provinceToCode(selectedProvince);
-
 		const payload = {
 			files: selectedFiles,
 			visibility: normalizeString(createPostVisibilityInput?.value) || "PUBLIC",
 			content: normalizeString(postCaptionInput.value),
-			address: cleanedAddress,
-			provinceCode: resolvedProvinceCode
+			address
 		};
 
 		setPublishSubmittingState(true);
@@ -628,7 +456,7 @@ export const initCreatePostModal = (options = {}) => {
 			postFileInput,
 			publishPostBtn,
 			postCaptionInput,
-
+			createPostProvinceInput,
 			createPostVisibilityInput,
 			createPostAddressInput,
 			createPostFeedbackElement
