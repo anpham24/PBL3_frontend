@@ -1,7 +1,7 @@
 "use strict";
 
 import { API_BASE_URL } from "../config.js";
-import { clearAuthStorage, getToken } from "../utils/auth.js";
+import { clearAuthStorage, getToken, setToken } from "../utils/auth.js";
 
 const isFormData = (value) => typeof FormData !== "undefined" && value instanceof FormData;
 
@@ -99,6 +99,38 @@ const resolveApiUrl = (endpoint) => {
 	return `${baseUrl}${normalizedEndpoint}`;
 };
 
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+const onRefreshed = (token) => {
+	refreshSubscribers.forEach((cb) => cb(token));
+	refreshSubscribers = [];
+};
+
+const executeRefreshToken = async () => {
+	if (!isRefreshing) {
+		isRefreshing = true;
+		try {
+			const { authApi } = await import("./auth-api.js");
+			const res = await authApi.refreshToken();
+			const newToken = res?.data?.token;
+			isRefreshing = false;
+			onRefreshed(newToken);
+			return newToken;
+		} catch (error) {
+			isRefreshing = false;
+			onRefreshed(null);
+			return null;
+		}
+	} else {
+		return new Promise((resolve) => {
+			refreshSubscribers.push((token) => {
+				resolve(token);
+			});
+		});
+	}
+};
+
 export const apiClient = {
 	async request(endpoint, options = {}) {
 		const {
@@ -107,20 +139,51 @@ export const apiClient = {
 			headers,
 			requiresAuth = true,
 			skipAuthRedirect = false,
+			credentials,
 			...restOptions
 		} = options;
 
-		const response = await fetch(resolveApiUrl(endpoint), {
+		const fetchOptions = {
 			...restOptions,
 			method,
 			headers: createRequestHeaders({ headers, requiresAuth, data }),
 			body: createBody(data)
-		});
+		};
 
-		const responseData = await parseJsonSafely(response);
+		if (credentials) {
+			fetchOptions.credentials = credentials;
+		}
 
-		if (response.status === 401 && !skipAuthRedirect) {
-			handleUnauthorized();
+		let response = await fetch(resolveApiUrl(endpoint), fetchOptions);
+		let responseData = await parseJsonSafely(response);
+
+		if (response.status === 401) {
+			const urlStr = resolveApiUrl(endpoint).toLowerCase();
+			const isLoginOrRefresh = urlStr.includes("/api/auth/login") || urlStr.includes("/api/auth/refresh");
+
+			if (isLoginOrRefresh) {
+				if (!skipAuthRedirect) {
+					handleUnauthorized();
+				}
+			} else {
+				const newToken = await executeRefreshToken();
+				if (newToken) {
+					setToken(newToken);
+					
+					// Retry request with new token
+					fetchOptions.headers = createRequestHeaders({ headers, requiresAuth, data });
+					response = await fetch(resolveApiUrl(endpoint), fetchOptions);
+					responseData = await parseJsonSafely(response);
+					
+					if (response.status === 401 && !skipAuthRedirect) {
+						handleUnauthorized();
+					}
+				} else {
+					if (!skipAuthRedirect) {
+						handleUnauthorized();
+					}
+				}
+			}
 		}
 
 		if (!response.ok) {

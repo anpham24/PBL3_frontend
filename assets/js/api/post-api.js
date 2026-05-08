@@ -114,7 +114,7 @@ export const postApi = {
 
 	/**
 	 * Lấy danh sách bình luận của một bài đăng (cursor-based pagination).
-	 * GET /api/posts/{postId}/comments?last_id={lastId}
+	 * GET /api/posts/{postId}/comments?lastCommentId={lastId}
 	 * @param {string} postId - ID bài đăng cần lấy bình luận.
 	 * @param {string|null} lastId - ID bình luận cuối đã tải. Null = lần đầu tiên.
 	 * @returns {Promise<{data: {commentList: object[], respLastCommentId: string, hasMore: boolean}}>}
@@ -125,7 +125,7 @@ export const postApi = {
 
 		const resolvedLastId = toSafeId(lastId, "");
 		if (resolvedLastId.length > 0) {
-			params.set("last_id", resolvedLastId);
+			params.set("lastCommentId", resolvedLastId);
 		}
 
 		const queryString = params.toString();
@@ -134,5 +134,22 @@ export const postApi = {
 			: `/api/posts/${encodeURIComponent(resolvedPostId)}/comments`;
 
 		return apiClient.get(endpoint);
+	},
+
+	/**
+	 * Tạo bình luận mới cho một bài đăng.
+	 * POST /api/posts/{postId}/comments
+	 */
+	async createComment(postId, content) {
+		const resolvedPostId = normalizePostId(postId);
+		const resolvedContent = typeof content === "string" ? content.trim() : "";
+		
+		if (resolvedContent.length === 0) {
+			throw new Error("Nội dung bình luận không được để trống.");
+		}
+		
+		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/comments`, {
+			content: resolvedContent
+		});
 	}
 };

@@ -110,7 +110,7 @@ const initRegisterPage = () => {
 		try {
 			await authApi.register(payload);
 
-			setFeedback(feedbackElement, "Đăng ký thành công. Đang chuyển sang trang đăng nhập...", "success");
+			setFeedback(feedbackElement, "Đăng ký thành công. Đang chuyển hướng đến trang đăng nhập...", "success");
 
 			window.setTimeout(() => {
 				window.location.href = "login.html";

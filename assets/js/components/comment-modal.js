@@ -99,6 +99,9 @@ const resolvePostMediaUrls = (post) => resolvePostMediaItems(post).map(item => i
 /** ID bài viết đang hiển thị trong modal */
 let currentPostId = null;
 
+/** Số lượng comment hiện tại (dùng để update count ngoài feed) */
+let currentPostCommentCount = 0;
+
 /** Cursor: ID bình luận cuối cùng đã tải, null = lần đầu */
 let currentLastCmtId = null;
 
@@ -200,6 +203,9 @@ export const initCommentModal = () => {
 
 	/** Container có scrollbar chứa danh sách bình luận */
 	const commentListEl = document.getElementById("comment-modal-comment-list");
+	
+	const commentInputEl = document.getElementById("comment-input");
+	const commentPostBtn = commentModal.querySelector(".comment-post-btn");
 
 	// ---------------------------------------------------------------------------
 	// loadComments — gọi API & render
@@ -332,6 +338,16 @@ export const initCommentModal = () => {
 		currentLastCmtId = null;
 		hasMoreCmts = true;
 		isLoadingCmts = false;
+		
+		let initialCount = normalizeNumber(post.commentCount ?? post.comment_count, 0);
+		const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function" 
+			? CSS.escape(postId) 
+			: postId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+		const postCard = document.querySelector(`.post-card[data-post-id="${escapedId}"]`);
+		if (postCard && postCard.dataset.newCommentCount !== undefined) {
+			initialCount = normalizeNumber(postCard.dataset.newCommentCount, initialCount);
+		}
+		currentPostCommentCount = initialCount;
 
 		// Xóa sạch bình luận cũ (bao gồm mock data và bình luận trang trước)
 		if (commentListEl) {
@@ -361,6 +377,7 @@ export const initCommentModal = () => {
 
 		// Reset comment state khi đóng
 		currentPostId = null;
+		currentPostCommentCount = 0;
 		currentLastCmtId = null;
 		hasMoreCmts = true;
 		isLoadingCmts = false;
@@ -381,6 +398,73 @@ export const initCommentModal = () => {
 	document.addEventListener("keydown", (event) => {
 		if (event.key === "Escape" && commentModal.classList.contains("open")) {
 			closeCommentModal();
+		}
+	});
+
+	// ---------------------------------------------------------------------------
+	// Create Comment
+	// ---------------------------------------------------------------------------
+	let isSubmittingComment = false;
+
+	const handleCreateComment = async () => {
+		if (!currentPostId || isSubmittingComment) return;
+
+		const content = normalizeString(commentInputEl?.value);
+		if (content.length === 0) return;
+
+		isSubmittingComment = true;
+		if (commentPostBtn) {
+			commentPostBtn.disabled = true;
+			commentPostBtn.textContent = "Đang đăng...";
+		}
+
+		try {
+			const response = await postApi.createComment(currentPostId, content);
+			const newComment = response?.data;
+			
+			if (newComment) {
+				// 1. Chèn bình luận vào đầu danh sách
+				const html = createCommentHtml(newComment);
+				commentListEl?.insertAdjacentHTML("afterbegin", html);
+				
+				// 2. Xóa ô nhập liệu
+				if (commentInputEl) {
+					commentInputEl.value = "";
+				}
+				
+				// 3. Tăng commentCount và update ngoài Feed
+				currentPostCommentCount += 1;
+				const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function" 
+					? CSS.escape(currentPostId) 
+					: currentPostId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+					
+				const postCard = document.querySelector(`.post-card[data-post-id="${escapedId}"]`);
+				if (postCard) {
+					postCard.dataset.newCommentCount = String(currentPostCommentCount);
+					const countSpan = postCard.querySelector('.post-comment-btn .action-count');
+					if (countSpan) {
+						countSpan.textContent = formatCompactNumber(currentPostCommentCount);
+					}
+				}
+			}
+		} catch (error) {
+			console.error("[comment-modal] Lỗi khi tạo bình luận:", error);
+			alert("Không thể đăng bình luận. Vui lòng thử lại!");
+		} finally {
+			isSubmittingComment = false;
+			if (commentPostBtn) {
+				commentPostBtn.disabled = false;
+				commentPostBtn.textContent = "Đăng";
+			}
+		}
+	};
+
+	commentPostBtn?.addEventListener("click", handleCreateComment);
+
+	commentInputEl?.addEventListener("keydown", (event) => {
+		if (event.key === "Enter" && !event.shiftKey) {
+			event.preventDefault();
+			void handleCreateComment();
 		}
 	});
 
