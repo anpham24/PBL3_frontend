@@ -261,13 +261,13 @@ const initLoginPage = () => {
 
 		try {
 			const response = await authApi.login(payload);
-			const token = response?.data?.token;
+			const { token, userId, avtUrl, nickname } = response?.data ?? {};
 
 			if (typeof token !== "string" || token.trim().length === 0) {
 				throw new Error("Không nhận được token từ hệ thống.");
 			}
 
-			saveAuthSession(token);
+			saveAuthSession(token, { userId, avtUrl, nickname });
 			const currentUser = getCurrentUser();
 			const userRole = currentUser?.userRole || "MEMBER";
 			setFeedback(feedbackElement, "Đăng nhập thành công. Đang chuyển trang...", "success");

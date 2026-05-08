@@ -1494,3 +1494,114 @@ img {
 .carousel-btn.next-btn {
 	right: 12px;
 }
+
+/* ---------------------------------------------------------------------------
+   Location Auto-suggest — input wrapper & dropdown
+   --------------------------------------------------------------------------- */
+
+.location-input-wrap {
+	position: relative;
+}
+
+.location-input-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 9px 12px;
+	background: #f9fafb;
+	cursor: text;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.location-input-label:focus-within {
+	border-color: #6b7280;
+	box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.12);
+	background: #fff;
+}
+
+.location-input-label > i {
+	font-size: 1.05rem;
+	color: var(--muted);
+	flex-shrink: 0;
+}
+
+.location-input-label > input {
+	flex: 1;
+	border: none;
+	background: transparent;
+	outline: none;
+	font-size: 0.9rem;
+	color: var(--text);
+	min-width: 0;
+}
+
+.location-input-label > input::placeholder {
+	color: #9ca3af;
+}
+
+/* Dropdown — position:fixed so it escapes overflow:hidden containers */
+.location-suggest-list {
+	position: fixed;
+	z-index: 200;
+	list-style: none;
+	margin: 0;
+	padding: 6px;
+	background: #ffffff;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	box-shadow: 0 14px 30px rgba(17, 24, 39, 0.14);
+	max-height: 240px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.location-suggest-list::-webkit-scrollbar {
+	width: 4px;
+}
+
+.location-suggest-list::-webkit-scrollbar-thumb {
+	background: #d1d5db;
+	border-radius: 4px;
+}
+
+.location-suggest-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 9px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 0.875rem;
+	line-height: 1.4;
+	color: var(--text);
+	transition: background-color 0.12s ease;
+}
+
+.location-suggest-item:hover,
+.location-suggest-item:focus {
+	background: #f3f4f6;
+	outline: none;
+}
+
+.location-suggest-item > i {
+	font-size: 1rem;
+	color: #6b7280;
+	margin-top: 2px;
+	flex-shrink: 0;
+}
+
+.location-suggest-item > span {
+	flex: 1;
+	min-width: 0;
+	word-break: break-word;
+}
+
+.location-suggest-msg {
+	padding: 10px 12px;
+	font-size: 0.85rem;
+	color: var(--muted);
+	text-align: center;
+}

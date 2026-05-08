@@ -1,6 +1,9 @@
 "use strict";
 
 const TOKEN_KEY = "token";
+const USER_ID_KEY = "userId";
+const AVT_URL_KEY = "avtUrl";
+const NICKNAME_KEY = "nickname";
 
 const normalizeStoredValue = (value) => {
 	if (typeof value !== "string") {
@@ -32,6 +35,9 @@ export const setToken = (token) => {
 
 export const removeToken = () => {
 	localStorage.removeItem(TOKEN_KEY);
+	localStorage.removeItem(USER_ID_KEY);
+	localStorage.removeItem(AVT_URL_KEY);
+	localStorage.removeItem(NICKNAME_KEY);
 };
 
 export const parseJwt = (token) => {
@@ -82,11 +88,24 @@ export const getCurrentUser = () => {
 	};
 };
 
-export const saveAuthSession = (token) => {
+/**
+ * Lưu toàn bộ thông tin phiên đăng nhập vào localStorage.
+ * @param {string} token - JWT access token.
+ * @param {{ userId?: string, avtUrl?: string, nickname?: string }} [userDetails={}] - Thông tin bổ sung từ API.
+ */
+export const saveAuthSession = (token, userDetails = {}) => {
 	setToken(token);
+	setStorageValue(USER_ID_KEY, userDetails.userId ?? "");
+	setStorageValue(AVT_URL_KEY, userDetails.avtUrl ?? "");
+	setStorageValue(NICKNAME_KEY, userDetails.nickname ?? "");
 };
 
+export const getUserId = () => getStorageValue(USER_ID_KEY);
+export const getAvtUrl = () => getStorageValue(AVT_URL_KEY);
+export const getNickname = () => getStorageValue(NICKNAME_KEY);
+
 export const clearAuthStorage = () => {
+	// removeToken() đã xóa tất cả các key liên quan (token, userId, avtUrl, nickname)
 	removeToken();
 };
 
