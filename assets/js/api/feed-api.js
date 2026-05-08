@@ -19,19 +19,19 @@ const buildFeedQueryString = (lastId, provinceCode, topicCode, feedType) => {
 	const safeTopicCode = normalizeValue(topicCode);
 
 	if (safeLastId.length > 0) {
-		params.set("last_id", safeLastId);
+		params.set("lastPostId", safeLastId);
 	}
 
 	if (safeProvinceCode.length > 0) {
-		params.set("province_code", safeProvinceCode);
+		params.set("provinceCode", safeProvinceCode);
 	}
 
 	if (safeTopicCode.length > 0) {
-		params.set("topic_code", safeTopicCode);
+		params.set("topicCode", safeTopicCode);
 	}
 
 	if (typeof feedType === "string" && feedType.trim().length > 0) {
-		params.set("feed_type", feedType.trim());
+		params.set("feedType", feedType.trim());
 	}
 
 	return params.toString();
