@@ -2,6 +2,7 @@
 
 import { postApi } from "../api/post-api.js";
 import { getAvtUrl, getNickname } from "../utils/auth.js";
+import { apiClient } from "../api/api-client.js";
 
 const DEFAULT_PUBLISH_LABEL = "Đăng";
 
@@ -38,7 +39,6 @@ const extractProvince = (address) => {
 		address.state ||
 		address.city ||
 		address.province ||
-		address.county ||
 		""
 	);
 };
@@ -101,68 +101,48 @@ const removePostalCode = (address) => {
 };
 
 /**
- * Bản đồ chuyển đổi tên tỉnh/thành sang mã provinceCode.
- * Sử dụng Unicode normalization (NFD) để loại bỏ dấu tiếng Việt,
- * sau đó chuyển sang UPPER_SNAKE_CASE.
- *
- * Ví dụ:
- *   "Thành phố Đà Nẵng" → "DA_NANG"
- *   "Hà Nội"             → "HA_NOI"
- *   "Hồ Chí Minh"        → "HO_CHI_MINH"
- *
+ * Bản đồ chuyển đổi tên tỉnh/thành sang mã provinceCode từ Master Data.
  * @param {string} provinceName - Tên tỉnh/thành từ Nominatim (extractProvince)
- * @returns {string} Mã provinceCode dạng UPPER_SNAKE_CASE hoặc "" nếu không xác định
+ * @param {Array} provincesList - Danh sách tỉnh/thành từ API
+ * @returns {string} Mã provinceCode hoặc "" nếu không khớp
  */
-const PROVINCE_ALIASES = {
-	"tp. ho chi minh": "HO_CHI_MINH",
-	"tp ho chi minh": "HO_CHI_MINH",
-	"tp.hcm": "HO_CHI_MINH",
-	"tphcm": "HO_CHI_MINH",
-	"ho chi minh city": "HO_CHI_MINH",
-	"saigon": "HO_CHI_MINH",
-	"sai gon": "HO_CHI_MINH",
-	"ha noi capital": "HA_NOI",
-	"thu do ha noi": "HA_NOI",
-	"hanoi": "HA_NOI",
-	"danang": "DA_NANG",
-	"da nang city": "DA_NANG",
-	"hue": "THUA_THIEN_HUE",
-	"thua thien-hue": "THUA_THIEN_HUE",
-	"ba ria - vung tau": "BA_RIA_VUNG_TAU",
-	"ba ria-vung tau": "BA_RIA_VUNG_TAU",
-};
-
-const provinceToCode = (provinceName) => {
+const mapProvinceToCode = (provinceName, provincesList) => {
 	if (typeof provinceName !== "string" || provinceName.trim().length === 0) return "";
+	if (!Array.isArray(provincesList) || provincesList.length === 0) return "";
 
-	// Bước 1: Chuẩn hóa chuỗi — loại bỏ dấu tiếng Việt, chuyển thường
-	const normalized = provinceName
-		.normalize("NFD")
-		.replace(/[\u0300-\u036f]/g, "")
-		.replace(/đ/gi, "d")
-		.toLowerCase()
-		.trim();
+	const normalize = (str) => {
+		return str
+			.normalize("NFD")
+			.replace(/[\u0300-\u036f]/g, "")
+			.replace(/đ/gi, "d")
+			.toLowerCase()
+			.replace(/^(tinh|thanh pho|tp\.?\s*)\s*/i, "")
+			.trim();
+	};
 
-	// Bước 2: Kiểm tra alias trước
-	if (PROVINCE_ALIASES[normalized]) {
-		return PROVINCE_ALIASES[normalized];
+	const target = normalize(provinceName);
+
+	// Ưu tiên khớp chính xác
+	for (const prov of provincesList) {
+		if (prov && typeof prov.name === "string") {
+			const pName = normalize(prov.name);
+			if (pName === target) {
+				return prov.code || "";
+			}
+		}
 	}
 
-	// Bước 3: Xóa tiền tố "tinh", "thanh pho", "tp.", "tp"
-	const cleaned = normalized
-		.replace(/^(tinh|thanh pho|tp\.?\s*)\s*/i, "")
-		.trim();
-
-	// Bước 4: Kiểm tra alias một lần nữa sau khi xóa tiền tố
-	if (PROVINCE_ALIASES[cleaned]) {
-		return PROVINCE_ALIASES[cleaned];
+	// Khớp tương đối nếu không có khớp chính xác
+	for (const prov of provincesList) {
+		if (prov && typeof prov.name === "string") {
+			const pName = normalize(prov.name);
+			if (pName.includes(target) || target.includes(pName)) {
+				return prov.code || "";
+			}
+		}
 	}
 
-	// Bước 5: Chuyển sang UPPER_SNAKE_CASE
-	return cleaned
-		.replace(/[^a-z0-9\s]/g, "")
-		.replace(/\s+/g, "_")
-		.toUpperCase();
+	return "";
 };
 
 // ─── Khởi tạo component ──────────────────────────────────────────────────────
@@ -216,6 +196,29 @@ export const initCreatePostModal = (options = {}) => {
 
 	// Bug 3 fix: flag idempotent — đảm bảo listeners chỉ gắn một lần
 	let locationSuggestInitialized = false;
+
+	// ── Master Data Tỉnh/Thành ───────────────────────────────────────────────
+	let masterProvinces = [];
+
+	const fetchMasterProvinces = async () => {
+		try {
+			const response = await apiClient.get("/api/master-data", { requiresAuth: false });
+			if (response?.data?.provinces && Array.isArray(response.data.provinces)) {
+				masterProvinces = response.data.provinces;
+			} else if (response?.provinces && Array.isArray(response.provinces)) {
+				masterProvinces = response.provinces;
+			} else if (Array.isArray(response?.data)) {
+				masterProvinces = response.data;
+			} else if (Array.isArray(response)) {
+				masterProvinces = response;
+			}
+		} catch (error) {
+			console.error("Lỗi khi tải danh sách tỉnh/thành:", error);
+		}
+	};
+
+	// Gọi ngay khi khởi tạo component
+	fetchMasterProvinces();
 
 	// ── Preview ảnh/video ─────────────────────────────────────────────────────
 
@@ -454,6 +457,10 @@ export const initCreatePostModal = (options = {}) => {
 		resetCreateModalState();
 		populateAuthorInfo();
 
+		if (masterProvinces.length === 0) {
+			fetchMasterProvinces();
+		}
+
 		createPostModal.classList.add("open");
 		createPostModal.setAttribute("aria-hidden", "false");
 		document.body.style.overflow = "hidden";
@@ -571,13 +578,13 @@ export const initCreatePostModal = (options = {}) => {
 		}
 
 		const cleanedAddress = removePostalCode(address);
-		const resolvedProvinceCode = provinceToCode(selectedProvince);
+		const resolvedProvinceCode = mapProvinceToCode(selectedProvince, masterProvinces);
 
 		const payload = {
 			files: selectedFiles,
 			visibility: normalizeString(createPostVisibilityInput?.value) || "PUBLIC",
 			content: normalizeString(postCaptionInput.value),
-			address: cleanedAddress,
+			address: cleanedAddress, // Giữ lại địa chỉ đầy đủ (không provinceCode) như hợp đồng API yêu cầu "address (Chuỗi địa chỉ đầy đủ)"
 			provinceCode: resolvedProvinceCode
 		};
 
@@ -585,20 +592,31 @@ export const initCreatePostModal = (options = {}) => {
 
 		try {
 			const response = await postApi.createPost(buildFormData(payload));
-			const createdPost = response?.data?.post || response?.data;
 
+			// Thành công 201
+			setFeedback("Lưu bài thành công, Đang chờ AI kiểm duyệt.", "success");
+
+			const createdPost = response?.data?.post || response?.data;
 			if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
 				onPublish(createdPost);
 			}
 
-			if (closeOnPublish) {
-				closeCreateModal();
-			} else {
-				// Đặt lại form nhưng giữ modal mở (dùng cho feed.js tự đóng sau)
-				resetCreateModalState();
-			}
+			// Đợi một chút để người dùng thấy thông báo thành công
+			setTimeout(() => {
+				if (closeOnPublish) {
+					closeCreateModal();
+				} else {
+					resetCreateModalState();
+				}
+			}, 1500);
 		} catch (error) {
-			setFeedback(toMessage(error, "Đăng bài thất bại. Vui lòng thử lại."));
+			if (error?.status === 400) {
+				setFeedback(toMessage(error, "Bài đăng thiếu nội dung, media hoặc bị AI từ chối."));
+			} else if (error?.status === 500) {
+				setFeedback("Lỗi hệ thống. Vui lòng thử lại sau.");
+			} else {
+				setFeedback(toMessage(error, "Đăng bài thất bại. Vui lòng thử lại."));
+			}
 		} finally {
 			setPublishSubmittingState(false);
 		}
