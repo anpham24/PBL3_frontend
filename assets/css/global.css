@@ -592,6 +592,12 @@ img {
 	border-radius: 999px;
 	font-weight: 600;
 	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.publish-btn:disabled {
+	opacity: 0.38;
+	cursor: not-allowed;
 }
 
 .create-modal-body {
@@ -1162,8 +1168,31 @@ img {
 	width: 100%;
 	border: none;
 	outline: none;
+	box-shadow: none;
 	font-size: 0.94rem;
 	background: transparent;
+}
+
+#create-post-address:focus,
+#create-post-address:active {
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
+/* Modifier: bỏ viền wrapper khi dùng cho thanh địa điểm */
+.post-caption-wrap.location-input-wrap {
+	border: none;
+	outline: none;
+	box-shadow: none;
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.post-caption-wrap.location-input-wrap:focus-within {
+	border: none;
+	outline: none;
+	box-shadow: none;
 }
 
 .create-post-feedback {

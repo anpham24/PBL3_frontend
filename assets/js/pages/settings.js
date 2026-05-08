@@ -4,10 +4,9 @@ import { userApi } from "../api/user-api.js";
 import { authApi } from "../api/auth-api.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initSettingsSubviews } from "./settings-subviews.js";
-import { clearAuthStorage } from "../utils/auth.js";
+import { clearAuthStorage, getToken, saveAuthSession } from "../utils/auth.js";
 
-const DEFAULT_AVATAR_URL =
-	"https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=60";
+const DEFAULT_AVATAR_URL = "../assets/images/225-default-avatar.png";
 
 const toMessage = (error, fallbackMessage) => {
 	if (typeof error?.data?.message === "string" && error.data.message.trim().length > 0) {
@@ -172,8 +171,9 @@ const attachEditProfileHandler = () => {
 				avatarFile: selectedAvatarFile
 			};
 
-			const response = await userApi.updateProfileWithAvatar(createProfileUpdateFormData(payload));
+			const response = await userApi.updateMyProfile(createProfileUpdateFormData(payload));
 
+			// ── Cập nhật giao diện ngay lập tức ──────────────────────────────
 			const responseAvatar =
 				safeText(response?.data?.user?.avatar) ||
 				safeText(response?.data?.avatar) ||
@@ -186,6 +186,9 @@ const attachEditProfileHandler = () => {
 			selectedAvatarFile = null;
 			avatarFileInput.value = "";
 			setFeedback(feedbackElement, safeText(response?.message) || "Cập nhật thành công.", "success");
+
+			// ── Đồng bộ localStorage — gọi sau khi UI đã được cập nhật ────────────
+			void syncLocalStorageProfile(nickname);
 		} catch (error) {
 			setFeedback(feedbackElement, toMessage(error, "Cập nhật hồ sơ thất bại."), "error");
 		} finally {
@@ -212,6 +215,37 @@ const attachEditProfileHandler = () => {
 			);
 		} catch (error) {
 			setFeedback(feedbackElement, toMessage(error, "Không thể tải thông tin hồ sơ."), "error");
+		}
+	};
+
+	/**
+	 * Sau khi cập nhật profile thành công, gọi lại GET /api/users/me/profile
+	 * để lấy dữ liệu chính xác từ server (bao gồm avtUrl mới sau upload),
+	 * rồi đồng bộ vào localStorage.
+	 * @param {string} nickname - Nickname mới (từ form, dùng fallback nếu server không trả)
+	 */
+	const syncLocalStorageProfile = async (nickname) => {
+		try {
+			const refreshed = await userApi.getMyProfile();
+			const serverUser = refreshed?.data?.user;
+
+			const resolvedNickname =
+				safeText(serverUser?.nickname) || safeText(nickname) || "Người dùng";
+			const resolvedAvtUrl =
+				safeText(serverUser?.avatar) ||
+				safeText(serverUser?.avatar_url) ||
+				safeText(serverUser?.avt_url) ||
+				"";
+
+			// saveAuthSession giữ nguyên token hiện tại, chỉ cập nhật nickname và avtUrl
+			const currentToken = getToken();
+			saveAuthSession(currentToken, {
+				nickname: resolvedNickname,
+				avtUrl: resolvedAvtUrl,
+			});
+		} catch {
+			// Không thể làm mới localStorage — không block luồng chính
+			console.warn("[settings] Không thể đồng bộ localStorage sau khi cập nhật hồ sơ.");
 		}
 	};
 

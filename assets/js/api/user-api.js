@@ -35,9 +35,25 @@ export const userApi = {
 	},
 
 
+	/**
+	 * Cập nhật hồ sơ cá nhân của người dùng đang đăng nhập.
+	 * PUT /api/users/me/profile
+	 * Body (FormData): file (nullable), nickname, bio
+	 * @param {FormData} formData
+	 * @returns {Promise<{code: number, message: string}>}
+	 */
+	async updateMyProfile(formData) {
+		if (!(formData instanceof FormData)) {
+			throw new Error("Profile form data is invalid.");
+		}
+
+		return apiClient.put("/api/users/me/profile", formData);
+	},
+
+	// Alias giữ tương thích ngược — đều gọi đúng endpoint mới
 	async updateProfile(payload) {
 		if (payload instanceof FormData) {
-			return apiClient.put("/api/users/update", payload);
+			return apiClient.put("/api/users/me/profile", payload);
 		}
 
 		const formData = new FormData();
@@ -53,7 +69,7 @@ export const userApi = {
 			formData.append("file", payload.file);
 		}
 
-		return apiClient.put("/api/users/update", formData);
+		return apiClient.put("/api/users/me/profile", formData);
 	},
 
 	async updateProfileWithAvatar(formData) {
@@ -61,7 +77,7 @@ export const userApi = {
 			throw new Error("Profile form data is invalid.");
 		}
 
-		return apiClient.put("/api/users/update", formData);
+		return apiClient.put("/api/users/me/profile", formData);
 	},
 
 	async getUsers(keyword = "") {

@@ -316,6 +316,9 @@ export const initCreatePostModal = (options = {}) => {
 
 		clearFeedback();
 		resetPreviewGrid();
+
+		// Đặt lại nút Đăng về disabled khi reset form
+		if (publishPostBtn) publishPostBtn.disabled = true;
 	};
 
 	// ── Nominatim Location Auto-suggest ───────────────────────────────────────
@@ -543,6 +546,13 @@ export const initCreatePostModal = (options = {}) => {
 
 		clearFeedback();
 
+		// Guard: chặn nếu nội dung bài đăng rỗng
+		const contentValue = normalizeString(postCaptionInput.value);
+		if (contentValue.length === 0) {
+			setFeedback("Vui lòng nhập nội dung cho bài đăng.");
+			return;
+		}
+
 		const selectedFiles = Array.from(postFileInput.files || []).filter(
 			(file) =>
 				file instanceof File &&
@@ -627,6 +637,14 @@ export const initCreatePostModal = (options = {}) => {
 	reselectFileBtn?.addEventListener("click", () => {
 		postFileInput?.click();
 	});
+
+	// Điều khiển trạng thái disabled của nút Đăng theo nội dung textarea
+	if (postCaptionInput && publishPostBtn) {
+		postCaptionInput.addEventListener("input", () => {
+			const hasContent = postCaptionInput.value.trim().length > 0;
+			publishPostBtn.disabled = !hasContent;
+		});
+	}
 
 	closeCreateModalBtn?.addEventListener("click", closeCreateModal);
 
