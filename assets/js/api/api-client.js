@@ -99,7 +99,6 @@ const resolveApiUrl = (endpoint) => {
 	return `${baseUrl}${normalizedEndpoint}`;
 };
 
-
 export const apiClient = {
 	async request(endpoint, options = {}) {
 		const {
@@ -123,11 +122,13 @@ export const apiClient = {
 			fetchOptions.credentials = credentials;
 		}
 
-		let response = await fetch(resolveApiUrl(endpoint), fetchOptions);
-		let responseData = await parseJsonSafely(response);
+		const response = await fetch(resolveApiUrl(endpoint), fetchOptions);
+		const responseData = await parseJsonSafely(response);
 
+		// Nếu lỗi 401 (Hết hạn Token), văng luôn về trang Login
 		if (response.status === 401 && !skipAuthRedirect) {
 			handleUnauthorized();
+			throw buildApiError(response, responseData);
 		}
 
 		if (!response.ok) {

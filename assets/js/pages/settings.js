@@ -4,7 +4,7 @@ import { userApi } from "../api/user-api.js";
 import { authApi } from "../api/auth-api.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initSettingsSubviews } from "./settings-subviews.js";
-import { clearAuthStorage, getToken, saveAuthSession } from "../utils/auth.js";
+import { clearAuthStorage, getToken, saveAuthSession, getAvtUrl, updateAvatarSession } from "../utils/auth.js";
 
 const DEFAULT_AVATAR_URL = "../assets/images/225-default-avatar.png";
 
@@ -173,16 +173,19 @@ const attachEditProfileHandler = () => {
 
 			const response = await userApi.updateMyProfile(createProfileUpdateFormData(payload));
 
-			// ── Lấy trực tiếp data từ response (response.data chứa avtUrl, nickname, bio) ──
-			const updatedData = response?.data ?? {};
-			const newAvtUrl   = safeText(updatedData.avtUrl);
-			const newNickname = safeText(updatedData.nickname) || nickname;
-			const newBio      = safeText(updatedData.bio);
+			// ── 1. Lưu link ảnh mới vào session ngay nếu Backend có trả về ──
+			if (response?.data?.avtUrl) {
+				updateAvatarSession(response.data.avtUrl);
+			}
 
-			// ── Cập nhật UI ngay lập tức ────────────────────────────────────────────────
-			currentAvatarUrl = newAvtUrl.length > 0
-				? newAvtUrl
-				: (safeText(previewObjectUrl).length > 0 ? previewObjectUrl : currentAvatarUrl);
+			// ── 2. Cập nhật giao diện ngay lập tức ──────────────────────────	
+			const responseAvatar =
+				safeText(response?.data?.avtUrl) ||
+				safeText(response?.data?.user?.avtUrl) ||
+				(safeText(previewObjectUrl).length > 0 ? previewObjectUrl : currentAvatarUrl);
+
+			// Dùng hàm có sẵn của bạn để đổi ảnh thay vì document.getElementById
+			currentAvatarUrl = responseAvatar;
 			applyAvatarPreview(avatarPreviewElement, currentAvatarUrl);
 
 			// Cập nhật lại các input trong form với dữ liệu mới nhất từ server
@@ -199,6 +202,9 @@ const attachEditProfileHandler = () => {
 				nickname: newNickname,
 				avtUrl: currentAvatarUrl,
 			});
+			// ── 3. Đồng bộ localStorage — gọi sau khi UI đã được cập nhật ──
+			void syncLocalStorageProfile(nickname);
+
 		} catch (error) {
 			setFeedback(feedbackElement, toMessage(error, "Cập nhật hồ sơ thất bại."), "error");
 		} finally {
@@ -225,6 +231,33 @@ const attachEditProfileHandler = () => {
 			);
 		} catch (error) {
 			setFeedback(feedbackElement, toMessage(error, "Không thể tải thông tin hồ sơ."), "error");
+		}
+	};
+
+	/**
+	 * Sau khi cập nhật profile thành công, gọi lại GET /api/users/me/profile
+	 * để lấy dữ liệu chính xác từ server (bao gồm avtUrl mới sau upload),
+	 * rồi đồng bộ vào localStorage.
+	 * @param {string} nickname - Nickname mới (từ form, dùng fallback nếu server không trả)
+	 */
+	const syncLocalStorageProfile = async (nickname) => {
+		try {
+			const refreshed = await userApi.getMyProfile();
+			const serverUser = refreshed?.data?.user;
+
+			const resolvedNickname =
+				safeText(serverUser?.nickname) || safeText(nickname) || "Người dùng";
+			const resolvedAvtUrl = safeText(serverUser?.avtUrl) || "";
+
+			// saveAuthSession giữ nguyên token hiện tại, chỉ cập nhật nickname và avtUrl
+			const currentToken = getToken();
+			saveAuthSession(currentToken, {
+				nickname: resolvedNickname,
+				avtUrl: resolvedAvtUrl,
+			});
+		} catch {
+			// Không thể làm mới localStorage — không block luồng chính
+			console.warn("[settings] Không thể đồng bộ localStorage sau khi cập nhật hồ sơ.");
 		}
 	};
 
@@ -308,6 +341,11 @@ const initSettingsPage = () => {
 	attachEditProfileHandler();
 	attachChangePasswordHandler();
 	attachLogoutHandler();
+	const currentAvt = getAvtUrl();
+	const previewImg = document.getElementById("settings-avatar-preview");
+	if (previewImg && currentAvt) {
+		previewImg.src = currentAvt;
+	}
 };
 
 document.addEventListener("DOMContentLoaded", initSettingsPage);

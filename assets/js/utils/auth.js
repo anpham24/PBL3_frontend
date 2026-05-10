@@ -44,13 +44,13 @@ export const parseJwt = (token) => {
 	if (!token || typeof token !== "string") {
 		return null;
 	}
-	
+
 	try {
 		const base64Url = token.split(".")[1];
 		if (!base64Url) {
 			return null;
 		}
-		
+
 		const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
 		const jsonPayload = decodeURIComponent(
 			atob(base64)
@@ -69,19 +69,19 @@ export const getCurrentUser = () => {
 	if (token.length === 0) {
 		return null;
 	}
-	
+
 	const payload = parseJwt(token);
 	if (!payload) {
 		return null;
 	}
-	
+
 	// Bỏ qua check exp để dễ dàng test với token có sẵn (mock data)
 	// const currentTime = Math.floor(Date.now() / 1000);
 	// if (payload.exp && payload.exp < currentTime) {
 	// 	clearAuthStorage();
 	// 	return null;
 	// }
-	
+
 	return {
 		userId: payload.sub || "",
 		userRole: payload.role || "MEMBER"
@@ -109,3 +109,18 @@ export const clearAuthStorage = () => {
 	removeToken();
 };
 
+export const getAccessToken = () => getToken();
+
+export const setAccessToken = (token) => {
+	setToken(token);
+};
+
+export const clearAccessToken = () => {
+	removeToken();
+};
+
+export const updateAvatarSession = (newAvtUrl) => {
+	if (newAvtUrl) {
+		setStorageValue(AVT_URL_KEY, newAvtUrl);
+	}
+};

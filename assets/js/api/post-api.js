@@ -149,15 +149,19 @@ export const postApi = {
 	async getMyPosts(lastId = null) {
 		const params = new URLSearchParams();
 
+		// 1. Luôn đính kèm tham số báo cho backend biết đây là feed cá nhân
+		params.set("feedType", "PERSONAL");
+
 		const resolvedLastId = toSafeId(lastId, "");
 		if (resolvedLastId.length > 0) {
-			params.set("last_id", resolvedLastId);
+			// 2. Đổi từ "last_id" sang "lastPostId" cho khớp với biến ở PostController
+			params.set("lastPostId", resolvedLastId);
 		}
 
 		const queryString = params.toString();
-		const endpoint = queryString.length > 0
-			? `/api/users/me/posts?${queryString}`
-			: "/api/users/me/posts";
+
+		// 3. Đổi đường dẫn gốc trỏ về PostController
+		const endpoint = `/api/posts?${queryString}`;
 
 		return apiClient.get(endpoint);
 	},
