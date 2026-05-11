@@ -50,6 +50,35 @@ export const feedApi = {
 		});
 	},
 
+	/**
+	 * Lấy Newsfeed (Explore hoặc Following), hỗ trợ cursor-based pagination.
+	 * GET /api/posts?lastPostId=...&provinceCode=...&topicCode=...&feedType=...
+	 * @param {string} lastId
+	 * @param {string} provinceCode
+	 * @param {string} topicCode
+	 * @returns {Promise<{
+	 *   data: {
+	 *     postList: Array<{
+	 *       id: string,
+	 *       authorId: string,
+	 *       authorName: string,
+	 *       avtUrl: string,
+	 *       createAt: string,
+	 *       visibility: string,
+	 *       province: string,
+	 *       topic: string,
+	 *       content: string,
+	 *       address: string,
+	 *       mediaList: Array<{mediaType: string, mediaUrl: string, thumbnailUrl: string|null}>,
+	 *       likeCount: number,
+	 *       commentCount: number,
+	 *       isOwner: boolean
+	 *     }>,
+	 *     respLastPostId: string,
+	 *     hasMore: boolean
+	 *   }
+	 * }>}
+	 */
 	async getFeed(lastId, provinceCode, topicCode) {
 		return apiClient.get(buildFeedUrl(lastId, provinceCode, topicCode, ""));
 	},

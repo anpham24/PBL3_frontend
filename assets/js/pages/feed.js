@@ -264,6 +264,7 @@ const createMediaHtml = (post, authorName) => {
 
 const createPostCardHtml = (post) => {
 	const postId = normalizeString(post?.id);
+	const authorId = normalizeString(post?.authorId);
 	const authorName = normalizeString(post?.authorName || post?.author_name || post?.username) || "Người dùng";
 	const avatarUrl =
 		normalizeString(post?.avtUrl) ||
@@ -282,7 +283,7 @@ const createPostCardHtml = (post) => {
 	const mediaHtml = createMediaHtml(post, authorName);
 
 	return `
-		<article class="post-card" data-post-id="${escapeHtml(postId)}">
+		<article class="post-card" data-post-id="${escapeHtml(postId)}"${authorId.length > 0 ? ` data-author-id="${escapeHtml(authorId)}"` : ""}>
 			<header class="post-header">
 				<div class="post-author">
 					<img class="avatar" src="${escapeHtml(avatarUrl)}" alt="Avatar ${escapeHtml(authorName)}">

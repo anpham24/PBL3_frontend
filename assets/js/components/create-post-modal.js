@@ -188,8 +188,6 @@ export const initCreatePostModal = (options = {}) => {
 	const createPostFormElement = document.getElementById("create-post-form");
 	const locationSuggestList = document.getElementById("location-suggest-list");
 
-	const previewObjectUrls = [];
-
 	// ── State địa điểm đã chọn ───────────────────────────────────────────────
 	// Lưu province được bóc tách khi người dùng click chọn gợi ý
 	let selectedProvince = "";
@@ -220,72 +218,225 @@ export const initCreatePostModal = (options = {}) => {
 	// Gọi ngay khi khởi tạo component
 	fetchMasterProvinces();
 
+	// ── State quản lý ảnh đã chọn ────────────────────────────────────────────
+	/**
+	 * Mảng lưu trữ các đối tượng File thực tế.
+	 * Đây là nguồn truth duy nhất — KHÔNG dùng postFileInput.files vì FileList là read-only.
+	 */
+	let selectedFiles = [];
+
+	/** Index của ảnh/video đang hiển thị trong Main Preview. */
+	let activePreviewIndex = 0;
+
+	/** WeakMap lưu objectURL tương ứng với từng File để tránh tạo trùng lặp. */
+	const fileUrlMap = new WeakMap();
+
+	const getObjectUrl = (file) => {
+		if (fileUrlMap.has(file)) return fileUrlMap.get(file);
+		const url = URL.createObjectURL(file);
+		fileUrlMap.set(file, url);
+		return url;
+	};
+
+	const revokeObjectUrl = (file) => {
+		if (fileUrlMap.has(file)) {
+			URL.revokeObjectURL(fileUrlMap.get(file));
+		}
+	};
+
+	// Lấy element thumbnail strip (được thêm vào HTML)
+	const draftThumbnailStrip = document.getElementById("draft-thumbnail-strip");
+
 	// ── Preview ảnh/video ─────────────────────────────────────────────────────
 
 	const resetPreviewGrid = () => {
-		while (previewObjectUrls.length > 0) {
-			const objectUrl = previewObjectUrls.pop();
-			if (typeof objectUrl === "string" && objectUrl.length > 0) {
-				URL.revokeObjectURL(objectUrl);
-			}
-		}
+		selectedFiles.forEach(revokeObjectUrl);
+		selectedFiles = [];
+		activePreviewIndex = 0;
 
-		if (draftPreviewInner) {
-			draftPreviewInner.innerHTML = "";
-		}
+		if (draftPreviewInner) draftPreviewInner.innerHTML = "";
+		if (draftThumbnailStrip) draftThumbnailStrip.innerHTML = "";
 
 		uploadDropzone?.classList.remove("is-hidden");
 		draftPreviewContainer?.classList.add("is-hidden");
 	};
 
-	const renderPreviewGrid = (files) => {
-		const safeFiles = Array.from(files || []).filter((file) => {
-			if (!(file instanceof File)) return false;
-			return file.type.startsWith("image/") || file.type.startsWith("video/");
+	const scrollMainPreviewTo = (index) => {
+		if (!draftPreviewInner) return;
+		const item = draftPreviewInner.children[index];
+		if (item) item.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+	};
+
+	const updateThumbnailActive = (index) => {
+		if (!draftThumbnailStrip) return;
+		draftThumbnailStrip.querySelectorAll(".draft-thumbnail-item").forEach((el, i) => {
+			el.classList.toggle("is-active", i === index);
 		});
+		activePreviewIndex = index;
+	};
 
-		resetPreviewGrid();
+	const renderThumbnailStrip = () => {
+		if (!draftThumbnailStrip) return;
+		draftThumbnailStrip.innerHTML = "";
 
-		if (safeFiles.length === 0) return;
+		selectedFiles.forEach((file, index) => {
+			const objectUrl = getObjectUrl(file);
+			const item = document.createElement("div");
+			item.className = "draft-thumbnail-item";
+			if (index === activePreviewIndex) item.classList.add("is-active");
+			item.setAttribute("role", "button");
+			item.setAttribute("tabindex", "0");
+			item.setAttribute("aria-label", `Xem ảnh ${index + 1}`);
 
-		if (draftPreviewInner) {
-			safeFiles.forEach((file) => {
-				const previewItem = document.createElement("div");
-				previewItem.className = "carousel-item";
+			if (file.type.startsWith("video/")) {
+				const videoEl = document.createElement("video");
+				videoEl.src = objectUrl;
+				videoEl.muted = true;
+				item.appendChild(videoEl);
+			} else {
+				const imgEl = document.createElement("img");
+				imgEl.src = objectUrl;
+				imgEl.alt = file.name || `Ảnh ${index + 1}`;
+				item.appendChild(imgEl);
+			}
 
-				const objectUrl = URL.createObjectURL(file);
-				previewObjectUrls.push(objectUrl);
+			// Nút X xóa ảnh
+			const removeBtn = document.createElement("button");
+			removeBtn.className = "draft-thumbnail-remove";
+			removeBtn.type = "button";
+			removeBtn.setAttribute("aria-label", `Xóa ảnh ${index + 1}`);
+			removeBtn.innerHTML = '<i class="bx bx-x"></i>';
+			removeBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				removeFileAtIndex(index);
+			});
+			item.appendChild(removeBtn);
 
-				if (file.type.startsWith("video/")) {
-					const videoElement = document.createElement("video");
-					videoElement.src = objectUrl;
-					videoElement.muted = true;
-					videoElement.loop = true;
-					videoElement.playsInline = true;
-					videoElement.controls = true;
-					videoElement.setAttribute("aria-label", file.name || "Video bản nháp");
-					previewItem.appendChild(videoElement);
-				} else {
-					const imageElement = document.createElement("img");
-					imageElement.src = objectUrl;
-					imageElement.alt = file.name || "Ảnh bản nháp";
-					previewItem.appendChild(imageElement);
+			// Click → navigate
+			item.addEventListener("click", () => {
+				activePreviewIndex = index;
+				scrollMainPreviewTo(index);
+				updateThumbnailActive(index);
+			});
+			item.addEventListener("keydown", (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					activePreviewIndex = index;
+					scrollMainPreviewTo(index);
+					updateThumbnailActive(index);
 				}
-
-				draftPreviewInner.appendChild(previewItem);
 			});
 
-			uploadDropzone?.classList.add("is-hidden");
-			draftPreviewContainer?.classList.remove("is-hidden");
+			draftThumbnailStrip.appendChild(item);
+		});
 
-			if (safeFiles.length > 1) {
-				draftPrevBtn?.classList.remove("is-hidden");
-				draftNextBtn?.classList.remove("is-hidden");
+		// Nút + thêm ảnh
+		const addBtn = document.createElement("button");
+		addBtn.className = "draft-thumbnail-add";
+		addBtn.type = "button";
+		addBtn.setAttribute("aria-label", "Thêm ảnh");
+		addBtn.innerHTML = '<i class="bx bx-plus"></i>';
+		addBtn.addEventListener("click", () => postFileInput?.click());
+		draftThumbnailStrip.appendChild(addBtn);
+	};
+
+	const renderMainPreview = () => {
+		if (!draftPreviewInner) return;
+		draftPreviewInner.innerHTML = "";
+
+		selectedFiles.forEach((file) => {
+			const objectUrl = getObjectUrl(file);
+			const previewItem = document.createElement("div");
+			previewItem.className = "carousel-item";
+
+			if (file.type.startsWith("video/")) {
+				const videoElement = document.createElement("video");
+				videoElement.src = objectUrl;
+				videoElement.muted = true;
+				videoElement.loop = true;
+				videoElement.playsInline = true;
+				videoElement.controls = true;
+				videoElement.setAttribute("aria-label", file.name || "Video bản nháp");
+				previewItem.appendChild(videoElement);
 			} else {
-				draftPrevBtn?.classList.add("is-hidden");
-				draftNextBtn?.classList.add("is-hidden");
+				const imageElement = document.createElement("img");
+				imageElement.src = objectUrl;
+				imageElement.alt = file.name || "Ảnh bản nháp";
+				previewItem.appendChild(imageElement);
 			}
+
+			draftPreviewInner.appendChild(previewItem);
+		});
+	};
+
+	/**
+	 * Render toàn bộ preview (main + thumbnail). Gọi mỗi khi selectedFiles thay đổi.
+	 */
+	const renderPreview = () => {
+		if (selectedFiles.length === 0) {
+			uploadDropzone?.classList.remove("is-hidden");
+			draftPreviewContainer?.classList.add("is-hidden");
+			return;
 		}
+
+		uploadDropzone?.classList.add("is-hidden");
+		draftPreviewContainer?.classList.remove("is-hidden");
+
+		renderMainPreview();
+		renderThumbnailStrip();
+
+		if (activePreviewIndex >= selectedFiles.length) {
+			activePreviewIndex = Math.max(0, selectedFiles.length - 1);
+		}
+
+		requestAnimationFrame(() => {
+			scrollMainPreviewTo(activePreviewIndex);
+			updateThumbnailActive(activePreviewIndex);
+		});
+
+		if (selectedFiles.length > 1) {
+			draftPrevBtn?.classList.remove("is-hidden");
+			draftNextBtn?.classList.remove("is-hidden");
+		} else {
+			draftPrevBtn?.classList.add("is-hidden");
+			draftNextBtn?.classList.add("is-hidden");
+		}
+	};
+
+	const removeFileAtIndex = (index) => {
+		if (index < 0 || index >= selectedFiles.length) return;
+		const wasActive = index === activePreviewIndex;
+		revokeObjectUrl(selectedFiles[index]);
+		selectedFiles.splice(index, 1);
+
+		if (selectedFiles.length === 0) {
+			resetPreviewGrid();
+			return;
+		}
+
+		if (wasActive) {
+			activePreviewIndex = Math.min(index, selectedFiles.length - 1);
+		} else if (index < activePreviewIndex) {
+			activePreviewIndex = activePreviewIndex - 1;
+		}
+
+		renderPreview();
+	};
+
+	/**
+	 * Thêm (append) các file mới vào selectedFiles — KHÔNG ghi đè ảnh cũ.
+	 * @param {FileList|File[]} newFiles
+	 */
+	const appendFiles = (newFiles) => {
+		const validFiles = Array.from(newFiles || []).filter(
+			(file) =>
+				file instanceof File &&
+				(file.type.startsWith("image/") || file.type.startsWith("video/"))
+		);
+		if (validFiles.length === 0) return;
+		activePreviewIndex = selectedFiles.length; // trỏ đến ảnh đầu tiên vừa thêm
+		selectedFiles.push(...validFiles);
+		renderPreview();
 	};
 
 	// ── Feedback ──────────────────────────────────────────────────────────────
@@ -549,7 +700,7 @@ export const initCreatePostModal = (options = {}) => {
 	};
 
 	const handleSubmit = async () => {
-		if (!postFileInput || !postCaptionInput) return;
+		if (!postCaptionInput) return;
 
 		clearFeedback();
 
@@ -560,12 +711,7 @@ export const initCreatePostModal = (options = {}) => {
 			return;
 		}
 
-		const selectedFiles = Array.from(postFileInput.files || []).filter(
-			(file) =>
-				file instanceof File &&
-				(file.type.startsWith("image/") || file.type.startsWith("video/"))
-		);
-
+		// Dùng selectedFiles module-level (đã được quản lý bởi appendFiles/removeFileAtIndex)
 		if (selectedFiles.length === 0) {
 			setFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
 			return;
@@ -638,22 +784,10 @@ export const initCreatePostModal = (options = {}) => {
 	});
 
 	postFileInput?.addEventListener("change", (event) => {
-		const selectedFiles = Array.from(event.target.files || []).filter(
-			(file) =>
-				file instanceof File &&
-				(file.type.startsWith("image/") || file.type.startsWith("video/"))
-		);
-
-		if (selectedFiles.length === 0) {
-			resetPreviewGrid();
-			return;
-		}
-
-		renderPreviewGrid(selectedFiles);
-	});
-
-	reselectFileBtn?.addEventListener("click", () => {
-		postFileInput?.click();
+		// Dùng appendFiles để THÊM vào danh sách, không ghi đè ảnh cũ
+		appendFiles(event.target.files);
+		// Reset input value để có thể chọn lại cùng một file sau khi xóa
+		event.target.value = "";
 	});
 
 	// Điều khiển trạng thái disabled của nút Đăng theo nội dung textarea

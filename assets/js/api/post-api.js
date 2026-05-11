@@ -94,7 +94,28 @@ export const postApi = {
 	 * Lấy danh sách bài viết của người dùng đang đăng nhập (cursor-based pagination).
 	 * GET /api/users/me/posts?last_id={lastId}
 	 * @param {string|null} lastId - ID bài cuối đã tải. Null = lần đầu tiên.
-	 * @returns {Promise<{data: {postList: object[], respLastPostId: string, hasMore: boolean}}>}
+	 * @returns {Promise<{
+	 *   data: {
+	 *     postList: Array<{
+	 *       id: string,
+	 *       authorId: string,
+	 *       authorName: string,
+	 *       avtUrl: string,
+	 *       createAt: string,
+	 *       visibility: string,
+	 *       province: string,
+	 *       topic: string,
+	 *       content: string,
+	 *       address: string,
+	 *       mediaList: Array<{mediaType: string, mediaUrl: string, thumbnailUrl: string|null}>,
+	 *       likeCount: number,
+	 *       commentCount: number,
+	 *       isOwner: boolean
+	 *     }>,
+	 *     respLastPostId: string,
+	 *     hasMore: boolean
+	 *   }
+	 * }>}
 	 */
 	async getMyPosts(lastId = null) {
 		const params = new URLSearchParams();

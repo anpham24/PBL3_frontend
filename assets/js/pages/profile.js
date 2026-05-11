@@ -323,6 +323,9 @@ const createGridItem = (post) => {
 	item.href = "#";
 	item.setAttribute("aria-label", `Bài đăng của ${post.authorName || ""}`);
 	item.dataset.postId = post.id ?? "";
+	if (post.authorId) {
+		item.dataset.authorId = post.authorId;
+	}
 
 	if (firstMedia) {
 		const isVideo = firstMedia.mediaType === "VIDEO";
