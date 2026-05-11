@@ -82,7 +82,10 @@ export const userApi = {
 		}
 
 		try {
-			return await apiClient.put(`/api/users/${encodeURIComponent(resolvedUserId)}/block`, {});
+			return apiClient.put("/api/admin/users/status", {
+				id: userId,
+				status: "LOCKED" // (Hoặc bạn có thể dùng "BANNED" tùy vào logic)
+			});
 		} catch (error) {
 			if (Number(error?.status) !== 404) {
 				throw error;
