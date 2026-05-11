@@ -24,12 +24,4 @@ export const authApi = {
 	async getProfile() {
 		return apiClient.get("/api/users/profile/me");
 	},
-
-	async refreshToken() {
-		return apiClient.post("/api/auth/refresh", undefined, {
-			requiresAuth: false,
-			skipAuthRedirect: true,
-			credentials: "include"
-		});
-	}
 };

@@ -109,12 +109,3 @@ export const clearAuthStorage = () => {
 	removeToken();
 };
 
-export const getAccessToken = () => getToken();
-
-export const setAccessToken = (token) => {
-	setToken(token);
-};
-
-export const clearAccessToken = () => {
-	removeToken();
-};

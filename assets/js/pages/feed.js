@@ -266,7 +266,7 @@ const createPostCardHtml = (post) => {
 	const postId = normalizeString(post?.id);
 	const authorName = normalizeString(post?.authorName || post?.author_name || post?.username) || "Người dùng";
 	const avatarUrl =
-		normalizeString(post?.avtUrl || post?.avt_url || post?.avatar_url || post?.avatar) ||
+		normalizeString(post?.avtUrl) ||
 		"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
 	const content = normalizeString(post?.content || post?.caption);
 	const isLiked = isTruthyLike(post?.is_liked);

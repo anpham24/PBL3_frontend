@@ -37,47 +37,18 @@ export const userApi = {
 
 	/**
 	 * Cập nhật hồ sơ cá nhân của người dùng đang đăng nhập.
-	 * PUT /api/users/me/profile
-	 * Body (FormData): file (nullable), nickname, bio
+	 * PATCH /api/users/me/profile
+	 * Headers: Authorization: Bearer {token} (inject tự động bởi apiClient)
+	 * Body (FormData): file (nullable), nickname (string), bio (string)
 	 * @param {FormData} formData
-	 * @returns {Promise<{code: number, message: string}>}
+	 * @returns {Promise<{code: number, message: string, data: {avtUrl: string, nickname: string, bio: string}}>}
 	 */
 	async updateMyProfile(formData) {
 		if (!(formData instanceof FormData)) {
 			throw new Error("Profile form data is invalid.");
 		}
 
-		return apiClient.put("/api/users/me/profile", formData);
-	},
-
-	// Alias giữ tương thích ngược — đều gọi đúng endpoint mới
-	async updateProfile(payload) {
-		if (payload instanceof FormData) {
-			return apiClient.put("/api/users/me/profile", payload);
-		}
-
-		const formData = new FormData();
-		if (typeof payload?.nickname === "string") {
-			formData.append("nickname", payload.nickname);
-		}
-
-		if (typeof payload?.bio === "string") {
-			formData.append("bio", payload.bio);
-		}
-
-		if (payload?.file instanceof File) {
-			formData.append("file", payload.file);
-		}
-
-		return apiClient.put("/api/users/me/profile", formData);
-	},
-
-	async updateProfileWithAvatar(formData) {
-		if (!(formData instanceof FormData)) {
-			throw new Error("Profile form data is invalid.");
-		}
-
-		return apiClient.put("/api/users/me/profile", formData);
+		return apiClient.patch("/api/users/me/profile", formData);
 	},
 
 	async getUsers(keyword = "") {

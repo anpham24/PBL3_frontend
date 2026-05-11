@@ -172,7 +172,7 @@ const renderProfile = (response) => {
 	const linkElement = document.getElementById("profile-link");
 
 	const nickname = safeText(user.nickname, "Người dùng");
-	const avatar = safeText(user.avatar, DEFAULT_AVATAR_URL);
+	const avatar = safeText(user.avtUrl, DEFAULT_AVATAR_URL);
 	const bio = safeText(user.bio, "Chưa cập nhật bio.");
 	const website = safeText(user.website || user.link);
 

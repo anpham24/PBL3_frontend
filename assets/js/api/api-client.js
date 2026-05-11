@@ -1,7 +1,7 @@
 "use strict";
 
 import { API_BASE_URL } from "../config.js";
-import { clearAuthStorage, getToken, setToken } from "../utils/auth.js";
+import { clearAuthStorage, getToken } from "../utils/auth.js";
 
 const isFormData = (value) => typeof FormData !== "undefined" && value instanceof FormData;
 
@@ -99,37 +99,6 @@ const resolveApiUrl = (endpoint) => {
 	return `${baseUrl}${normalizedEndpoint}`;
 };
 
-let isRefreshing = false;
-let refreshSubscribers = [];
-
-const onRefreshed = (token) => {
-	refreshSubscribers.forEach((cb) => cb(token));
-	refreshSubscribers = [];
-};
-
-const executeRefreshToken = async () => {
-	if (!isRefreshing) {
-		isRefreshing = true;
-		try {
-			const { authApi } = await import("./auth-api.js");
-			const res = await authApi.refreshToken();
-			const newToken = res?.data?.token;
-			isRefreshing = false;
-			onRefreshed(newToken);
-			return newToken;
-		} catch (error) {
-			isRefreshing = false;
-			onRefreshed(null);
-			return null;
-		}
-	} else {
-		return new Promise((resolve) => {
-			refreshSubscribers.push((token) => {
-				resolve(token);
-			});
-		});
-	}
-};
 
 export const apiClient = {
 	async request(endpoint, options = {}) {
@@ -157,33 +126,8 @@ export const apiClient = {
 		let response = await fetch(resolveApiUrl(endpoint), fetchOptions);
 		let responseData = await parseJsonSafely(response);
 
-		if (response.status === 401) {
-			const urlStr = resolveApiUrl(endpoint).toLowerCase();
-			const isLoginOrRefresh = urlStr.includes("/api/auth/login") || urlStr.includes("/api/auth/refresh");
-
-			if (isLoginOrRefresh) {
-				if (!skipAuthRedirect) {
-					handleUnauthorized();
-				}
-			} else {
-				const newToken = await executeRefreshToken();
-				if (newToken) {
-					setToken(newToken);
-					
-					// Retry request with new token
-					fetchOptions.headers = createRequestHeaders({ headers, requiresAuth, data });
-					response = await fetch(resolveApiUrl(endpoint), fetchOptions);
-					responseData = await parseJsonSafely(response);
-					
-					if (response.status === 401 && !skipAuthRedirect) {
-						handleUnauthorized();
-					}
-				} else {
-					if (!skipAuthRedirect) {
-						handleUnauthorized();
-					}
-				}
-			}
+		if (response.status === 401 && !skipAuthRedirect) {
+			handleUnauthorized();
 		}
 
 		if (!response.ok) {
@@ -212,6 +156,14 @@ export const apiClient = {
 		return this.request(endpoint, {
 			...options,
 			method: "PUT",
+			data
+		});
+	},
+
+	async patch(endpoint, data, options = {}) {
+		return this.request(endpoint, {
+			...options,
+			method: "PATCH",
 			data
 		});
 	},
