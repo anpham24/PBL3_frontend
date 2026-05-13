@@ -30,6 +30,28 @@ export const postApi = {
 		return apiClient.post("/api/posts", formData);
 	},
 
+	/**
+	 * Cập nhật bài đăng đã có.
+	 * PUT /api/posts/{postId}
+	 * @param {string} postId - ID bài đăng cần cập nhật.
+	 * @param {FormData} formData - Dữ liệu cập nhật (multipart/form-data).
+	 *   Các trường bắt buộc:
+	 *   - isMediaChanged (string "true"|"false")
+	 *   - oldUrls (string[]) — các URL media cũ được giữ lại
+	 *   - newFiles (File[])  — các file media mới
+	 *   - visibility, content, address, provinceCode
+	 * @returns {Promise<{code: number, message: string}>}
+	 */
+	async updatePost(postId, formData) {
+		const resolvedPostId = normalizePostId(postId);
+
+		if (!(formData instanceof FormData)) {
+			throw new Error("Dữ liệu cập nhật bài không hợp lệ.");
+		}
+
+		return apiClient.put(`/api/posts/${encodeURIComponent(resolvedPostId)}`, formData);
+	},
+
 	async toggleLike(postId) {
 		const resolvedPostId = normalizePostId(postId);
 
@@ -164,11 +186,11 @@ export const postApi = {
 	async createComment(postId, content) {
 		const resolvedPostId = normalizePostId(postId);
 		const resolvedContent = typeof content === "string" ? content.trim() : "";
-		
+
 		if (resolvedContent.length === 0) {
 			throw new Error("Nội dung bình luận không được để trống.");
 		}
-		
+
 		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/comments`, {
 			content: resolvedContent
 		});

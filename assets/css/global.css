@@ -228,6 +228,7 @@ img {
 
 .post-menu-wrap {
 	flex-shrink: 0;
+	position: relative;
 }
 
 .post-menu-btn {
@@ -255,7 +256,7 @@ img {
 	position: absolute;
 	top: calc(100% - 2px);
 	right: 12px;
-	min-width: 170px;
+	width: 160px;
 	padding: 6px;
 	border: 1px solid var(--border);
 	border-radius: 12px;
@@ -285,11 +286,43 @@ img {
 
 .post-dropdown-item i {
 	font-size: 1rem;
-	color: #ef4444;
+	color: #6b7280;
 }
 
 .post-dropdown-item:hover {
 	background: #f3f4f6;
+}
+
+/* Edit post button */
+.post-dropdown-item--edit i {
+	color: #374151;
+}
+
+.post-dropdown-item--edit:hover {
+	background: #f3f4f6;
+	color: #111827;
+}
+
+.post-dropdown-item--edit:hover i {
+	color: #111827;
+}
+
+/* Delete post button — danger */
+.post-dropdown-item--delete {
+	color: #dc2626;
+}
+
+.post-dropdown-item--delete i {
+	color: #dc2626;
+}
+
+.post-dropdown-item--delete:hover {
+	background: #fef2f2;
+	color: #b91c1c;
+}
+
+.post-dropdown-item--delete:hover i {
+	color: #b91c1c;
 }
 
 .post-tags {
@@ -804,7 +837,6 @@ img {
 	background: #ffffff;
 	min-height: 0;
 	max-height: 90vh;
-	overflow: hidden;
 }
 
 .comment-panel-header {
@@ -813,6 +845,10 @@ img {
 	align-items: center;
 	justify-content: space-between;
 	gap: 10px;
+	position: relative;
+	z-index: 10;
+	overflow: visible;
+	flex-shrink: 0;
 }
 
 .comment-header-user {
@@ -1070,18 +1106,21 @@ img {
    --------------------------------------------------------------------------- */
 
 @keyframes skeleton-shimmer {
-	0%   { background-position: -400px 0; }
-	100% { background-position:  400px 0; }
+	0% {
+		background-position: -400px 0;
+	}
+
+	100% {
+		background-position: 400px 0;
+	}
 }
 
 .is-skeleton {
 	color: transparent !important;
-	background: linear-gradient(
-		90deg,
-		#e5e7eb 25%,
-		#f3f4f6 50%,
-		#e5e7eb 75%
-	) !important;
+	background: linear-gradient(90deg,
+			#e5e7eb 25%,
+			#f3f4f6 50%,
+			#e5e7eb 75%) !important;
 	background-size: 800px 100% !important;
 	animation: skeleton-shimmer 1.4s ease-in-out infinite;
 	border-radius: 6px;
@@ -1666,13 +1705,13 @@ img {
 	background: #fff;
 }
 
-.location-input-label > i {
+.location-input-label>i {
 	font-size: 1.05rem;
 	color: var(--muted);
 	flex-shrink: 0;
 }
 
-.location-input-label > input {
+.location-input-label>input {
 	flex: 1;
 	border: none;
 	background: transparent;
@@ -1682,7 +1721,7 @@ img {
 	min-width: 0;
 }
 
-.location-input-label > input::placeholder {
+.location-input-label>input::placeholder {
 	color: #9ca3af;
 }
 
@@ -1730,14 +1769,14 @@ img {
 	outline: none;
 }
 
-.location-suggest-item > i {
+.location-suggest-item>i {
 	font-size: 1rem;
 	color: #6b7280;
 	margin-top: 2px;
 	flex-shrink: 0;
 }
 
-.location-suggest-item > span {
+.location-suggest-item>span {
 	flex: 1;
 	min-width: 0;
 	word-break: break-word;

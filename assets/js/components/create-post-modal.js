@@ -5,6 +5,7 @@ import { getAvtUrl, getNickname } from "../utils/auth.js";
 import { apiClient } from "../api/api-client.js";
 
 const DEFAULT_PUBLISH_LABEL = "Đăng";
+const DEFAULT_EDIT_LABEL = "Lưu";
 
 // ─── Debounce utility ────────────────────────────────────────────────────────
 
@@ -218,16 +219,26 @@ export const initCreatePostModal = (options = {}) => {
 	// Gọi ngay khi khởi tạo component
 	fetchMasterProvinces();
 
-	// ── State quản lý ảnh đã chọn ────────────────────────────────────────────
+	// ── State quản lý media ───────────────────────────────────────────────────
 	/**
-	 * Mảng lưu trữ các đối tượng File thực tế.
-	 * Đây là nguồn truth duy nhất — KHÔNG dùng postFileInput.files vì FileList là read-only.
+	 * Mảng mediaItems — nguồn truth duy nhất cho toàn bộ preview.
+	 * Mỗi phần tử là một trong hai cấu trúc:
+	 *   - Media cũ (từ server): { id, type: 'old', url, mediaType: 'image'|'video' }
+	 *   - File mới (upload):    { id, type: 'new', file: File }
 	 */
-	let selectedFiles = [];
+	let mediaItems = [];
 
-	/** Index của ảnh/video đang hiển thị trong Main Preview. */
+	/** Index của item đang hiển thị trong Main Preview. */
 	let activePreviewIndex = 0;
 
+	// ── Edit state ────────────────────────────────────────────────────────────
+	/** null = chế độ Create; string = chế độ Edit (postId đang sửa). */
+	let editPostId = null;
+
+	/** Snapshot URL media gốc khi mở Edit, dùng để phát hiện xóa media cũ. */
+	let originalMediaUrls = [];
+
+	// ── Object URL cache (chỉ cho File mới) ──────────────────────────────────
 	/** WeakMap lưu objectURL tương ứng với từng File để tránh tạo trùng lặp. */
 	const fileUrlMap = new WeakMap();
 
@@ -238,9 +249,32 @@ export const initCreatePostModal = (options = {}) => {
 		return url;
 	};
 
-	const revokeObjectUrl = (file) => {
-		if (fileUrlMap.has(file)) {
-			URL.revokeObjectURL(fileUrlMap.get(file));
+	/**
+	 * Lấy URL hiển thị của một mediaItem.
+	 * - type 'old': trả về item.url trực tiếp.
+	 * - type 'new': tạo/lấy objectURL từ fileUrlMap.
+	 * @param {{ type: string, url?: string, file?: File }} item
+	 * @returns {string}
+	 */
+	const getMediaUrl = (item) => {
+		if (item.type === "old") return item.url;
+		return getObjectUrl(item.file);
+	};
+
+	/**
+	 * Xác định mediaType (image/video) của một mediaItem.
+	 * @param {{ type: string, mediaType?: string, file?: File }} item
+	 * @returns {'image'|'video'}
+	 */
+	const getMediaType = (item) => {
+		if (item.type === "old") return item.mediaType || "image";
+		return item.file.type.startsWith("video/") ? "video" : "image";
+	};
+
+	/** Giải phóng objectURL nếu item là 'new'. */
+	const revokeItemUrl = (item) => {
+		if (item.type === "new" && fileUrlMap.has(item.file)) {
+			URL.revokeObjectURL(fileUrlMap.get(item.file));
 		}
 	};
 
@@ -250,8 +284,8 @@ export const initCreatePostModal = (options = {}) => {
 	// ── Preview ảnh/video ─────────────────────────────────────────────────────
 
 	const resetPreviewGrid = () => {
-		selectedFiles.forEach(revokeObjectUrl);
-		selectedFiles = [];
+		mediaItems.forEach(revokeItemUrl);
+		mediaItems = [];
 		activePreviewIndex = 0;
 
 		if (draftPreviewInner) draftPreviewInner.innerHTML = "";
@@ -279,8 +313,9 @@ export const initCreatePostModal = (options = {}) => {
 		if (!draftThumbnailStrip) return;
 		draftThumbnailStrip.innerHTML = "";
 
-		selectedFiles.forEach((file, index) => {
-			const objectUrl = getObjectUrl(file);
+		mediaItems.forEach((mediaItem, index) => {
+			const mediaUrl = getMediaUrl(mediaItem);
+			const mediaType = getMediaType(mediaItem);
 			const item = document.createElement("div");
 			item.className = "draft-thumbnail-item";
 			if (index === activePreviewIndex) item.classList.add("is-active");
@@ -288,19 +323,19 @@ export const initCreatePostModal = (options = {}) => {
 			item.setAttribute("tabindex", "0");
 			item.setAttribute("aria-label", `Xem ảnh ${index + 1}`);
 
-			if (file.type.startsWith("video/")) {
+			if (mediaType === "video") {
 				const videoEl = document.createElement("video");
-				videoEl.src = objectUrl;
+				videoEl.src = mediaUrl;
 				videoEl.muted = true;
 				item.appendChild(videoEl);
 			} else {
 				const imgEl = document.createElement("img");
-				imgEl.src = objectUrl;
-				imgEl.alt = file.name || `Ảnh ${index + 1}`;
+				imgEl.src = mediaUrl;
+				imgEl.alt = `Ảnh ${index + 1}`;
 				item.appendChild(imgEl);
 			}
 
-			// Nút X xóa ảnh
+			// Nút X xóa media
 			const removeBtn = document.createElement("button");
 			removeBtn.className = "draft-thumbnail-remove";
 			removeBtn.type = "button";
@@ -344,24 +379,25 @@ export const initCreatePostModal = (options = {}) => {
 		if (!draftPreviewInner) return;
 		draftPreviewInner.innerHTML = "";
 
-		selectedFiles.forEach((file) => {
-			const objectUrl = getObjectUrl(file);
+		mediaItems.forEach((mediaItem) => {
+			const mediaUrl = getMediaUrl(mediaItem);
+			const mediaType = getMediaType(mediaItem);
 			const previewItem = document.createElement("div");
 			previewItem.className = "carousel-item";
 
-			if (file.type.startsWith("video/")) {
+			if (mediaType === "video") {
 				const videoElement = document.createElement("video");
-				videoElement.src = objectUrl;
+				videoElement.src = mediaUrl;
 				videoElement.muted = true;
 				videoElement.loop = true;
 				videoElement.playsInline = true;
 				videoElement.controls = true;
-				videoElement.setAttribute("aria-label", file.name || "Video bản nháp");
+				videoElement.setAttribute("aria-label", "Video bản nháp");
 				previewItem.appendChild(videoElement);
 			} else {
 				const imageElement = document.createElement("img");
-				imageElement.src = objectUrl;
-				imageElement.alt = file.name || "Ảnh bản nháp";
+				imageElement.src = mediaUrl;
+				imageElement.alt = "Ảnh bản nháp";
 				previewItem.appendChild(imageElement);
 			}
 
@@ -370,10 +406,10 @@ export const initCreatePostModal = (options = {}) => {
 	};
 
 	/**
-	 * Render toàn bộ preview (main + thumbnail). Gọi mỗi khi selectedFiles thay đổi.
+	 * Render toàn bộ preview (main + thumbnail). Gọi mỗi khi mediaItems thay đổi.
 	 */
 	const renderPreview = () => {
-		if (selectedFiles.length === 0) {
+		if (mediaItems.length === 0) {
 			uploadDropzone?.classList.remove("is-hidden");
 			draftPreviewContainer?.classList.add("is-hidden");
 			return;
@@ -385,8 +421,8 @@ export const initCreatePostModal = (options = {}) => {
 		renderMainPreview();
 		renderThumbnailStrip();
 
-		if (activePreviewIndex >= selectedFiles.length) {
-			activePreviewIndex = Math.max(0, selectedFiles.length - 1);
+		if (activePreviewIndex >= mediaItems.length) {
+			activePreviewIndex = Math.max(0, mediaItems.length - 1);
 		}
 
 		requestAnimationFrame(() => {
@@ -394,7 +430,7 @@ export const initCreatePostModal = (options = {}) => {
 			updateThumbnailActive(activePreviewIndex);
 		});
 
-		if (selectedFiles.length > 1) {
+		if (mediaItems.length > 1) {
 			draftPrevBtn?.classList.remove("is-hidden");
 			draftNextBtn?.classList.remove("is-hidden");
 		} else {
@@ -404,18 +440,18 @@ export const initCreatePostModal = (options = {}) => {
 	};
 
 	const removeFileAtIndex = (index) => {
-		if (index < 0 || index >= selectedFiles.length) return;
+		if (index < 0 || index >= mediaItems.length) return;
 		const wasActive = index === activePreviewIndex;
-		revokeObjectUrl(selectedFiles[index]);
-		selectedFiles.splice(index, 1);
+		revokeItemUrl(mediaItems[index]);
+		mediaItems.splice(index, 1);
 
-		if (selectedFiles.length === 0) {
+		if (mediaItems.length === 0) {
 			resetPreviewGrid();
 			return;
 		}
 
 		if (wasActive) {
-			activePreviewIndex = Math.min(index, selectedFiles.length - 1);
+			activePreviewIndex = Math.min(index, mediaItems.length - 1);
 		} else if (index < activePreviewIndex) {
 			activePreviewIndex = activePreviewIndex - 1;
 		}
@@ -424,7 +460,8 @@ export const initCreatePostModal = (options = {}) => {
 	};
 
 	/**
-	 * Thêm (append) các file mới vào selectedFiles — KHÔNG ghi đè ảnh cũ.
+	 * Thêm (append) các file mới vào mediaItems — KHÔNG ghi đè media cũ.
+	 * Mỗi File được wrap thành mediaItem { type: 'new', file, id }.
 	 * @param {FileList|File[]} newFiles
 	 */
 	const appendFiles = (newFiles) => {
@@ -434,8 +471,10 @@ export const initCreatePostModal = (options = {}) => {
 				(file.type.startsWith("image/") || file.type.startsWith("video/"))
 		);
 		if (validFiles.length === 0) return;
-		activePreviewIndex = selectedFiles.length; // trỏ đến ảnh đầu tiên vừa thêm
-		selectedFiles.push(...validFiles);
+		activePreviewIndex = mediaItems.length; // trỏ đến item đầu tiên vừa thêm
+		validFiles.forEach((file) => {
+			mediaItems.push({ id: `new-${Date.now()}-${Math.random()}`, type: "new", file });
+		});
 		renderPreview();
 	};
 
@@ -458,6 +497,10 @@ export const initCreatePostModal = (options = {}) => {
 	// ── Reset form ────────────────────────────────────────────────────────────
 
 	const resetCreateModalState = () => {
+		// Xóa edit state
+		editPostId = null;
+		originalMediaUrls = [];
+
 		if (postFileInput) postFileInput.value = "";
 		if (postCaptionInput) postCaptionInput.value = "";
 		if (createPostAddressInput) createPostAddressInput.value = "";
@@ -471,8 +514,13 @@ export const initCreatePostModal = (options = {}) => {
 		clearFeedback();
 		resetPreviewGrid();
 
-		// Đặt lại nút Đăng về disabled khi reset form
-		if (publishPostBtn) publishPostBtn.disabled = true;
+		// Khôi phục tiêu đề và nút submit về chế độ Create
+		const modalTitle = createPostModal.querySelector(".create-post-modal-title");
+		if (modalTitle) modalTitle.textContent = "Tạo bài viết";
+		if (publishPostBtn) {
+			publishPostBtn.textContent = DEFAULT_PUBLISH_LABEL;
+			publishPostBtn.disabled = true;
+		}
 	};
 
 	// ── Nominatim Location Auto-suggest ───────────────────────────────────────
@@ -671,12 +719,12 @@ export const initCreatePostModal = (options = {}) => {
 		publishPostBtn.disabled = isSubmitting;
 
 		if (isSubmitting) {
-			publishPostBtn.innerHTML =
-				'<span class="btn-spinner" aria-hidden="true"></span><span>Đang đăng...</span>';
+			const loadingLabel = editPostId ? "Đang lưu..." : "Đang đăng...";
+			publishPostBtn.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${loadingLabel}</span>`;
 			return;
 		}
 
-		publishPostBtn.textContent = DEFAULT_PUBLISH_LABEL;
+		publishPostBtn.textContent = editPostId ? DEFAULT_EDIT_LABEL : DEFAULT_PUBLISH_LABEL;
 	};
 
 	const buildFormData = ({ files, visibility, content, address, provinceCode }) => {
@@ -711,12 +759,6 @@ export const initCreatePostModal = (options = {}) => {
 			return;
 		}
 
-		// Dùng selectedFiles module-level (đã được quản lý bởi appendFiles/removeFileAtIndex)
-		if (selectedFiles.length === 0) {
-			setFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
-			return;
-		}
-
 		const address = normalizeString(createPostAddressInput?.value);
 		if (address.length === 0) {
 			setFeedback("Vui lòng nhập địa chỉ cụ thể cho bài đăng.");
@@ -725,26 +767,70 @@ export const initCreatePostModal = (options = {}) => {
 
 		const cleanedAddress = removePostalCode(address);
 		const resolvedProvinceCode = mapProvinceToCode(selectedProvince, masterProvinces);
-
-		const payload = {
-			files: selectedFiles,
-			visibility: normalizeString(createPostVisibilityInput?.value) || "PUBLIC",
-			content: normalizeString(postCaptionInput.value),
-			address: cleanedAddress, // Giữ lại địa chỉ đầy đủ (không provinceCode) như hợp đồng API yêu cầu "address (Chuỗi địa chỉ đầy đủ)"
-			provinceCode: resolvedProvinceCode
-		};
+		const visibility = normalizeString(createPostVisibilityInput?.value) || "PUBLIC";
 
 		setPublishSubmittingState(true);
 
 		try {
-			const response = await postApi.createPost(buildFormData(payload));
+			if (editPostId) {
+				// ── Chế độ Edit ─────────────────────────────────────────────
+				if (mediaItems.length === 0) {
+					setFeedback("Vui lòng giữ lại hoặc thêm ít nhất một ảnh/video.");
+					return;
+				}
 
-			// Thành công 201
-			setFeedback("Lưu bài thành công, Đang chờ AI kiểm duyệt.", "success");
+				// Tách old URL (giữ lại) và new File (mới upload)
+				const oldUrls = mediaItems
+					.filter((item) => item.type === "old")
+					.map((item) => item.url);
+				const newFiles = mediaItems.filter((item) => item.type === "new");
 
-			const createdPost = response?.data?.post || response?.data;
-			if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
-				onPublish(createdPost);
+				// isMediaChanged = true nếu có file mới HOẶC có url cũ bị xóa
+				const isMediaChanged =
+					newFiles.length > 0 ||
+					oldUrls.length !== originalMediaUrls.length ||
+					!oldUrls.every((url) => originalMediaUrls.includes(url));
+
+				const formData = new FormData();
+				formData.append("isMediaChanged", isMediaChanged.toString());
+				oldUrls.forEach((url) => formData.append("oldUrls", url));
+				newFiles.forEach((item) => formData.append("newFiles", item.file));
+				formData.append("content", contentValue);
+				formData.append("visibility", visibility);
+				formData.append("address", cleanedAddress);
+				formData.append("provinceCode", resolvedProvinceCode);
+
+				await postApi.updatePost(editPostId, formData);
+
+				setFeedback("Lưu bài thành công!", "success");
+
+				if (typeof options.onUpdate === "function") {
+					options.onUpdate(editPostId);
+				}
+			} else {
+				// ── Chế độ Create ────────────────────────────────────────────
+				if (mediaItems.length === 0) {
+					setFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
+					return;
+				}
+
+				const newFilesOnly = mediaItems.map((item) => item.file);
+				const payload = {
+					files: newFilesOnly,
+					visibility,
+					content: contentValue,
+					address: cleanedAddress,
+					provinceCode: resolvedProvinceCode
+				};
+
+				const response = await postApi.createPost(buildFormData(payload));
+
+				setFeedback("Lưu bài thành công, Đang chờ AI kiểm duyệt.", "success");
+
+				const createdPost = response?.data?.post || response?.data;
+				if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
+					onPublish(createdPost);
+				}
 			}
 
 			// Đợi một chút để người dùng thấy thông báo thành công
@@ -761,14 +847,83 @@ export const initCreatePostModal = (options = {}) => {
 			} else if (error?.status === 500) {
 				setFeedback("Lỗi hệ thống. Vui lòng thử lại sau.");
 			} else {
-				setFeedback(toMessage(error, "Đăng bài thất bại. Vui lòng thử lại."));
+				setFeedback(toMessage(error, editPostId ? "Cập nhật bài thất bại. Vui lòng thử lại." : "Đăng bài thất bại. Vui lòng thử lại."));
 			}
 		} finally {
 			setPublishSubmittingState(false);
 		}
 	};
 
-	// ── Gắn event listeners ───────────────────────────────────────────────────
+	// ── Open / Edit ───────────────────────────────────────────────────────────
+
+	/**
+	 * Mở modal ở chế độ Edit, populate dữ liệu từ postData.
+	 * @param {{
+	 *   id: string,
+	 *   content?: string,
+	 *   address?: string,
+	 *   visibility?: string,
+	 *   mediaList?: Array<{mediaType: string, mediaUrl: string}>
+	 * }} postData
+	 */
+	const openEdit = (postData) => {
+		if (!postData?.id) {
+			console.warn("openEdit: postData.id bị thiếu.");
+			return;
+		}
+
+		resetCreateModalState();
+		editPostId = postData.id;
+
+		// Đổ nội dung text
+		if (postCaptionInput) {
+			postCaptionInput.value = postData.content || "";
+		}
+		if (createPostAddressInput) {
+			createPostAddressInput.value = postData.address || "";
+		}
+		if (createPostVisibilityInput && postData.visibility) {
+			const opt = Array.from(createPostVisibilityInput.options).find(
+				(o) => o.value === postData.visibility
+			);
+			if (opt) createPostVisibilityInput.value = postData.visibility;
+		}
+
+		// Đổ mediaList thành mediaItems type 'old'
+		const mediaList = Array.isArray(postData.mediaList) ? postData.mediaList : [];
+		mediaItems = mediaList.map((m, i) => ({
+			id: `old-${i}-${m.mediaUrl}`,
+			type: "old",
+			url: m.mediaUrl,
+			mediaType: m.mediaType === "VIDEO" || m.mediaType === "video" ? "video" : "image"
+		}));
+
+		// Lưu snapshot URL gốc để so sánh khi submit
+		originalMediaUrls = mediaItems.map((item) => item.url);
+
+		// Populate avatar/nickname
+		populateAuthorInfo();
+
+		// Cập nhật tiêu đề và nút submit
+		const modalTitle = createPostModal.querySelector(".create-post-modal-title");
+		if (modalTitle) modalTitle.textContent = "Chỉnh sửa bài viết";
+		if (publishPostBtn) {
+			publishPostBtn.textContent = DEFAULT_EDIT_LABEL;
+			publishPostBtn.disabled = false;
+		}
+
+		if (masterProvinces.length === 0) {
+			fetchMasterProvinces();
+		}
+
+		// Render media preview nếu có
+		activePreviewIndex = 0;
+		renderPreview();
+
+		createPostModal.classList.add("open");
+		createPostModal.setAttribute("aria-hidden", "false");
+		document.body.style.overflow = "hidden";
+	};
 
 	// Mở modal từ bất kỳ link nào có class .create-post-link
 	document.body.addEventListener("click", (event) => {
@@ -829,6 +984,7 @@ export const initCreatePostModal = (options = {}) => {
 
 	return {
 		open: openCreateModal,
+		openEdit,
 		close: closeCreateModal,
 		reset: resetCreateModalState,
 		elements: {

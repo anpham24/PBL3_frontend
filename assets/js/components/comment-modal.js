@@ -1,6 +1,7 @@
 "use strict";
 
 import { postApi } from "../api/post-api.js";
+import { isPostOwner } from "../utils/helpers.js";
 
 // ---------------------------------------------------------------------------
 // Utility helpers (module-scoped)
@@ -99,6 +100,9 @@ const resolvePostMediaUrls = (post) => resolvePostMediaItems(post).map(item => i
 /** ID bài viết đang hiển thị trong modal */
 let currentPostId = null;
 
+/** Object bài viết đang hiển thị (dùng cho callback edit) */
+let currentPostData = null;
+
 /** Số lượng comment hiện tại (dùng để update count ngoài feed) */
 let currentPostCommentCount = 0;
 
@@ -183,7 +187,8 @@ const showCommentEndMessage = (container) => {
 // Main export
 // ---------------------------------------------------------------------------
 
-export const initCommentModal = () => {
+export const initCommentModal = (options = {}) => {
+	const { onEditRequest = null } = options;
 	const commentModal = document.getElementById("comment-modal");
 	if (!commentModal) {
 		return null;
@@ -201,9 +206,14 @@ export const initCommentModal = () => {
 	const likeCountEl = document.getElementById("comment-modal-like-count");
 	const likeBtnEl = document.getElementById("btn-like-comment-modal");
 
+	/** .post-menu-wrap chứa nút ba chấm trong comment-modal header */
+	const commentModalMenuWrapEl = commentModal.querySelector(".comment-panel-header .post-menu-wrap");
+	/** Dropdown panel bên trong wrap đó */
+	const commentModalDropdownEl = commentModalMenuWrapEl?.querySelector(".post-dropdown-menu") ?? null;
+
 	/** Container có scrollbar chứa danh sách bình luận */
 	const commentListEl = document.getElementById("comment-modal-comment-list");
-	
+
 	const commentInputEl = document.getElementById("comment-input");
 	const commentPostBtn = commentModal.querySelector(".comment-post-btn");
 
@@ -282,6 +292,7 @@ export const initCommentModal = () => {
 		const topic = normalizeString(post.topic);
 		const createdAt = normalizeString(post.createAt || post.create_at || post.created_at);
 		const postId = normalizeString(post.id);
+		const authorId = normalizeString(post.authorId || post.author_id);
 
 		if (authorNameEl) authorNameEl.textContent = authorName;
 		if (authorAvatarEl) {
@@ -290,6 +301,39 @@ export const initCommentModal = () => {
 		}
 		if (postTimeEl) postTimeEl.textContent = timeAgo(createdAt);
 		if (postCaptionEl) postCaptionEl.textContent = content;
+
+		// Render Edit/Delete buttons dựa trên quyền sở hữu
+		if (commentModalDropdownEl) {
+			// Xóa các nút owner cũ để tránh duplicate khi mở bài khác
+			commentModalDropdownEl.querySelectorAll(
+				'[data-action="edit-post"], [data-action="delete-post"]'
+			).forEach(el => el.remove());
+
+			if (isPostOwner(authorId)) {
+				const editBtn = document.createElement("button");
+				editBtn.className = "post-dropdown-item post-dropdown-item--edit";
+				editBtn.type = "button";
+				editBtn.setAttribute("data-action", "edit-post");
+				editBtn.setAttribute("data-post-id", postId);
+				editBtn.innerHTML = `<i class="bx bx-edit"></i><span>Chỉnh sửa</span>`;
+
+				const deleteBtn = document.createElement("button");
+				deleteBtn.className = "post-dropdown-item post-dropdown-item--delete";
+				deleteBtn.type = "button";
+				deleteBtn.setAttribute("data-action", "delete-post");
+				deleteBtn.setAttribute("data-post-id", postId);
+				deleteBtn.innerHTML = `<i class="bx bx-trash"></i><span>Xóa</span>`;
+
+				// Chỉnh sửa + Xóa được đặt TRƯỚC nút Báo cáo
+				if (reportBtnEl && commentModalDropdownEl.contains(reportBtnEl)) {
+					commentModalDropdownEl.insertBefore(deleteBtn, reportBtnEl);
+					commentModalDropdownEl.insertBefore(editBtn, deleteBtn);
+				} else {
+					commentModalDropdownEl.prepend(deleteBtn);
+					commentModalDropdownEl.prepend(editBtn);
+				}
+			}
+		}
 
 		if (postTagsEl) {
 			let tagsHtml = "";
@@ -335,13 +379,14 @@ export const initCommentModal = () => {
 
 		// --- QUAN TRỌNG: Reset state bình luận trước khi mở bài viết mới ---
 		currentPostId = postId;
+		currentPostData = post; // Lưu lại để dùng khi gọi openEdit
 		currentLastCmtId = null;
 		hasMoreCmts = true;
 		isLoadingCmts = false;
-		
+
 		let initialCount = normalizeNumber(post.commentCount ?? post.comment_count, 0);
-		const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function" 
-			? CSS.escape(postId) 
+		const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function"
+			? CSS.escape(postId)
 			: postId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 		const postCard = document.querySelector(`.post-card[data-post-id="${escapedId}"]`);
 		if (postCard && postCard.dataset.newCommentCount !== undefined) {
@@ -367,7 +412,13 @@ export const initCommentModal = () => {
 	// closeCommentModal
 	// ---------------------------------------------------------------------------
 
+	/** Đóng dropdown ba chấm của modal (không đóng modal) */
+	const closeModalMenu = () => {
+		commentModalMenuWrapEl?.classList.remove("open");
+	};
+
 	const closeCommentModal = () => {
+		closeModalMenu();
 		commentModal.classList.remove("open");
 		commentModal.setAttribute("aria-hidden", "true");
 		document.body.style.overflow = "";
@@ -377,6 +428,7 @@ export const initCommentModal = () => {
 
 		// Reset comment state khi đóng
 		currentPostId = null;
+		currentPostData = null;
 		currentPostCommentCount = 0;
 		currentLastCmtId = null;
 		hasMoreCmts = true;
@@ -389,15 +441,88 @@ export const initCommentModal = () => {
 
 	closeCommentModalBtn?.addEventListener("click", closeCommentModal);
 
+	// ---------------------------------------------------------------------------
+	// Toggle dropdown ba chấm bên trong comment-modal
+	// ---------------------------------------------------------------------------
+	if (commentModalMenuWrapEl) {
+		const modalMenuBtn = commentModalMenuWrapEl.querySelector(".post-menu-btn");
+
+		/**
+		 * Định vị dropdown bằng position:fixed dựa trên getBoundingClientRect của nút ba chấm.
+		 * Cần thiết vì .comment-modal-dialog có overflow:hidden → position:absolute bị clip.
+		 */
+		const positionModalDropdown = () => {
+			if (!commentModalDropdownEl || !modalMenuBtn) return;
+			const rect = modalMenuBtn.getBoundingClientRect();
+			// Căn phải theo mép phải của nút, xuất hiện ngay dưới nút
+			commentModalDropdownEl.style.position = "fixed";
+			commentModalDropdownEl.style.top = `${rect.bottom + 4}px`;
+			commentModalDropdownEl.style.right = `${window.innerWidth - rect.right}px`;
+			commentModalDropdownEl.style.left = "auto";
+			commentModalDropdownEl.style.zIndex = "200";
+		};
+
+		// Nút ba chấm: toggle open/close + tính lại vị trí khi mở
+		modalMenuBtn?.addEventListener("click", (event) => {
+			event.stopPropagation();
+			const isOpen = commentModalMenuWrapEl.classList.toggle("open");
+			if (isOpen) {
+				positionModalDropdown();
+			}
+		});
+
+		// Click bên trong dropdown không đóng menu
+		commentModalDropdownEl?.addEventListener("click", (event) => {
+			event.stopPropagation();
+		});
+	}
+
+	// Click ra ngoài panel (backdrop hoặc media pane) đóng dropdown
 	commentModal.addEventListener("click", (event) => {
+		if (!commentModalMenuWrapEl?.contains(event.target)) {
+			closeModalMenu();
+		}
 		if (event.target === commentModal) {
 			closeCommentModal();
 		}
 	});
 
+	// Event delegation cho Edit / Delete trong comment-modal
+	if (commentModalDropdownEl) {
+		commentModalDropdownEl.addEventListener("click", (event) => {
+			const editBtn = event.target.closest('[data-action="edit-post"]');
+			if (editBtn) {
+				event.stopPropagation();
+				closeModalMenu();
+				// Đóng comment modal trước, sau đó gọi callback mở edit modal
+				if (typeof onEditRequest === "function" && currentPostData) {
+					const postSnapshot = currentPostData;
+					closeCommentModal();
+					onEditRequest(postSnapshot);
+				}
+				return;
+			}
+
+			const deleteBtn = event.target.closest('[data-action="delete-post"]');
+			if (deleteBtn) {
+				event.stopPropagation();
+				const postId = deleteBtn.dataset.postId ?? "";
+				// TODO: Xác nhận và gọi API xóa bài đăng
+				console.log("[comment-modal] Delete post:", postId);
+				return;
+			}
+		});
+	}
+
 	document.addEventListener("keydown", (event) => {
 		if (event.key === "Escape" && commentModal.classList.contains("open")) {
-			closeCommentModal();
+			if (commentModalMenuWrapEl?.classList.contains("open")) {
+				// Lần 1: chỉ đóng dropdown
+				closeModalMenu();
+			} else {
+				// Lần 2 (hoặc dropdown đã đóng): đóng cả modal
+				closeCommentModal();
+			}
 		}
 	});
 
@@ -421,23 +546,23 @@ export const initCommentModal = () => {
 		try {
 			const response = await postApi.createComment(currentPostId, content);
 			const newComment = response?.data;
-			
+
 			if (newComment) {
 				// 1. Chèn bình luận vào đầu danh sách
 				const html = createCommentHtml(newComment);
 				commentListEl?.insertAdjacentHTML("afterbegin", html);
-				
+
 				// 2. Xóa ô nhập liệu
 				if (commentInputEl) {
 					commentInputEl.value = "";
 				}
-				
+
 				// 3. Tăng commentCount và update ngoài Feed
 				currentPostCommentCount += 1;
-				const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function" 
-					? CSS.escape(currentPostId) 
+				const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function"
+					? CSS.escape(currentPostId)
 					: currentPostId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-					
+
 				const postCard = document.querySelector(`.post-card[data-post-id="${escapedId}"]`);
 				if (postCard) {
 					postCard.dataset.newCommentCount = String(currentPostCommentCount);

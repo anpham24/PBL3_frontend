@@ -4,6 +4,7 @@ import { feedApi } from "../api/feed-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
+import { isPostOwner } from "../utils/helpers.js";
 
 const SCROLL_BOTTOM_THRESHOLD = 220;
 const FEED_MODE_EXPLORE = "EXPLORE";
@@ -306,6 +307,16 @@ const createPostCardHtml = (post) => {
 						<i class="bx bx-dots-horizontal-rounded"></i>
 					</button>
 					<div class="post-dropdown-menu">
+						${isPostOwner(authorId) ? `
+						<button class="post-dropdown-item post-dropdown-item--edit" type="button" data-action="edit-post" data-post-id="${escapeHtml(postId)}">
+							<i class="bx bx-edit"></i>
+							<span>Chỉnh sửa</span>
+						</button>
+						<button class="post-dropdown-item post-dropdown-item--delete" type="button" data-action="delete-post" data-post-id="${escapeHtml(postId)}">
+							<i class="bx bx-trash"></i>
+							<span>Xóa</span>
+						</button>
+						` : ""}
 						<button class="post-dropdown-item" type="button" data-action="report-post" data-post-id="${escapeHtml(postId)}">
 							<i class="bx bx-flag"></i>
 							<span>Báo cáo</span>
@@ -439,6 +450,36 @@ const prependPost = (post) => {
 
 	feedPostListElement.insertAdjacentHTML("afterbegin", createPostCardHtml(post));
 	syncEmptyState();
+};
+
+/**
+ * Tìm post trong feedState.posts theo postId.
+ * @param {string} postId
+ * @returns {object|undefined}
+ */
+const findPostById = (postId) => {
+	const safeId = normalizeString(postId);
+	if (safeId.length === 0) return undefined;
+	return feedState.posts.find((p) => normalizeString(p?.id) === safeId);
+};
+
+/**
+ * Mở modal chỉnh sửa bài đăng. Tìm post data từ feedState, nếu không có thì dùng fallback.
+ * @param {string|object} postOrId - postId hoặc object post đầy đủ
+ */
+const openEditModal = (postOrId) => {
+	if (!createPostModalController) return;
+
+	const postData = typeof postOrId === "object" && postOrId !== null
+		? postOrId
+		: findPostById(postOrId);
+
+	if (!postData) {
+		console.warn("[feed] openEditModal: không tìm thấy post", postOrId);
+		return;
+	}
+
+	createPostModalController.openEdit(postData);
 };
 
 /**
@@ -793,9 +834,21 @@ const initFeedPage = () => {
 		onPublish: (createdPost) => {
 			prependPost(createdPost);
 			setStatus("Đăng bài thành công.", "success");
+		},
+		/**
+		 * Callback sau khi sửa bài thành công.
+		 * API chỉ trả về message, không có post object mới.
+		 * → Lấy post hiện tại trong state, cập nhật các field text, rồi re-render card.
+		 */
+		onUpdate: (editedPostId) => {
+			setStatus("Cập nhật bài viết thành công.", "success");
+			// Reload feed để lấy dữ liệu mới nhất từ server
+			void reloadFeedWithFilters();
 		}
 	});
-	commentModalController = initCommentModal();
+	commentModalController = initCommentModal({
+		onEditRequest: (post) => openEditModal(post)
+	});
 	initPostInteractions();
 
 	feedPostListElement.addEventListener("click", (event) => {
@@ -826,6 +879,29 @@ const initFeedPage = () => {
 			const postId = normalizeString(reportActionButton.dataset.postId);
 			closeAllPostMenus();
 			openReportModal(postId);
+			return;
+		}
+
+		const editActionButton = event.target.closest('[data-action="edit-post"]');
+		if (editActionButton) {
+			event.preventDefault();
+			event.stopPropagation();
+
+			const postId = normalizeString(editActionButton.dataset.postId);
+			closeAllPostMenus();
+			openEditModal(postId);
+			return;
+		}
+
+		const deleteActionButton = event.target.closest('[data-action="delete-post"]');
+		if (deleteActionButton) {
+			event.preventDefault();
+			event.stopPropagation();
+
+			const postId = normalizeString(deleteActionButton.dataset.postId);
+			closeAllPostMenus();
+			// TODO: Xác nhận và gọi API xóa bài đăng
+			console.log("[feed] Delete post:", postId);
 			return;
 		}
 
