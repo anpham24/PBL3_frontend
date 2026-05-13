@@ -53,9 +53,10 @@ export const feedApi = {
 	/**
 	 * Lấy Newsfeed (Explore hoặc Following), hỗ trợ cursor-based pagination.
 	 * GET /api/posts?lastPostId=...&provinceCode=...&topicCode=...&feedType=...
-	 * @param {string} lastId
-	 * @param {string} provinceCode
-	 * @param {string} topicCode
+	 * @param {string} lastId - ID bài viết cuối cùng đã tải (cursor).
+	 * @param {string} provinceCode - Mã tỉnh/thành phố ("") = tất cả.
+	 * @param {string} topicCode - Mã chủ đề ("") = tất cả.
+	 * @param {"EXPLORE"|"FOLLOWING"|""} feedType - Loại feed.
 	 * @returns {Promise<{
 	 *   data: {
 	 *     postList: Array<{
@@ -72,15 +73,15 @@ export const feedApi = {
 	 *       mediaList: Array<{mediaType: string, mediaUrl: string, thumbnailUrl: string|null}>,
 	 *       likeCount: number,
 	 *       commentCount: number,
-	 *       isOwner: boolean
+	 *       isLiked: boolean
 	 *     }>,
 	 *     respLastPostId: string,
 	 *     hasMore: boolean
 	 *   }
 	 * }>}
 	 */
-	async getFeed(lastId, provinceCode, topicCode) {
-		return apiClient.get(buildFeedUrl(lastId, provinceCode, topicCode, ""));
+	async getFeed(lastId, provinceCode, topicCode, feedType = "") {
+		return apiClient.get(buildFeedUrl(lastId, provinceCode, topicCode, feedType));
 	},
 
 	async getExploreFeed(lastId, provinceCode, topicCode) {

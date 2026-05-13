@@ -489,7 +489,7 @@ export const initCommentModal = (options = {}) => {
 
 	// Event delegation cho Edit / Delete trong comment-modal
 	if (commentModalDropdownEl) {
-		commentModalDropdownEl.addEventListener("click", (event) => {
+		commentModalDropdownEl.addEventListener("click", async (event) => {
 			const editBtn = event.target.closest('[data-action="edit-post"]');
 			if (editBtn) {
 				event.stopPropagation();
@@ -507,8 +507,38 @@ export const initCommentModal = (options = {}) => {
 			if (deleteBtn) {
 				event.stopPropagation();
 				const postId = deleteBtn.dataset.postId ?? "";
-				// TODO: Xác nhận và gọi API xóa bài đăng
-				console.log("[comment-modal] Delete post:", postId);
+				if (!postId) return;
+
+				// 1. Xác nhận với người dùng
+				const confirmed = window.confirm(
+					"Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác."
+				);
+				if (!confirmed) return;
+
+				// 2. Loading state — disable nút để tránh spam
+				deleteBtn.disabled = true;
+
+				try {
+					// 3. Gọi API
+					await postApi.deletePost(postId);
+
+					// 4. Thành công — đóng modal, thông báo, điều hướng
+					closeCommentModal();
+					alert("Xóa bài thành công.");
+					window.setTimeout(() => {
+						window.location.href = "profile.html";
+					}, 1000);
+				} catch (error) {
+					// 5. Thất bại — hiển thị lỗi, giữ nguyên, khôi phục nút
+					const errMsg =
+						(typeof error?.data?.message === "string" && error.data.message.trim().length > 0)
+							? error.data.message.trim()
+							: (typeof error?.message === "string" && error.message.trim().length > 0)
+								? error.message.trim()
+								: "Xóa bài thất bại. Vui lòng thử lại.";
+					alert(errMsg);
+					deleteBtn.disabled = false;
+				}
 				return;
 			}
 		});

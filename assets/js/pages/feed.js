@@ -1,6 +1,7 @@
 "use strict";
 
 import { feedApi } from "../api/feed-api.js";
+import { postApi } from "../api/post-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
@@ -271,8 +272,7 @@ const createPostCardHtml = (post) => {
 		normalizeString(post?.avtUrl) ||
 		"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
 	const content = normalizeString(post?.content || post?.caption);
-	const isLiked = isTruthyLike(post?.is_liked);
-	const isSaved = isTruthyLike(post?.is_saved || post?.isSaved);
+	const isLiked = isTruthyLike(post?.isLiked);
 	const likeCount = normalizeNumber(post?.likeCount || post?.like_count, 0);
 	const commentCount = normalizeNumber(post?.commentCount || post?.comment_count, 0);
 	const address = normalizeString(post?.address || post?.location);
@@ -620,77 +620,7 @@ const loadDropdowns = async () => {
 	}
 };
 
-const setSaveButtonVisualState = (saveButton, isSaved) => {
-	if (!saveButton) {
-		return;
-	}
-
-	const saved = Boolean(isSaved);
-	const iconElement = saveButton.querySelector("i");
-
-	saveButton.classList.toggle("is-saved", saved);
-	saveButton.setAttribute("aria-label", saved ? "Bỏ lưu bài viết" : "Lưu bài viết");
-
-	if (!iconElement) {
-		return;
-	}
-
-	iconElement.classList.toggle("bx-bookmark", !saved);
-	iconElement.classList.toggle("bxs-bookmark", saved);
-};
-
-const updatePostSaveState = (postId, isSaved) => {
-	const safePostId = normalizeString(postId);
-	if (safePostId.length === 0) {
-		return;
-	}
-
-	const normalizedIsSaved = Boolean(isSaved);
-
-	const postCard = feedPostListElement?.querySelector(`[data-post-id="${toCssSelectorValue(safePostId)}"]`);
-	if (postCard) {
-		const saveButton = postCard.querySelector(".post-save-btn");
-		setSaveButtonVisualState(saveButton, normalizedIsSaved);
-	}
-
-	feedState.posts = feedState.posts.map((post) => {
-		if (normalizeString(post?.id) !== safePostId) {
-			return post;
-		}
-
-		return {
-			...post,
-			is_saved: normalizedIsSaved
-		};
-	});
-};
-
-const handleSaveButtonClick = async (saveButton) => {
-	const postCard = saveButton?.closest(".post-card");
-	const postId = normalizeString(postCard?.dataset.postId);
-
-	if (postId.length === 0 || saveButton.dataset.loading === "true") {
-		return;
-	}
-
-	const wasSaved = saveButton.classList.contains("is-saved");
-	const nextSaved = !wasSaved;
-
-	saveButton.dataset.loading = "true";
-	saveButton.disabled = true;
-	setSaveButtonVisualState(saveButton, nextSaved);
-
-	try {
-		await postApi.savePost(postId, nextSaved);
-		updatePostSaveState(postId, nextSaved);
-	} catch (error) {
-		setSaveButtonVisualState(saveButton, wasSaved);
-		setStatus(toMessage(error, "Không thể lưu bài viết. Vui lòng thử lại."), "error");
-	} finally {
-		delete saveButton.dataset.loading;
-		saveButton.disabled = false;
-	}
-};
+// Chức năng Lưu bài viết (Save) đã được loại bỏ theo quyết định sản phẩm.
 
 // handleCreatePostSubmit đã được chuyển vào create-post-modal.js.
 // feed.js chỉ cần truyền onPublish callback để prepend bài mới vào danh sách.
@@ -810,6 +740,45 @@ const submitReportPost = async () => {
 	}
 };
 
+/**
+ * Xử lý xóa bài đăng từ Feed.
+ * @param {string} postId - ID bài đăng cần xóa.
+ * @param {HTMLElement} triggerBtn - Nút đã kích hoạt hành động (để disable/enable lại).
+ */
+const handleDeletePost = async (postId, triggerBtn = null) => {
+	if (!postId) return;
+
+	// 1. Xác nhận với người dùng
+	const confirmed = window.confirm(
+		"Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác."
+	);
+	if (!confirmed) return;
+
+	// 2. Loading state — disable nút để tránh spam
+	if (triggerBtn) {
+		triggerBtn.disabled = true;
+	}
+
+	try {
+		// 3. Gọi API
+		await postApi.deletePost(postId);
+
+		// 4. Thành công — hiển thị thông báo và điều hướng về trang cá nhân
+		alert("Xóa bài thành công.");
+		window.setTimeout(() => {
+			window.location.href = "profile.html";
+		}, 1000);
+	} catch (error) {
+		// 5. Thất bại — hiển thị lỗi, giữ nguyên trang, khôi phục nút
+		const message = toMessage(error, "Xóa bài thất bại. Vui lòng thử lại.");
+		alert(message);
+
+		if (triggerBtn) {
+			triggerBtn.disabled = false;
+		}
+	}
+};
+
 const initFeedPage = () => {
 	provinceSelectElement = document.getElementById("province-filter");
 	topicSelectElement = document.getElementById("topic-filter");
@@ -900,17 +869,10 @@ const initFeedPage = () => {
 
 			const postId = normalizeString(deleteActionButton.dataset.postId);
 			closeAllPostMenus();
-			// TODO: Xác nhận và gọi API xóa bài đăng
-			console.log("[feed] Delete post:", postId);
+			void handleDeletePost(postId, deleteActionButton);
 			return;
 		}
 
-		const saveButton = event.target.closest(".post-save-btn");
-		if (saveButton && feedPostListElement.contains(saveButton)) {
-			event.preventDefault();
-			void handleSaveButtonClick(saveButton);
-			return;
-		}
 
 		const commentButton = event.target.closest(".post-comment-btn");
 		if (commentButton && feedPostListElement.contains(commentButton)) {
