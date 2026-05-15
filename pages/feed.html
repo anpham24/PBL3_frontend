@@ -116,30 +116,13 @@
 			<form id="report-post-form" class="report-post-form" novalidate>
 				<p class="report-post-subtitle">Chọn lý do bạn muốn báo cáo bài đăng này.</p>
 
-				<label class="report-reason-option">
-					<input type="radio" name="report-reason" value="SPAM" required>
-					<span>Spam hoặc quảng cáo không mong muốn</span>
-				</label>
-
-				<label class="report-reason-option">
-					<input type="radio" name="report-reason" value="HARASSMENT" required>
-					<span>Quấy rối hoặc ngôn từ thù ghét</span>
-				</label>
-
-				<label class="report-reason-option">
-					<input type="radio" name="report-reason" value="MISINFORMATION" required>
-					<span>Thông tin sai lệch</span>
-				</label>
-
-				<label class="report-reason-option">
-					<input type="radio" name="report-reason" value="COPYRIGHT" required>
-					<span>Vi phạm bản quyền</span>
-				</label>
-
-				<label class="report-reason-option">
-					<input type="radio" name="report-reason" value="OTHER" required>
-					<span>Lý do khác</span>
-				</label>
+				<div id="report-reasons-container" class="report-reasons-container" aria-live="polite">
+					<!-- Lý do báo cáo được render động bởi feed.js -->
+					<div id="report-reasons-loading" class="report-reasons-loading">
+						<span class="report-reasons-spinner" aria-label="Đang tải..."></span>
+						<span>Đang tải lý do...</span>
+					</div>
+				</div>
 
 				<p id="report-post-feedback" class="report-post-feedback is-hidden" role="status" aria-live="polite">
 				</p>

@@ -522,8 +522,14 @@ const initGridClickHandler = () => {
 // ---------------------------------------------------------------------------
 
 const initProfilePage = () => {
-	initCreatePostModal();
-	commentModalController = initCommentModal();
+	const createPostModalController = initCreatePostModal();
+	commentModalController = initCommentModal({
+		onEditRequest: (post) => {
+			if (createPostModalController) {
+				createPostModalController.openEdit(post);
+			}
+		}
+	});
 	initPostInteractions();
 	loadProfileData();
 	initPostsInfiniteScroll();

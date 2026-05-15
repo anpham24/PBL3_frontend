@@ -94,22 +94,29 @@ export const postApi = {
 		return apiClient.delete(`/api/posts/${encodeURIComponent(resolvedPostId)}`);
 	},
 
-	async reportPost(postId, reasonCode, details = "") {
+	/**
+	 * Lấy danh sách lý do báo cáo.
+	 * GET /api/reports/reasons
+	 * @returns {Promise<{data: {reportReasons: Array<{code: string, reason: string}>}}>}
+	 */
+	async getReportReasons() {
+		return apiClient.get("/api/reports/reasons");
+	},
+
+	/**
+	 * Báo cáo một bài đăng.
+	 * POST /api/posts/{postId}/reports
+	 * @param {string} postId - ID bài đăng cần báo cáo.
+	 * @param {string} reasonCode - Mã lý do báo cáo (lấy từ getReportReasons).
+	 * @returns {Promise<{message: string}>}
+	 */
+	async reportPost(postId, reasonCode) {
 		const resolvedPostId = normalizePostId(postId);
-		const payload = {
-			reason: toSafeId(reasonCode, "OTHER"),
-			details: typeof details === "string" ? details.trim() : ""
-		};
+		const resolvedReasonCode = toSafeId(reasonCode, "OTHER");
 
-		try {
-			return await apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/report`, payload);
-		} catch (error) {
-			if (Number(error?.status) !== 404) {
-				throw error;
-			}
-
-			return apiClient.post(`/api/reports/posts/${encodeURIComponent(resolvedPostId)}`, payload);
-		}
+		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/reports`, {
+			reasonCode: resolvedReasonCode
+		});
 	},
 
 	/**

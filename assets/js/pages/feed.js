@@ -40,8 +40,12 @@ let reportPostCloseButton;
 let reportPostCancelButton;
 let reportPostSubmitButton;
 let reportPostFeedbackElement;
+let reportReasonsContainerElement;
 let createPostModalController;
 let commentModalController;
+
+/** Cache danh sách lý do báo cáo — tránh gọi lại API 2 lần */
+let reportReasonsCache = null;
 
 const normalizeString = (value) => {
 	if (typeof value !== "string") {
@@ -149,6 +153,46 @@ const clearReportFeedback = () => {
 	reportPostFeedbackElement.textContent = "";
 	reportPostFeedbackElement.classList.add("is-hidden");
 	reportPostFeedbackElement.style.color = "";
+};
+
+// ---------------------------------------------------------------------------
+// Toast notification — hiển thị thông báo nổi tạm thời
+// ---------------------------------------------------------------------------
+
+/**
+ * Hiển thị một toast thông báo nhỏ góc dưới màn hình.
+ * @param {string} message - Nội dung thông báo.
+ * @param {'success'|'error'|'info'} variant - Loại thông báo.
+ * @param {number} [duration=3000] - Thời gian hiển thị (ms).
+ */
+const showToast = (message, variant = "info", duration = 3500) => {
+	const existing = document.getElementById("feed-toast-container");
+	if (!existing) {
+		const container = document.createElement("div");
+		container.id = "feed-toast-container";
+		container.className = "toast-container";
+		document.body.appendChild(container);
+	}
+
+	const toast = document.createElement("div");
+	const toastId = `toast-${Date.now()}`;
+	toast.id = toastId;
+	toast.className = `toast toast--${variant}`;
+	toast.setAttribute("role", "status");
+	toast.setAttribute("aria-live", "polite");
+	toast.textContent = message;
+
+	const container = document.getElementById("feed-toast-container");
+	container.appendChild(toast);
+
+	// Trigger reflow để animation hoạt động
+	void toast.offsetWidth;
+	toast.classList.add("toast--visible");
+
+	window.setTimeout(() => {
+		toast.classList.remove("toast--visible");
+		toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+	}, duration);
 };
 
 const syncEmptyState = () => {
@@ -316,11 +360,12 @@ const createPostCardHtml = (post) => {
 							<i class="bx bx-trash"></i>
 							<span>Xóa</span>
 						</button>
-						` : ""}
+						` : `
 						<button class="post-dropdown-item" type="button" data-action="report-post" data-post-id="${escapeHtml(postId)}">
 							<i class="bx bx-flag"></i>
 							<span>Báo cáo</span>
 						</button>
+						`}
 					</div>
 				</div>
 			</header>
@@ -665,6 +710,65 @@ const closeAllPostMenus = (exceptWrap = null) => {
 	});
 };
 
+// ---------------------------------------------------------------------------
+// Report Reasons — render động và cache
+// ---------------------------------------------------------------------------
+
+/**
+ * Render danh sách lý do báo cáo vào #report-reasons-container.
+ * @param {Array<{code: string, reason: string}>} reasons
+ */
+const renderReportReasons = (reasons) => {
+	if (!reportReasonsContainerElement) return;
+
+	const html = reasons.map((item) => {
+		const code = escapeHtml(normalizeString(item?.code));
+		const reason = escapeHtml(normalizeString(item?.reason));
+		if (code.length === 0 || reason.length === 0) return "";
+
+		return `<label class="report-reason-option">
+			<input type="radio" name="report-reason" value="${code}">
+			<span>${reason}</span>
+		</label>`;
+	}).join("");
+
+	reportReasonsContainerElement.innerHTML = html || `<p class="report-reasons-error">Không có lý do nào được tải.</p>`;
+};
+
+/**
+ * Lấy danh sách lý do báo cáo từ API, sử dụng cache để tránh gọi lại khi đã có data.
+ * Hiển thị spinner trong quá trình tải.
+ */
+const loadReportReasons = async () => {
+	if (!reportReasonsContainerElement) return;
+
+	// Nếu đã có cache — render ngay, không gọi API
+	if (Array.isArray(reportReasonsCache) && reportReasonsCache.length > 0) {
+		renderReportReasons(reportReasonsCache);
+		return;
+	}
+
+	// Hiển thị spinner loading
+	reportReasonsContainerElement.innerHTML = `
+		<div id="report-reasons-loading" class="report-reasons-loading">
+			<span class="report-reasons-spinner" aria-label="Đang tải..."></span>
+			<span>Đang tải lý do...</span>
+		</div>`;
+
+	try {
+		const response = await postApi.getReportReasons();
+		const reasons = Array.isArray(response?.data?.reportReasons)
+			? response.data.reportReasons
+			: [];
+
+		reportReasonsCache = reasons; // Lưu cache
+		renderReportReasons(reasons);
+	} catch (error) {
+		console.error("[feed] loadReportReasons error:", error);
+		reportReasonsContainerElement.innerHTML = `<p class="report-reasons-error">Đã có lỗi khi tải danh sách lý do. Vui lòng thử lại.</p>`;
+	}
+};
+
 const openReportModal = (postId) => {
 	if (!reportPostModalElement || !reportPostFormElement) {
 		return;
@@ -676,6 +780,9 @@ const openReportModal = (postId) => {
 	reportPostFormElement.reset();
 	clearReportFeedback();
 	reportPostSubmitButton && (reportPostSubmitButton.disabled = false);
+
+	// Load lý do báo cáo động (có cache — gọi API tối đa 1 lần trong suốt phiên)
+	void loadReportReasons();
 
 	reportPostModalElement.classList.remove("is-hidden");
 	reportPostModalElement.setAttribute("aria-hidden", "false");
@@ -722,20 +829,23 @@ const submitReportPost = async () => {
 	clearReportFeedback();
 
 	try {
-		await postApi.reportPost(reportState.activePostId, reasonCode);
-		setReportFeedback("Đã gửi báo cáo thành công.", "success");
-		setStatus("Đã gửi báo cáo bài đăng.", "success");
+		const response = await postApi.reportPost(reportState.activePostId, reasonCode);
+		// HTTP 201 — thành công
+		const successMsg = normalizeString(response?.message) || "Báo cáo thành công.";
+		showToast(successMsg, "success");
 
 		window.setTimeout(() => {
 			closeReportModal();
 		}, 550);
 	} catch (error) {
-		setReportFeedback(toMessage(error, "Không thể gửi báo cáo. Vui lòng thử lại."));
+		// HTTP 404 hoặc 409 — dùng chính xác message từ API
+		const errMsg = toMessage(error, "Không thể gửi báo cáo. Vui lòng thử lại.");
+		showToast(errMsg, "error");
 	} finally {
 		reportState.isSubmitting = false;
 		if (reportPostSubmitButton) {
 			reportPostSubmitButton.disabled = false;
-			reportPostSubmitButton.textContent = "Gửi";
+			reportPostSubmitButton.textContent = "G\u1eedi";
 		}
 	}
 };
@@ -793,6 +903,7 @@ const initFeedPage = () => {
 	reportPostCancelButton = document.getElementById("report-post-cancel");
 	reportPostSubmitButton = document.getElementById("report-post-submit");
 	reportPostFeedbackElement = document.getElementById("report-post-feedback");
+	reportReasonsContainerElement = document.getElementById("report-reasons-container");
 
 	if (!provinceSelectElement || !topicSelectElement || !feedPostListElement || !feedEmptyStateElement || !feedStatusElement) {
 		return;

@@ -389,6 +389,11 @@ export const initCommentModal = (options = {}) => {
 				'[data-action="edit-post"], [data-action="delete-post"]'
 			).forEach(el => el.remove());
 
+			// Ẩn/hiện nút Báo cáo tùy theo quyền sở hữu bài viết
+			if (reportBtnEl) {
+				reportBtnEl.style.display = isPostOwner(authorId) ? "none" : "";
+			}
+
 			if (isPostOwner(authorId)) {
 				const editBtn = document.createElement("button");
 				editBtn.className = "post-dropdown-item post-dropdown-item--edit";
