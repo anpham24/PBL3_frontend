@@ -1,12 +1,10 @@
-﻿�<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Thông báo</title>
-	
-	
-	
+
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -149,84 +147,9 @@
 		</main>
 	</div>
 
-	<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
-		<div class="create-post-dialog split-layout">
-			<div class="create-preview-col">
-				<div class="upload-dropzone">
-					<i class="bx bx-images" aria-hidden="true"></i>
-					<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
-					<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
-					<input type="file" id="post-file-input" accept="image/*,video/*" multiple hidden>
-				</div>
-				<div id="draft-preview-container" class="draft-preview-container is-hidden">
-					<div id="post-draft-preview-carousel" class="draft-preview-carousel">
-						<div id="post-draft-preview-inner" class="draft-preview-inner"></div>
-						<button id="draft-prev-btn" class="carousel-btn prev-btn is-hidden" type="button"
-							aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
-						<button id="draft-next-btn" class="carousel-btn next-btn is-hidden" type="button"
-							aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
-					</div>
-					<div id="draft-thumbnail-strip" class="draft-thumbnail-strip" aria-label="Danh sach anh da chon" role="list"></div>
-				</div>
-			</div>
-
-			<div class="create-form-col">
-				<header class="create-modal-header">
-					<h2 id="create-post-title">Tạo bài đăng</h2>
-					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
-						<i class="bx bx-x"></i>
-					</button>
-				</header>
-
-				<form id="create-post-form" class="create-modal-body" novalidate>
-					<div class="create-detail-top">
-						<div class="create-post-author">
-						<img class="detail-avatar" id="create-post-author-avatar"
-							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar người dùng">
-					<span class="create-post-author-nickname">Người dùng</span>
-				</div>
-
-						<div class="detail-chips">
-							<label class="detail-chip detail-chip-select" for="create-post-visibility">
-								<i class="bx bx-lock-alt"></i>
-								<select id="create-post-visibility" aria-label="Quyền riêng tư bài đăng" required>
-									<option value="PUBLIC">Công khai</option>
-									<option value="PRIVATE">Chỉ mình tôi</option>
-								</select>
-							</label>
-						</div>
-					</div>
-
-					<div class="post-caption-wrap">
-						<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
-					</div>
-
-									<div class="post-caption-wrap location-input-wrap">
-					<label class="location-input-label" for="create-post-address">
-						<i class="bx bx-map-pin" aria-hidden="true"></i>
-						<input id="create-post-address" type="text" placeholder="Nhập địa điểm..." required
-							autocomplete="off" aria-autocomplete="list"
-							aria-controls="location-suggest-list" aria-expanded="false">
-					</label>
-					<ul id="location-suggest-list" class="location-suggest-list is-hidden"
-						role="listbox" aria-label="Gợi ý địa điểm"></ul>
-				</div>
-
-					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
-						aria-live="polite"></p>
-
-					<div class="create-modal-footer">
-						<button id="publish-post-btn" class="publish-btn" type="submit">Đăng</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
+	<!-- create-post-modal injected by assets/js/components/create-post-modal.js -->
 
 	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/notifications.js"></script>
 </body>
 </html>
-
-

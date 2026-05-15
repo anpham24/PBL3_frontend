@@ -7,6 +7,94 @@ import { apiClient } from "../api/api-client.js";
 const DEFAULT_PUBLISH_LABEL = "Đăng";
 const DEFAULT_EDIT_LABEL = "Lưu";
 
+// ─── HTML Template ────────────────────────────────────────────────────────────
+
+const CREATE_POST_MODAL_HTML = `
+<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
+	<div class="create-post-dialog split-layout">
+		<div class="create-preview-col">
+			<div class="upload-dropzone">
+				<i class="bx bx-images" aria-hidden="true"></i>
+				<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
+				<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
+				<input type="file" id="post-file-input" accept="image/*,video/*" multiple hidden>
+			</div>
+			<div id="draft-preview-container" class="draft-preview-container is-hidden">
+				<div id="post-draft-preview-carousel" class="draft-preview-carousel">
+					<div id="post-draft-preview-inner" class="draft-preview-inner"></div>
+					<button id="draft-prev-btn" class="carousel-btn prev-btn is-hidden" type="button"
+						aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
+					<button id="draft-next-btn" class="carousel-btn next-btn is-hidden" type="button"
+						aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
+				</div>
+				<div id="draft-thumbnail-strip" class="draft-thumbnail-strip" aria-label="Danh sách ảnh đã chọn" role="list"></div>
+			</div>
+		</div>
+
+		<div class="create-form-col">
+			<header class="create-modal-header">
+				<h2 id="create-post-title">Tạo bài đăng</h2>
+				<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
+					<i class="bx bx-x"></i>
+				</button>
+			</header>
+
+			<form id="create-post-form" class="create-modal-body" novalidate>
+				<div class="create-detail-top">
+					<div class="create-post-author">
+						<img class="detail-avatar" id="create-post-author-avatar"
+							src="../assets/images/225-default-avatar.png"
+							alt="Avatar người dùng">
+						<span class="create-post-author-nickname">Người dùng</span>
+					</div>
+
+					<div class="detail-chips">
+						<label class="detail-chip detail-chip-select" for="create-post-visibility">
+							<i class="bx bx-lock-alt"></i>
+							<select id="create-post-visibility" aria-label="Quyền riêng tư bài đăng" required>
+								<option value="PUBLIC">Công khai</option>
+								<option value="PRIVATE">Chỉ mình tôi</option>
+							</select>
+						</label>
+					</div>
+				</div>
+
+				<div class="post-caption-wrap">
+					<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
+				</div>
+
+				<div class="post-caption-wrap location-input-wrap">
+					<label class="location-input-label" for="create-post-address">
+						<i class="bx bx-map-pin" aria-hidden="true"></i>
+						<input id="create-post-address" type="text" placeholder="Nhập địa điểm..." required
+							autocomplete="off" aria-autocomplete="list"
+							aria-controls="location-suggest-list" aria-expanded="false">
+					</label>
+					<ul id="location-suggest-list" class="location-suggest-list is-hidden"
+						role="listbox" aria-label="Gợi ý địa điểm"></ul>
+				</div>
+
+				<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
+					aria-live="polite"></p>
+
+				<div class="create-modal-footer">
+					<button id="publish-post-btn" class="publish-btn" type="submit">Đăng</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+`;
+
+/**
+ * Chèn HTML của create-post-modal vào cuối <body> nếu chưa tồn tại.
+ * Idempotent: gọi nhiều lần cũng chỉ inject một lần.
+ */
+const injectCreatePostModal = () => {
+	if (document.getElementById("create-post-modal")) return;
+	document.body.insertAdjacentHTML("beforeend", CREATE_POST_MODAL_HTML);
+};
+
 // ─── Debounce utility ────────────────────────────────────────────────────────
 
 /**
@@ -105,14 +193,14 @@ const removePostalCode = (address) => {
 export const initCreatePostModal = (options = {}) => {
 	const { closeOnPublish = true, onPublish = null } = options;
 
+	// Inject HTML vào DOM nếu chưa có (idempotent)
+	injectCreatePostModal();
+
 	// Đăng ký carousel handler toàn cục (idempotent)
 	initCarouselHandler();
 
 	// ── Lấy elements ──────────────────────────────────────────────────────────
 	const createPostModal = document.getElementById("create-post-modal");
-	if (!createPostModal) {
-		return null;
-	}
 
 	const uploadDropzone = document.querySelector(".upload-dropzone");
 	const draftPreviewContainer = document.getElementById("draft-preview-container");

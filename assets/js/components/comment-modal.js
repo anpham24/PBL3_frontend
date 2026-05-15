@@ -3,6 +3,85 @@
 import { postApi } from "../api/post-api.js";
 import { isPostOwner } from "../utils/helpers.js";
 
+// ─── HTML Template ────────────────────────────────────────────────────────────
+
+const COMMENT_MODAL_HTML = `
+<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
+	<button id="close-comment-modal" class="comment-modal-close" type="button"
+		aria-label="Đóng hộp thoại bình luận">
+		<i class="bx bx-x"></i>
+	</button>
+
+	<div class="comment-modal-dialog">
+		<div class="comment-media-pane">
+			<div id="comment-modal-media-gallery" class="comment-media-gallery">
+				<!-- Media dynamically injected here -->
+			</div>
+		</div>
+
+		<div class="comment-panel">
+			<header class="comment-panel-header">
+				<div class="comment-header-user">
+					<img id="comment-modal-author-avatar" class="comment-header-avatar" src="" alt="Avatar">
+
+					<div class="comment-header-meta">
+						<strong id="comment-modal-author-name"></strong>
+						<span class="meta-divider">&bull;</span>
+						<span id="comment-modal-post-time" class="post-time"></span>
+					</div>
+				</div>
+
+				<div class="post-menu-wrap">
+					<button class="comment-header-menu post-menu-btn" type="button" aria-label="Tùy chọn bài đăng">
+						<i class="bx bx-dots-horizontal-rounded"></i>
+					</button>
+					<div class="post-dropdown-menu">
+						<button id="comment-modal-report-btn" class="post-dropdown-item" type="button"
+							data-action="report-post" data-post-id="">
+							<i class="bx bx-flag"></i>
+							<span>Báo cáo</span>
+						</button>
+					</div>
+				</div>
+			</header>
+
+			<section class="comment-post-info" aria-label="Thông tin bài viết">
+				<div id="comment-modal-post-tags" class="comment-post-tags">
+					<!-- Tags injected here -->
+				</div>
+				<p id="comment-modal-post-caption" class="comment-post-caption"></p>
+			</section>
+
+			<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sách bình luận">
+				<!-- Comments dynamically injected here -->
+			</div>
+
+			<div class="comment-action-bar">
+				<button id="btn-like-comment-modal" class="comment-action-btn post-action-btn post-like-btn"
+					type="button" aria-label="Thả tim bài đăng">
+					<i class="bx bx-heart"></i>
+					<span id="comment-modal-like-count" class="action-count" data-role="like-count"></span>
+				</button>
+			</div>
+
+			<footer class="comment-input-bar">
+				<textarea id="comment-input" rows="1" placeholder="Thêm bình luận..."></textarea>
+				<button class="comment-post-btn" type="button">Đăng</button>
+			</footer>
+		</div>
+	</div>
+</div>
+`;
+
+/**
+ * Chèn HTML của comment-modal vào cuối <body> nếu chưa tồn tại.
+ * Idempotent: gọi nhiều lần cũng chỉ inject một lần.
+ */
+const injectCommentModal = () => {
+	if (document.getElementById("comment-modal")) return;
+	document.body.insertAdjacentHTML("beforeend", COMMENT_MODAL_HTML);
+};
+
 // ---------------------------------------------------------------------------
 // Utility helpers (module-scoped)
 // ---------------------------------------------------------------------------
@@ -189,10 +268,11 @@ const showCommentEndMessage = (container) => {
 
 export const initCommentModal = (options = {}) => {
 	const { onEditRequest = null } = options;
+
+	// Inject HTML vào DOM nếu chưa có (idempotent)
+	injectCommentModal();
+
 	const commentModal = document.getElementById("comment-modal");
-	if (!commentModal) {
-		return null;
-	}
 
 	// Các element trong modal (cached một lần)
 	const closeCommentModalBtn = document.getElementById("close-comment-modal");
