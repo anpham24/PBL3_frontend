@@ -28,21 +28,7 @@ const debounce = (fn, delay) => {
 const NOMINATIM_URL =
 	"https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=vn&q=";
 
-/**
- * Bóc tách tỉnh/thành từ object address trả về bởi Nominatim.
- * Thứ tự ưu tiên: state → city → province → county → ""
- * @param {object} address
- * @returns {string}
- */
-const extractProvince = (address) => {
-	if (!address || typeof address !== "object") return "";
-	return (
-		address.state ||
-		address.city ||
-		address.province ||
-		""
-	);
-};
+
 
 // ─── Carousel (dùng chung cho feed card và draft preview) ────────────────────
 
@@ -101,50 +87,7 @@ const removePostalCode = (address) => {
 		.trim();
 };
 
-/**
- * Bản đồ chuyển đổi tên tỉnh/thành sang mã provinceCode từ Master Data.
- * @param {string} provinceName - Tên tỉnh/thành từ Nominatim (extractProvince)
- * @param {Array} provincesList - Danh sách tỉnh/thành từ API
- * @returns {string} Mã provinceCode hoặc "" nếu không khớp
- */
-const mapProvinceToCode = (provinceName, provincesList) => {
-	if (typeof provinceName !== "string" || provinceName.trim().length === 0) return "";
-	if (!Array.isArray(provincesList) || provincesList.length === 0) return "";
 
-	const normalize = (str) => {
-		return str
-			.normalize("NFD")
-			.replace(/[\u0300-\u036f]/g, "")
-			.replace(/đ/gi, "d")
-			.toLowerCase()
-			.replace(/^(tinh|thanh pho|tp\.?\s*)\s*/i, "")
-			.trim();
-	};
-
-	const target = normalize(provinceName);
-
-	// Ưu tiên khớp chính xác
-	for (const prov of provincesList) {
-		if (prov && typeof prov.name === "string") {
-			const pName = normalize(prov.name);
-			if (pName === target) {
-				return prov.code || "";
-			}
-		}
-	}
-
-	// Khớp tương đối nếu không có khớp chính xác
-	for (const prov of provincesList) {
-		if (prov && typeof prov.name === "string") {
-			const pName = normalize(prov.name);
-			if (pName.includes(target) || target.includes(pName)) {
-				return prov.code || "";
-			}
-		}
-	}
-
-	return "";
-};
 
 // ─── Khởi tạo component ──────────────────────────────────────────────────────
 
@@ -189,35 +132,8 @@ export const initCreatePostModal = (options = {}) => {
 	const createPostFormElement = document.getElementById("create-post-form");
 	const locationSuggestList = document.getElementById("location-suggest-list");
 
-	// ── State địa điểm đã chọn ───────────────────────────────────────────────
-	// Lưu province được bóc tách khi người dùng click chọn gợi ý
-	let selectedProvince = "";
-
 	// Bug 3 fix: flag idempotent — đảm bảo listeners chỉ gắn một lần
 	let locationSuggestInitialized = false;
-
-	// ── Master Data Tỉnh/Thành ───────────────────────────────────────────────
-	let masterProvinces = [];
-
-	const fetchMasterProvinces = async () => {
-		try {
-			const response = await apiClient.get("/api/master-data", { requiresAuth: false });
-			if (response?.data?.provinces && Array.isArray(response.data.provinces)) {
-				masterProvinces = response.data.provinces;
-			} else if (response?.provinces && Array.isArray(response.provinces)) {
-				masterProvinces = response.provinces;
-			} else if (Array.isArray(response?.data)) {
-				masterProvinces = response.data;
-			} else if (Array.isArray(response)) {
-				masterProvinces = response;
-			}
-		} catch (error) {
-			console.error("Lỗi khi tải danh sách tỉnh/thành:", error);
-		}
-	};
-
-	// Gọi ngay khi khởi tạo component
-	fetchMasterProvinces();
 
 	// ── State quản lý media ───────────────────────────────────────────────────
 	/**
@@ -507,8 +423,7 @@ export const initCreatePostModal = (options = {}) => {
 
 		if (createPostVisibilityInput) createPostVisibilityInput.selectedIndex = 0;
 
-		// Xóa province đã chọn và đóng dropdown
-		selectedProvince = "";
+		// Đóng dropdown gợi ý địa chỉ
 		hideSuggestList();
 
 		clearFeedback();
@@ -573,7 +488,6 @@ export const initCreatePostModal = (options = {}) => {
 				// mousedown thay vì click để chạy trước blur của input
 				e.preventDefault();
 				createPostAddressInput.value = cleanedDisplayName;
-				selectedProvince = extractProvince(place.address);
 				hideSuggestList();
 			});
 
@@ -622,9 +536,6 @@ export const initCreatePostModal = (options = {}) => {
 		createPostAddressInput.addEventListener("input", () => {
 			const query = createPostAddressInput.value.trim();
 
-			// Nếu người dùng thay đổi nội dung thủ công → xóa province đã chọn trước
-			selectedProvince = "";
-
 			if (query.length === 0) {
 				hideSuggestList();
 				locationSuggestList.innerHTML = "";
@@ -655,10 +566,6 @@ export const initCreatePostModal = (options = {}) => {
 	const openCreateModal = () => {
 		resetCreateModalState();
 		populateAuthorInfo();
-
-		if (masterProvinces.length === 0) {
-			fetchMasterProvinces();
-		}
 
 		createPostModal.classList.add("open");
 		createPostModal.setAttribute("aria-hidden", "false");
@@ -727,13 +634,12 @@ export const initCreatePostModal = (options = {}) => {
 		publishPostBtn.textContent = editPostId ? DEFAULT_EDIT_LABEL : DEFAULT_PUBLISH_LABEL;
 	};
 
-	const buildFormData = ({ files, visibility, content, address, provinceCode }) => {
+	const buildFormData = ({ files, visibility, content, address }) => {
 		const formData = new FormData();
 		files.forEach((file) => formData.append("files", file));
 		formData.append("visibility", visibility);
 		formData.append("content", content);
 		formData.append("address", address);
-		formData.append("provinceCode", provinceCode);
 		return formData;
 	};
 
@@ -766,7 +672,6 @@ export const initCreatePostModal = (options = {}) => {
 		}
 
 		const cleanedAddress = removePostalCode(address);
-		const resolvedProvinceCode = mapProvinceToCode(selectedProvince, masterProvinces);
 		const visibility = normalizeString(createPostVisibilityInput?.value) || "PUBLIC";
 
 		setPublishSubmittingState(true);
@@ -798,7 +703,6 @@ export const initCreatePostModal = (options = {}) => {
 				formData.append("content", contentValue);
 				formData.append("visibility", visibility);
 				formData.append("address", cleanedAddress);
-				formData.append("provinceCode", resolvedProvinceCode);
 
 				await postApi.updatePost(editPostId, formData);
 
@@ -819,8 +723,7 @@ export const initCreatePostModal = (options = {}) => {
 					files: newFilesOnly,
 					visibility,
 					content: contentValue,
-					address: cleanedAddress,
-					provinceCode: resolvedProvinceCode
+					address: cleanedAddress
 				};
 
 				const response = await postApi.createPost(buildFormData(payload));
@@ -910,10 +813,6 @@ export const initCreatePostModal = (options = {}) => {
 		if (publishPostBtn) {
 			publishPostBtn.textContent = DEFAULT_EDIT_LABEL;
 			publishPostBtn.disabled = false;
-		}
-
-		if (masterProvinces.length === 0) {
-			fetchMasterProvinces();
 		}
 
 		// Render media preview nếu có

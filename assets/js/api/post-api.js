@@ -39,7 +39,7 @@ export const postApi = {
 	 *   - isMediaChanged (string "true"|"false")
 	 *   - oldUrls (string[]) — các URL media cũ được giữ lại
 	 *   - newFiles (File[])  — các file media mới
-	 *   - visibility, content, address, provinceCode
+	 *   - visibility, content, address
 	 * @returns {Promise<{code: number, message: string}>}
 	 */
 	async updatePost(postId, formData) {
