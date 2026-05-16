@@ -210,12 +210,14 @@ const createCommentHtml = (comment) => {
 	const avatarUrl = escapeHtml(normalizeString(comment.avtUrl) || DEFAULT_AVATAR);
 	const content = escapeHtml(normalizeString(comment.content));
 	const timeText = escapeHtml(timeAgo(normalizeString(comment.createAt)));
+	const authorId = escapeHtml(normalizeString(comment.authorId || comment.author_id));
+	const profileAttr = authorId.length > 0 ? ` data-user-id="${authorId}"` : "";
 
 	return `
 		<div class="comment-item">
-			<img class="comment-avatar" src="${avatarUrl}" alt="Avatar ${authorName}">
+			<img class="comment-avatar open-profile-link" src="${avatarUrl}" alt="Avatar ${authorName}"${profileAttr} style="cursor:pointer;">
 			<div class="comment-content">
-				<p><strong>${authorName}</strong>${content}</p>
+				<p><strong class="open-profile-link"${profileAttr} style="cursor:pointer;">${authorName}</strong>${content}</p>
 				${timeText ? `<span class="comment-time">${timeText}</span>` : ""}
 			</div>
 		</div>
@@ -374,10 +376,32 @@ export const initCommentModal = (options = {}) => {
 		const postId = normalizeString(post.id);
 		const authorId = normalizeString(post.authorId || post.author_id);
 
-		if (authorNameEl) authorNameEl.textContent = authorName;
+		if (authorNameEl) {
+			authorNameEl.textContent = authorName;
+			// Cho phép click vào tên tác giả để xem hồ sơ
+			if (authorId.length > 0) {
+				authorNameEl.classList.add("open-profile-link");
+				authorNameEl.dataset.userId = authorId;
+				authorNameEl.style.cursor = "pointer";
+			} else {
+				authorNameEl.classList.remove("open-profile-link");
+				delete authorNameEl.dataset.userId;
+				authorNameEl.style.cursor = "";
+			}
+		}
 		if (authorAvatarEl) {
 			authorAvatarEl.src = avatarUrl;
 			authorAvatarEl.alt = `Avatar ${authorName}`;
+			// Cho phép click vào avatar để xem hồ sơ
+			if (authorId.length > 0) {
+				authorAvatarEl.classList.add("open-profile-link");
+				authorAvatarEl.dataset.userId = authorId;
+				authorAvatarEl.style.cursor = "pointer";
+			} else {
+				authorAvatarEl.classList.remove("open-profile-link");
+				delete authorAvatarEl.dataset.userId;
+				authorAvatarEl.style.cursor = "";
+			}
 		}
 		if (postTimeEl) postTimeEl.textContent = timeAgo(createdAt);
 		if (postCaptionEl) postCaptionEl.textContent = content;
@@ -624,6 +648,19 @@ export const initCommentModal = (options = {}) => {
 					alert(errMsg);
 					deleteBtn.disabled = false;
 				}
+				return;
+			}
+
+			// Nut Bao cao - dispatch custom event de feed.js (hoac trang bat ky) lang nghe.
+			// comment-modal khong can biet ve openReportModal -> tranh coupling.
+			const reportBtn = event.target.closest('[data-action="report-post"]');
+			if (reportBtn) {
+				event.stopPropagation();
+				const postId = normalizeString(reportBtn.dataset.postId ?? '');
+				closeModalMenu();
+				document.dispatchEvent(
+					new CustomEvent('postReportRequested', { detail: { postId } })
+				);
 				return;
 			}
 		});

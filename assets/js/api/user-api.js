@@ -110,6 +110,13 @@ export const userApi = {
 		}
 	},
 
+	/**
+	 * Lấy hồ sơ của một người dùng bất kỳ theo userId.
+	 * GET /api/users/{userId}/profile
+	 * Trả về thông tin user + trường isFollowing (true/false).
+	 * @param {string|number} userId
+	 * @returns {Promise<{code: number, data: {user: object, isFollowing: boolean}}>}
+	 */
 	async getProfileById(userId) {
 		const resolvedUserId = normalizeUserId(userId);
 
@@ -117,8 +124,36 @@ export const userApi = {
 			throw new Error("Missing user id.");
 		}
 
-		const query = new URLSearchParams({ id: resolvedUserId });
-		return apiClient.get(`/api/users/profile?${query.toString()}`);
+		return apiClient.get(`/api/users/${encodeURIComponent(resolvedUserId)}/profile`);
+	},
+
+	/**
+	 * Lấy danh sách bài viết của một người dùng bất kỳ theo userId (cursor-based pagination).
+	 * GET /api/users/{userId}/posts?lastPostId={lastPostId}
+	 * Cấu trúc response giống hoàn toàn /api/users/me/posts.
+	 * @param {string|number} userId
+	 * @param {string|null} lastPostId - ID bài cuối đã tải. Null = lần đầu tiên.
+	 * @returns {Promise<{data: {postList: object[], respLastPostId: string, hasMore: boolean}}>}
+	 */
+	async getPostsByUserId(userId, lastPostId = null) {
+		const resolvedUserId = normalizeUserId(userId);
+
+		if (resolvedUserId.length === 0) {
+			throw new Error("Missing user id.");
+		}
+
+		const params = new URLSearchParams();
+		const resolvedLastPostId = normalizeUserId(lastPostId); // reuse normalizer (handles string/number/null)
+		if (resolvedLastPostId.length > 0) {
+			params.set("lastPostId", resolvedLastPostId);
+		}
+
+		const queryString = params.toString();
+		const endpoint = queryString.length > 0
+			? `/api/users/${encodeURIComponent(resolvedUserId)}/posts?${queryString}`
+			: `/api/users/${encodeURIComponent(resolvedUserId)}/posts`;
+
+		return apiClient.get(endpoint);
 	},
 
 	/**

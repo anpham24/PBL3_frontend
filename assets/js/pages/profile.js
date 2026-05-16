@@ -5,6 +5,7 @@ import { postApi } from "../api/post-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
+import { getUserId } from "../utils/auth.js";
 
 const DEFAULT_AVATAR_URL =
 	"https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=520&q=70";
@@ -155,7 +156,11 @@ const showErrorState = (message) => {
 // Render helpers
 // ---------------------------------------------------------------------------
 
-const renderProfile = (response) => {
+/**
+ * @param {object} response - Response từ API getMyProfile() hoặc getProfileById().
+ * @param {boolean} isOwnProfile - true nếu đang xem hồ sơ của chính mình.
+ */
+const renderProfile = (response, isOwnProfile = true) => {
 	const user = response?.data?.user;
 
 	if (!user) {
@@ -214,16 +219,14 @@ const renderProfile = (response) => {
 	}
 
 	if (followButton) {
-		const viewingOtherProfile = getTargetUserIdFromQuery().length > 0;
-
-		if (!viewingOtherProfile) {
+		if (isOwnProfile) {
 			followButton.classList.add("is-hidden");
 		} else {
 			const isFollowing = Boolean(response?.data?.isFollowing);
 			followButton.classList.remove("is-hidden");
 			followButton.classList.toggle("is-following", isFollowing);
-			followButton.textContent = isFollowing ? "Following" : "Follow";
-			followButton.disabled = true;
+			followButton.textContent = isFollowing ? "Đang theo dõi" : "Theo dõi";
+			followButton.disabled = true; // Chức năng follow/unfollow sẽ tích hợp sau
 		}
 	}
 };
@@ -244,22 +247,23 @@ const renderProfile = (response) => {
  * 6. Lỗi mạng / server → hiển thị thông báo lỗi inline qua #profile-feedback.
  * 7. Luôn ẩn skeleton trong khối finally.
  */
-const loadProfileData = async () => {
+/**
+ * @param {boolean} isOwnProfile - true nếu đang xem hồ sơ của chính mình.
+ * @param {string} resolvedTargetId - userId cần xem. Rỗng nếu là chính mình.
+ */
+const loadProfileData = async (isOwnProfile = true, resolvedTargetId = "") => {
 	const feedbackElement = document.getElementById("profile-feedback");
 	clearFeedback(feedbackElement);
 	showSkeleton();
 
 	try {
-		const targetUserId = getTargetUserIdFromQuery();
+		// Không có targetId → xem hồ sơ của chính mình (GET /api/users/me/profile)
+		// Có targetId       → xem hồ sơ người khác  (GET /api/users/{id}/profile)
+		const response = isOwnProfile
+			? await userApi.getMyProfile()
+			: await userApi.getProfileById(resolvedTargetId);
 
-		// Không có ?id → xem hồ sơ của chính mình (GET /api/users/me/profile)
-		// Có ?id=xxx   → xem hồ sơ người khác
-		const response =
-			targetUserId.length > 0
-				? await userApi.getProfileById(targetUserId)
-				: await userApi.getMyProfile();
-
-		renderProfile(response);
+		renderProfile(response, isOwnProfile);
 	} catch (error) {
 		const httpStatus = Number(error?.status);
 
@@ -419,7 +423,13 @@ const showEndOfFeedMessage = () => {
  * GỌi API getMyPosts() và render kết quả vào lưới.
  * An toàn khi gọi nhiều lần — guard bằng isLoadingPosts / hasMorePosts.
  */
-const loadPosts = async () => {
+/**
+ * Gọi API lấy bài viết phù hợp với ngữ cảnh hiện tại:
+ * - Chính mình  → postApi.getMyPosts()
+ * - Người khác  → userApi.getPostsByUserId(targetUserId)
+ * @param {string} targetUserId - ID người dùng cần xem. Rỗng = chính mình.
+ */
+const loadPosts = async (targetUserId = "") => {
 	if (isLoadingPosts || !hasMorePosts) {
 		return;
 	}
@@ -427,7 +437,10 @@ const loadPosts = async () => {
 	isLoadingPosts = true;
 
 	try {
-		const response = await postApi.getMyPosts(currentLastId);
+		const response = targetUserId.length > 0
+			? await userApi.getPostsByUserId(targetUserId, currentLastId)
+			: await postApi.getMyPosts(currentLastId);
+
 		const data = response?.data;
 		const posts = Array.isArray(data?.postList) ? data.postList : [];
 
@@ -451,9 +464,10 @@ const loadPosts = async () => {
 
 /**
  * Khởi tạo IntersectionObserver theo dõi sentinel element.
- * Khi sentinel xuất hiện trong viewport, gọi loadPosts().
+ * Khi sentinel xuất hiện trong viewport, gọi loadPosts() với targetUserId phù hợp.
+ * @param {string} targetUserId - ID người dùng cần xem. Rỗng = chính mình.
  */
-const initPostsInfiniteScroll = () => {
+const initPostsInfiniteScroll = (targetUserId = "") => {
 	const grid = document.querySelector(".profile-grid");
 	if (!grid) {
 		return;
@@ -471,7 +485,7 @@ const initPostsInfiniteScroll = () => {
 	postsObserver = new IntersectionObserver(
 		(entries) => {
 			if (entries[0].isIntersecting) {
-				loadPosts();
+				loadPosts(targetUserId);
 			}
 		},
 		{ rootMargin: "200px" }  // Bắt đầu tải trước khi còn cách 200px
@@ -522,18 +536,53 @@ const initGridClickHandler = () => {
 // ---------------------------------------------------------------------------
 
 const initProfilePage = () => {
-	const createPostModalController = initCreatePostModal();
+	// ── Xác định ngữ cảnh: xem hồ sơ của ai? ──────────────────────────────
+	const targetUserId = getTargetUserIdFromQuery(); // ?id=xxx hoặc ""
+	const currentUserId = getUserId();               // từ localStorage
+
+	// Nếu ?id trỏ về chính mình → xử lý như "chính mình" để tránh gọi API thừa
+	const isOwnProfile = targetUserId.length === 0 || targetUserId === currentUserId;
+	const resolvedTargetId = isOwnProfile ? "" : targetUserId;
+
+	// ── Hiển thị / ẩn nút hành động ────────────────────────────────────────
+	const followButton = document.getElementById("profile-follow-button");
+
+	if (followButton) {
+		// Nút Follow chỉ hiện khi xem hồ sơ người khác; trạng thái thực sẽ
+		// được cập nhật trong renderProfile() sau khi API trả về isFollowing.
+		followButton.classList.toggle("is-hidden", isOwnProfile);
+	}
+
+	// ── Khởi tạo các component ──────────────────────────────────────────────
+	const createPostModalController = isOwnProfile ? initCreatePostModal() : null;
 	commentModalController = initCommentModal({
-		onEditRequest: (post) => {
-			if (createPostModalController) {
-				createPostModalController.openEdit(post);
+		onEditRequest: isOwnProfile
+			? (post) => {
+				if (createPostModalController) {
+					createPostModalController.openEdit(post);
+				}
 			}
-		}
+			: null
 	});
 	initPostInteractions();
-	loadProfileData();
-	initPostsInfiniteScroll();
+	loadProfileData(isOwnProfile, resolvedTargetId);
+	initPostsInfiniteScroll(resolvedTargetId);
 	initGridClickHandler();
+
+	// Chuyển hướng đến trang hồ sơ khi click vào avatar/nickname có class .open-profile-link
+	// (dành cho các element được inject động bởi comment-modal, v.v.)
+	document.addEventListener("click", (event) => {
+		const link = event.target.closest(".open-profile-link");
+		if (!link) return;
+
+		const userId = safeText(link.dataset.userId);
+		if (userId.length === 0) return;
+
+		if (event.defaultPrevented) return;
+
+		event.preventDefault();
+		window.location.href = `profile.html?id=${encodeURIComponent(userId)}`;
+	});
 };
 
 document.addEventListener("DOMContentLoaded", initProfilePage);

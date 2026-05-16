@@ -5,7 +5,7 @@ import { postApi } from "../api/post-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
-import { isPostOwner } from "../utils/helpers.js";
+import { generateDropdownMenuHtml, initPostMenus } from "../components/post-menu.js";
 
 const SCROLL_BOTTOM_THRESHOLD = 220;
 const FEED_MODE_EXPLORE = "EXPLORE";
@@ -331,10 +331,10 @@ const createPostCardHtml = (post) => {
 		<article class="post-card" data-post-id="${escapeHtml(postId)}"${authorId.length > 0 ? ` data-author-id="${escapeHtml(authorId)}"` : ""}>
 			<header class="post-header">
 				<div class="post-author">
-					<img class="avatar" src="${escapeHtml(avatarUrl)}" alt="Avatar ${escapeHtml(authorName)}">
+					<img class="avatar open-profile-link" src="${escapeHtml(avatarUrl)}" alt="Avatar ${escapeHtml(authorName)}"${authorId.length > 0 ? ` data-user-id="${escapeHtml(authorId)}"` : ""} style="cursor:pointer;">
 					<div class="post-meta">
 						<div class="post-meta-row">
-							<h3>${escapeHtml(authorName)}${timeText ? `<span class="post-time"> &bull; ${escapeHtml(timeText)}</span>` : ""}</h3>
+							<h3><span class="open-profile-link"${authorId.length > 0 ? ` data-user-id="${escapeHtml(authorId)}"` : ""} style="cursor:pointer;">${escapeHtml(authorName)}</span>${timeText ? `<span class="post-time"> &bull; ${escapeHtml(timeText)}</span>` : ""}</h3>
 						</div>
 						${(province || topic || address) ? `
 						<div class="post-tags-inline">
@@ -346,28 +346,7 @@ const createPostCardHtml = (post) => {
 					</div>
 				</div>
 
-				<div class="post-menu-wrap">
-					<button class="post-menu-btn" type="button" aria-label="Tùy chọn bài đăng">
-						<i class="bx bx-dots-horizontal-rounded"></i>
-					</button>
-					<div class="post-dropdown-menu">
-						${isPostOwner(authorId) ? `
-						<button class="post-dropdown-item post-dropdown-item--edit" type="button" data-action="edit-post" data-post-id="${escapeHtml(postId)}">
-							<i class="bx bx-edit"></i>
-							<span>Chỉnh sửa</span>
-						</button>
-						<button class="post-dropdown-item post-dropdown-item--delete" type="button" data-action="delete-post" data-post-id="${escapeHtml(postId)}">
-							<i class="bx bx-trash"></i>
-							<span>Xóa</span>
-						</button>
-						` : `
-						<button class="post-dropdown-item" type="button" data-action="report-post" data-post-id="${escapeHtml(postId)}">
-							<i class="bx bx-flag"></i>
-							<span>Báo cáo</span>
-						</button>
-						`}
-					</div>
-				</div>
+				${generateDropdownMenuHtml({ type: 'post', itemId: postId, authorId })}
 			</header>
 
 			${mediaHtml}
@@ -698,14 +677,10 @@ const changeFeedMode = async (mode) => {
 	await reloadFeedWithFilters();
 };
 
-const closeAllPostMenus = (exceptWrap = null) => {
-	if (!feedPostListElement) {
-		return;
-	}
-
-	feedPostListElement.querySelectorAll(".post-menu-wrap.open").forEach((menuWrap) => {
-		if (menuWrap !== exceptWrap) {
-			menuWrap.classList.remove("open");
+const closeAllPostMenus = () => {
+	document.querySelectorAll(".post-menu-wrap.open").forEach((wrap) => {
+		if (!wrap.closest("#comment-modal")) {
+			wrap.classList.remove("open");
 		}
 	});
 };
@@ -930,26 +905,9 @@ const initFeedPage = () => {
 		onEditRequest: (post) => openEditModal(post)
 	});
 	initPostInteractions();
+	initPostMenus();
 
 	feedPostListElement.addEventListener("click", (event) => {
-		const menuButton = event.target.closest(".post-menu-btn");
-		if (menuButton) {
-			event.preventDefault();
-			event.stopPropagation();
-
-			const menuWrap = menuButton.closest(".post-menu-wrap");
-			if (!menuWrap) {
-				return;
-			}
-
-			const shouldOpen = !menuWrap.classList.contains("open");
-			closeAllPostMenus();
-			if (shouldOpen) {
-				menuWrap.classList.add("open");
-			}
-
-			return;
-		}
 
 		const reportActionButton = event.target.closest('[data-action="report-post"]');
 		if (reportActionButton) {
@@ -1033,15 +991,8 @@ const initFeedPage = () => {
 
 
 
-	document.addEventListener("click", (event) => {
-		if (!event.target.closest(".post-menu-wrap")) {
-			closeAllPostMenus();
-		}
-	});
-
 	document.addEventListener("keydown", (event) => {
 		if (event.key === "Escape") {
-			closeAllPostMenus();
 			closeReportModal();
 		}
 	});
@@ -1068,6 +1019,30 @@ const initFeedPage = () => {
 					: {}),
 			};
 		});
+	});
+
+	// Lạng nghe CustomEvent từ comment-modal.js khi người dùng nhấn Báo cáo bên trong modal.
+	// comment-modal không gọi trực tiếp openReportModal -> tránh coupling.
+	document.addEventListener("postReportRequested", (event) => {
+		const postId = normalizeString(event.detail?.postId ?? "");
+		if (postId.length > 0) {
+			openReportModal(postId);
+		}
+	});
+
+	// Chuyển hướng về trang hồ sơ khi click vào avatar hoặc tên tác giả (event delegation toàn cục)
+	document.addEventListener("click", (event) => {
+		const link = event.target.closest(".open-profile-link");
+		if (!link) return;
+
+		const userId = normalizeString(link.dataset.userId);
+		if (userId.length === 0) return;
+
+		// Không mở profile nếu đang thực hiện hành động khác (ví dụ: click vào dropdown)
+		if (event.defaultPrevented) return;
+
+		event.preventDefault();
+		window.location.href = `profile.html?id=${encodeURIComponent(userId)}`;
 	});
 
 	updateFeedTabs();
