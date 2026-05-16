@@ -4,7 +4,7 @@ import { userApi } from "../api/user-api.js";
 import { authApi } from "../api/auth-api.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initSettingsSubviews } from "./settings-subviews.js";
-import { clearAuthStorage, getToken, saveAuthSession, getAvtUrl } from "../utils/auth.js";
+import { clearAuthStorage, getToken, saveAuthSession, getAvtUrl, updateAvatarSession } from "../utils/auth.js";
 
 const DEFAULT_AVATAR_URL = "../assets/images/225-default-avatar.png";
 

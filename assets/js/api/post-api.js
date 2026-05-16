@@ -94,6 +94,11 @@ export const postApi = {
 		return apiClient.delete(`/api/posts/${encodeURIComponent(resolvedPostId)}`);
 	},
 
+	async getPostById(postId) {
+		const resolvedPostId = normalizePostId(postId);
+		return apiClient.get(`/api/posts/${encodeURIComponent(resolvedPostId)}`);
+	},
+
 	async reportPost(postId, reasonCode, details = "") {
 		const resolvedPostId = normalizePostId(postId);
 		const payload = {
@@ -155,6 +160,26 @@ export const postApi = {
 
 		// 3. Đổi đường dẫn gốc trỏ về PostController
 		const endpoint = `/api/posts?${queryString}`;
+
+		return apiClient.get(endpoint);
+	},
+
+	async getUserPosts(userId, lastId = null) {
+		const resolvedUserId = toSafeId(userId, "");
+		const params = new URLSearchParams();
+
+		const resolvedLastId = toSafeId(lastId, "");
+		if (resolvedLastId.length > 0) {
+			params.set("lastPostId", resolvedLastId);
+		}
+
+		const queryString = params.toString();
+
+		// LƯU Ý: Tui đang giả định Backend của ông dùng link /api/users/{userId}/posts
+		// Nếu Backend của ông dùng link khác (ví dụ: /api/posts?userId=...) thì ông tự sửa lại chuỗi này nhé!
+		const endpoint = queryString.length > 0
+			? `/api/users/${encodeURIComponent(resolvedUserId)}/posts?${queryString}`
+			: `/api/users/${encodeURIComponent(resolvedUserId)}/posts`;
 
 		return apiClient.get(endpoint);
 	},

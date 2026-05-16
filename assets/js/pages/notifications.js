@@ -115,6 +115,7 @@ const resolveNotificationType = (type, actorName) => {
 	}
 };
 
+// Thay đổi duy nhất tại hàm `createNotificationItemHtml` để đảm bảo nhận diện chính xác ID người tương tác:
 const createNotificationItemHtml = (noti) => {
 	const id = safeText(noti.id);
 	const isRead = Boolean(noti.isRead || noti.is_read);
@@ -125,8 +126,10 @@ const createNotificationItemHtml = (noti) => {
 	const timeText = timeAgo(noti.createdAt || noti.created_at);
 
 	const notiType = safeText(noti.type).toUpperCase();
-	const targetId = safeText(noti.targetId);
-	const actorId = safeText(noti.actorId);
+	const targetId = safeText(noti.targetId || noti.target_id || noti.postId || noti.post_id);
+
+	// SỬA TẠI ĐÂY: Đảm bảo lấy đúng trường actorId từ API trả về
+	const actorId = safeText(noti.actorId || noti.actor_id);
 
 	let targetLink = "#";
 	let rightSideHtml = "";
@@ -136,7 +139,6 @@ const createNotificationItemHtml = (noti) => {
 		rightSideHtml = `<button class="following-btn" type="button" data-action="view-profile" data-target="${escapeHtml(actorId)}">Xem hồ sơ</button>`;
 	}
 
-	// TRUYỀN DỮ LIỆU VÀO CÁC DATA ATTRIBUTE ĐỂ CLICK JS DỄ DÀNG ĐỌC VÀ BẬT MODAL
 	return `
 		<div class="notification-item ${isRead ? "is-read" : "is-unread"}" 
 			data-id="${escapeHtml(id)}" 

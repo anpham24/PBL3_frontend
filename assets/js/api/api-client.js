@@ -122,11 +122,11 @@ export const apiClient = {
 			headers,
 			requiresAuth = true,
 			skipAuthRedirect = false,
-			forcedToken, // THÊM DÒNG NÀY
+			forcedToken,
 			...restOptions
 		} = options;
 
-		const fullUrl = endpoint.startsWith("http") ? endpoint : `${BASE_URL}${endpoint}`;
+		const fullUrl = resolveApiUrl(endpoint);
 
 		const response = await fetch(fullUrl, {
 			...restOptions,
@@ -136,11 +136,6 @@ export const apiClient = {
 			credentials: "include"
 		});
 
-		if (credentials) {
-			fetchOptions.credentials = credentials;
-		}
-
-		const response = await fetch(resolveApiUrl(endpoint), fetchOptions);
 		const responseData = await parseJsonSafely(response);
 
 		// Nếu lỗi 401 (Hết hạn Token), văng luôn về trang Login

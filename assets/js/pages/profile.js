@@ -215,10 +215,9 @@ const renderProfile = (response) => {
 	if (followButton) {
 		// Dùng cờ từ backend để chốt chính xác đây có phải profile của mình không
 		const isOwnProfile = getTargetUserIdFromQuery().length === 0 || response?.data?.isOwnProfile === true;
-
 		const myProfileNavItem = document.querySelector('.side-nav .nav-item[href="profile.html"]');
 
-		if (!viewingOtherProfile) {
+		if (isOwnProfile) {
 			followButton.classList.add("is-hidden");
 
 			if (myProfileNavItem) {
@@ -228,8 +227,8 @@ const renderProfile = (response) => {
 			const isFollowing = Boolean(response?.data?.isFollowing);
 			followButton.classList.remove("is-hidden");
 			followButton.classList.toggle("is-following", isFollowing);
-			followButton.textContent = isFollowing ? "Following" : "Follow";
-			followButton.disabled = true;
+			followButton.textContent = isFollowing ? "Đang theo dõi" : "Theo dõi";
+			followButton.disabled = false;
 		}
 	}
 };
@@ -430,7 +429,18 @@ const loadPosts = async () => {
 	isLoadingPosts = true;
 
 	try {
-		const response = await postApi.getMyPosts(currentLastId);
+		const targetUserId = getTargetUserIdFromQuery();
+		let response;
+
+		// Check xem đang ở profile ai để gọi đúng API
+		if (targetUserId.length > 0) {
+			// Nếu có ID trên URL -> Gọi API lấy bài của người đó
+			response = await postApi.getUserPosts(targetUserId, currentLastId);
+		} else {
+			// Nếu không có ID -> Gọi API lấy bài của chính mình
+			response = await postApi.getMyPosts(currentLastId);
+		}
+
 		const data = response?.data;
 		const posts = Array.isArray(data?.postList) ? data.postList : [];
 
@@ -445,7 +455,6 @@ const loadPosts = async () => {
 			showEndOfFeedMessage();
 		}
 	} catch (error) {
-		// Lỗi khi tải bài — không block toàn trang, chỉ log
 		console.error("[profile] Lỗi khi tải danh sách bài viết:", error);
 	} finally {
 		isLoadingPosts = false;
@@ -558,6 +567,39 @@ const initProfilePage = () => {
 
 		event.preventDefault();
 		window.location.href = `profile.html?id=${encodeURIComponent(userId)}`;
+	});
+};
+
+const initFollowHandler = () => {
+	const followButton = document.getElementById("profile-follow-button");
+	if (!followButton) return;
+
+	followButton.addEventListener("click", async () => {
+		const targetUserId = getTargetUserIdFromQuery();
+		if (targetUserId.length === 0) return;
+
+		const isFollowing = followButton.classList.contains("is-following");
+
+		// Khóa tạm nút lúc đang đợi API phản hồi để chống spam click
+		followButton.disabled = true;
+
+		try {
+			if (isFollowing) {
+				await userApi.unfollowUser(targetUserId); // Gọi API hủy theo dõi
+				followButton.classList.remove("is-following");
+				followButton.textContent = "Theo dõi";
+			} else {
+				await userApi.followUser(targetUserId); // Gọi API theo dõi
+				followButton.classList.add("is-following");
+				followButton.textContent = "Đang theo dõi";
+			}
+		} catch (error) {
+			console.error("[profile] Lỗi follow/unfollow:", error);
+			alert("Không thể thực hiện thao tác. Vui lòng thử lại!");
+		} finally {
+			// Mở khóa nút trở lại
+			followButton.disabled = false;
+		}
 	});
 };
 

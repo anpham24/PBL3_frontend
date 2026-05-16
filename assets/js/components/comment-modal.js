@@ -194,6 +194,11 @@ let isLoadingCmts = false;
 /** Còn bình luận để tải không */
 let hasMoreCmts = true;
 
+let highlightActorId = null;
+
+/** Guard chống submit comment đồng thời */
+let isSubmittingComment = false;
+
 // ---------------------------------------------------------------------------
 // Comment render helpers
 // ---------------------------------------------------------------------------
@@ -210,19 +215,25 @@ const createCommentHtml = (comment, highlightActorId = null) => {
 	const avatarUrl = escapeHtml(normalizeString(comment.avtUrl) || DEFAULT_AVATAR);
 	const content = escapeHtml(normalizeString(comment.content));
 	const timeText = escapeHtml(timeAgo(normalizeString(comment.createAt)));
-	const authorId = escapeHtml(normalizeString(comment.authorId || comment.author_id));
-	const profileAttr = authorId.length > 0 ? ` data-user-id="${authorId}"` : "";
+	const authorId = String(comment.authorId || comment.author_id || "").trim();
+	const highlightId = String(highlightActorId || "").trim();
 
-	const isHighlight = highlightActorId && authorId === highlightActorId;
+	const isHighlight = authorId.length > 0 && highlightId.length > 0 && authorId === highlightId;
 	const highlightClass = isHighlight ? " highlight-comment" : "";
 	const highlightIdAttr = isHighlight ? ' id="highlighted-comment"' : "";
 
 	return `
-		<div${highlightIdAttr} class="comment-item${highlightClass}">
-			<img class="comment-avatar" src="${avatarUrl}" alt="Avatar ${authorName}">
+		<div${highlightIdAttr} class="comment-item${highlightClass}" data-comment-id="${escapeHtml(String(comment.id ?? ''))}">
+			<div class="comment-user">
+				<img class="comment-avatar" src="${avatarUrl}" alt="Avatar của ${authorName}">
+			</div>
 			<div class="comment-content">
-				<p><strong class="open-profile-link"${profileAttr} style="cursor:pointer;">${authorName}</strong>${content}</p>
-				${timeText ? `<span class="comment-time">${timeText}</span>` : ""}
+				<div class="comment-bubble">
+					<p><strong>${authorName}</strong> ${content}</p>
+				</div>
+				<div class="comment-meta">
+					<span class="comment-time">${timeText}</span>
+				</div>
 			</div>
 		</div>
 	`;
@@ -291,6 +302,30 @@ export const initCommentModal = (options = {}) => {
 	const reportBtnEl = document.getElementById("comment-modal-report-btn");
 	const likeCountEl = document.getElementById("comment-modal-like-count");
 	const likeBtnEl = document.getElementById("btn-like-comment-modal");
+
+	highlightActorId = null;
+	currentPostId = null;
+	currentPostCommentCount = 0;
+	isSubmittingComment = false;
+
+	// ─── ĐỊNH NGHĨA HÀM OPEN BÊN TRONG NÀY ───
+	const openModalFromExternal = async (postData) => {
+		if (!postData?.id) return;
+
+		currentPostId = postData.id;
+		currentPostCommentCount = Number(postData.commentCount ?? 0);
+
+		// Nhận cái ID người comment từ thông báo truyền sang
+		highlightActorId = postData.highlightActorId || null;
+
+		// Bật Modal lên màn hình
+		commentModal?.classList.add("open");
+		commentModal?.setAttribute("aria-hidden", "false");
+		document.body.style.overflow = "hidden";
+
+		// Đổi populatePostDetails thành openCommentModal để đổ dữ liệu và tự động tải comment
+		openCommentModal(postData);
+	};
 
 	/** .post-menu-wrap chứa nút ba chấm trong comment-modal header */
 	const commentModalMenuWrapEl = commentModal.querySelector(".comment-panel-header .post-menu-wrap");
@@ -700,7 +735,6 @@ export const initCommentModal = (options = {}) => {
 	// ---------------------------------------------------------------------------
 	// Create Comment
 	// ---------------------------------------------------------------------------
-	let isSubmittingComment = false;
 
 	const handleCreateComment = async () => {
 		if (!currentPostId || isSubmittingComment) return;
@@ -763,7 +797,8 @@ export const initCommentModal = (options = {}) => {
 	});
 
 	return {
-		open: openCommentModal,
-		close: closeCommentModal
+		init: initCommentModal,
+		open: openModalFromExternal,
+		elements: { commentModal, commentListEl, commentInputEl, commentPostBtn }
 	};
 };

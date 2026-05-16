@@ -21,25 +21,6 @@
 		<!-- sidebar injected by assets/js/components/sidebar.js -->
 
 		<main class="main-content">
-<<<<<<< HEAD
-			<header class="top-header">
-				<div class="header-inner">
-					<div class="search-wrap">
-						<label class="search-box" for="search-input">
-							<i class="bx bx-search"></i>
-							<input id="search-input" type="search" placeholder="Tìm kiếm">
-						</label>
-					</div>
-
-					<button class="header-avatar" type="button" aria-label="Trang cá nhân">
-						<img src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
-							alt="User avatar">
-					</button>
-				</div>
-			</header>
-
-=======
->>>>>>> main
 			<section class="main-inner">
 				<div class="feed-page">
 					<div class="feed-tabs" role="tablist" aria-label="Lọc bảng tin">
@@ -103,162 +84,6 @@
 					</div>
 				</div>
 
-<<<<<<< HEAD
-			<div id="step-2-details" class="modal-step is-hidden">
-				<header class="create-modal-header">
-					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
-						<i class="bx bx-x"></i>
-					</button>
-					<h2 id="create-post-title">Tạo bài đăng</h2>
-					<button id="publish-post-btn" class="publish-btn" type="submit"
-						form="create-post-form">Đăng</button>
-				</header>
-
-				<form id="create-post-form" class="create-modal-body" novalidate>
-					<div class="create-detail-top">
-						<img class="detail-avatar"
-							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar người dùng">
-
-						<div class="detail-chips">
-							<label class="detail-chip detail-chip-select" for="create-post-province">
-								<i class="bx bx-map"></i>
-								<select id="create-post-province" aria-label="Tỉnh cho bài đăng" required>
-									<option value="">Chọn tỉnh</option>
-								</select>
-							</label>
-
-							<label class="detail-chip detail-chip-select" for="create-post-visibility">
-								<i class="bx bx-lock-alt"></i>
-								<select id="create-post-visibility" aria-label="Quyền riêng tư bài đăng" required>
-									<option value="PUBLIC">Công khai</option>
-									<option value="FRIENDS">Bạn bè</option>
-									<option value="PRIVATE">Chỉ mình tôi</option>
-								</select>
-							</label>
-						</div>
-					</div>
-
-					<div class="post-caption-wrap">
-						<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
-					</div>
-
-					<div class="address-autocomplete-wrap">
-						<input id="create-post-address" type="text" placeholder="Địa chỉ cụ thể (nếu có)"
-							autocomplete="off">
-
-						<ul id="address-suggestions" class="address-dropdown is-hidden"></ul>
-					</div>
-
-					<div class="draft-preview">
-						<img id="post-draft-preview" alt="Ảnh bản nháp bài đăng">
-					</div>
-
-					<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
-						aria-live="polite"></p>
-				</form>
-			</div>
-		</div>
-	</div>
-
-	<div id="comment-modal" class="comment-modal" aria-hidden="true" role="dialog" aria-modal="true">
-		<button id="close-comment-modal" class="comment-modal-close" type="button"
-			aria-label="Đóng hộp thoại bình luận">
-			<i class="bx bx-x"></i>
-		</button>
-
-		<div class="comment-modal-dialog">
-			<div class="comment-media-pane">
-				<img src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=1400&q=80"
-					alt="Ảnh du lịch trong bài đăng">
-			</div>
-
-			<div class="comment-panel">
-				<header class="comment-panel-header">
-					<div class="comment-header-user">
-						<img class="comment-header-avatar"
-							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar duyen.travels">
-
-						<div class="comment-header-meta">
-							<strong>duyen.travels</strong>
-							<span class="meta-divider">&bull;</span>
-							<span class="post-time">2h</span>
-						</div>
-					</div>
-
-					<button class="comment-header-menu post-options" type="button" aria-label="Tùy chọn bài đăng">
-						<i class="bx bx-dots-horizontal-rounded"></i>
-					</button>
-				</header>
-
-				<div class="comment-action-bar">
-					<div class="comment-action-right">
-						<button id="btn-like-comment-modal" class="comment-action-btn" type="button"
-							aria-label="Thả tim bài đăng">
-							<i class="bx bx-heart"></i>
-						</button>
-						<button id="btn-save-comment-modal" class="comment-action-btn" type="button"
-							aria-label="Lưu bài đăng">
-							<i class="bx bx-bookmark"></i>
-						</button>
-					</div>
-				</div>
-
-				<div class="comment-list" aria-label="Danh sách bình luận">
-					<div class="comment-item">
-						<img class="comment-avatar"
-							src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar duyen.travels">
-
-						<div class="comment-content">
-							<p><strong>duyen.travels</strong>Sương sớm phủ kín dòng sông, chèo thuyền qua núi đá vôi
-								thật sự rất chill.</p>
-							<span class="comment-time">2 giờ trước</span>
-						</div>
-
-						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
-							<i class="bx bx-heart"></i>
-						</button>
-					</div>
-
-					<div class="comment-item">
-						<img class="comment-avatar"
-							src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar son.wander">
-
-						<div class="comment-content">
-							<p><strong>son.wander</strong>Góc này đẹp quá, mình cũng muốn đi Tam Coc vào cuối tuần.</p>
-							<span class="comment-time">1 giờ trước</span>
-						</div>
-
-						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
-							<i class="bx bx-heart"></i>
-						</button>
-					</div>
-
-					<div class="comment-item">
-						<img class="comment-avatar"
-							src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=96&q=60"
-							alt="Avatar annie.go">
-
-						<div class="comment-content">
-							<p><strong>annie.go</strong>Cảnh đẹp quá! Nhìn yên bình thật sự.</p>
-							<span class="comment-time">35 phút trước</span>
-						</div>
-
-						<button class="comment-like-btn" type="button" aria-label="Thả tim bình luận">
-							<i class="bx bx-heart"></i>
-						</button>
-					</div>
-				</div>
-
-				<footer class="comment-input-bar">
-					<textarea id="comment-input" rows="1" placeholder="Thêm bình luận..."></textarea>
-					<button class="comment-post-btn" type="button">Đăng</button>
-				</footer>
-			</div>
-=======
 				<p id="report-post-feedback" class="report-post-feedback is-hidden" role="status" aria-live="polite">
 				</p>
 
@@ -269,7 +94,6 @@
 						type="submit">Gửi</button>
 				</div>
 			</form>
->>>>>>> main
 		</div>
 	</div>
 

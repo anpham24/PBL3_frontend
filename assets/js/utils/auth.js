@@ -141,3 +141,7 @@ export const updateAvatarSession = (newAvtUrl) => {
 		setStorageValue(AVT_URL_KEY, newAvtUrl);
 	}
 };
+
+export const getAvtUrl = () => getStorageValue(AVT_URL_KEY);
+
+export const getNickname = () => getStorageValue(NICKNAME_KEY);

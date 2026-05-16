@@ -958,25 +958,6 @@ const initFeedPage = () => {
 			}
 			return;
 		}
-
-		const authorClickable = event.target.closest(".post-author .avatar, .post-meta h3");
-		if (authorClickable) {
-			event.preventDefault();
-			event.stopPropagation();
-
-			const postCard = authorClickable.closest(".post-card");
-			const postId = postCard?.dataset.postId;
-
-			if (postId) {
-				const post = feedState.posts.find(p => normalizeString(p?.id) === normalizeString(postId));
-				const authorId = post?.authorId || post?.author_id;
-
-				if (authorId) {
-					window.location.href = `profile.html?id=${encodeURIComponent(authorId)}`;
-				}
-			}
-			return;
-		}
 	});
 
 	provinceSelectElement.addEventListener("change", () => {
@@ -1065,36 +1046,7 @@ const initFeedPage = () => {
 	});
 
 	updateFeedTabs();
-	Promise.all([loadDropdowns(), loadFeed(true)]).then(() => {
-		const urlParams = new URLSearchParams(window.location.search);
-		const targetPostId = normalizeString(urlParams.get('postId'));
-		const actionType = normalizeString(urlParams.get('action'));
-		const actorId = normalizeString(urlParams.get('actorId'));
-
-		if (targetPostId.length > 0) {
-			const targetPost = findPostById(targetPostId);
-			const postCardElement = document.querySelector(`[data-post-id="${toCssSelectorValue(targetPostId)}"]`);
-
-			if (targetPost) {
-				if (actionType === 'comment' && commentModalController) {
-					const latestPostData = readLatestPostDataFromDom(targetPost);
-					if (actorId.length > 0) {
-						latestPostData.highlightActorId = actorId;
-					}
-					commentModalController.open(latestPostData);
-				}
-				else if (postCardElement) {
-					postCardElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
-					postCardElement.classList.add('highlight-post');
-					window.setTimeout(() => postCardElement.classList.remove('highlight-post'), 2000);
-				}
-			} else {
-				showToast("Không tìm thấy bài viết, có thể bài viết đã bị xóa hoặc quá cũ.", "info");
-			}
-
-			window.history.replaceState({}, document.title, window.location.pathname);
-		}
-	});
+	void Promise.all([loadDropdowns(), loadFeed(true)]);
 };
 
 document.addEventListener("DOMContentLoaded", initFeedPage);
