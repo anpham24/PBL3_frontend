@@ -186,10 +186,26 @@ const attachEditProfileHandler = () => {
 			currentAvatarUrl = responseAvatar;
 			applyAvatarPreview(avatarPreviewElement, currentAvatarUrl);
 
+<<<<<<< Updated upstream
+=======
+			// Cập nhật lại các input trong form với dữ liệu mới nhất từ server
+			nicknameInput.value = nickname;
+			bioInput.value = bio;
+
+>>>>>>> Stashed changes
 			selectedAvatarFile = null;
 			avatarFileInput.value = "";
 			setFeedback(feedbackElement, safeText(response?.message) || "Cập nhật thành công.", "success");
 
+<<<<<<< Updated upstream
+=======
+			// ── Đồng bộ localStorage từ response — KHÔNG gọi lại API ────────────────────
+			const currentToken = getToken();
+			saveAuthSession(currentToken, {
+				nickname: nickname,
+				avtUrl: currentAvatarUrl,
+			});
+>>>>>>> Stashed changes
 			// ── 3. Đồng bộ localStorage — gọi sau khi UI đã được cập nhật ──
 			void syncLocalStorageProfile(nickname);
 
