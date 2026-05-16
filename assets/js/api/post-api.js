@@ -95,6 +95,25 @@ export const postApi = {
 	},
 
 	/**
+	 * Lấy thông tin chi tiết của 1 bài đăng.
+	 * GET /api/posts/{postId} hoặc GET /api/posts?id={postId} tùy backend của bạn.
+	 */
+	async getPostById(postId) {
+		const resolvedPostId = normalizePostId(postId);
+		// Chỗ này bạn hỏi lại Backend xem đường dẫn lấy 1 bài viết là gì nhé. 
+		// Thường chuẩn RESTful sẽ là: /api/posts/ + id
+		return apiClient.get(`/api/posts/${encodeURIComponent(resolvedPostId)}`);
+	},
+
+	/**
+     * Lấy danh sách bài viết của MỘT NGƯỜI DÙNG BẤT KỲ
+     */
+    async getUserPosts(userId, lastId) {
+        const query = lastId ? `?lastPostId=${lastId}` : "";
+        return apiClient.get(`/api/users/${userId}/posts${query}`);
+    },
+
+	/**
 	 * Lấy danh sách lý do báo cáo.
 	 * GET /api/reports/reasons
 	 * @returns {Promise<{data: {reportReasons: Array<{code: string, reason: string}>}}>}

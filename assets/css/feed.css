@@ -305,7 +305,9 @@
 }
 
 @keyframes report-spin {
-	to { transform: rotate(360deg); }
+	to {
+		transform: rotate(360deg);
+	}
 }
 
 .report-reasons-error {
@@ -369,4 +371,13 @@
 	background: #1e3a5f;
 	color: #bfdbfe;
 	border: 1px solid #1d4ed8;
+}
+
+.post-author .avatar,
+.post-meta h3 {
+	cursor: pointer;
+}
+
+.post-meta h3:hover {
+	text-decoration: underline;
 }

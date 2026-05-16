@@ -205,7 +205,7 @@ const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf37
 /**
  * Tạo HTML cho một bình luận từ API response.
  */
-const createCommentHtml = (comment) => {
+const createCommentHtml = (comment, highlightActorId = null) => {
 	const authorName = escapeHtml(normalizeString(comment.authorName) || "Người dùng");
 	const avatarUrl = escapeHtml(normalizeString(comment.avtUrl) || DEFAULT_AVATAR);
 	const content = escapeHtml(normalizeString(comment.content));
@@ -213,9 +213,15 @@ const createCommentHtml = (comment) => {
 	const authorId = escapeHtml(normalizeString(comment.authorId || comment.author_id));
 	const profileAttr = authorId.length > 0 ? ` data-user-id="${authorId}"` : "";
 
+	const authorId = normalizeString(comment.authorId || comment.author_id);
+
+	const isHighlight = highlightActorId && authorId === highlightActorId;
+	const highlightClass = isHighlight ? " highlight-comment" : "";
+	const highlightIdAttr = isHighlight ? ' id="highlighted-comment"' : "";
+
 	return `
-		<div class="comment-item">
-			<img class="comment-avatar open-profile-link" src="${avatarUrl}" alt="Avatar ${authorName}"${profileAttr} style="cursor:pointer;">
+		<div${highlightIdAttr} class="comment-item${highlightClass}">
+			<img class="comment-avatar" src="${avatarUrl}" alt="Avatar ${authorName}">
 			<div class="comment-content">
 				<p><strong class="open-profile-link"${profileAttr} style="cursor:pointer;">${authorName}</strong>${content}</p>
 				${timeText ? `<span class="comment-time">${timeText}</span>` : ""}
@@ -319,9 +325,11 @@ export const initCommentModal = (options = {}) => {
 			const data = response?.data;
 			const comments = Array.isArray(data?.commentList) ? data.commentList : [];
 
+			const highlightActorId = currentPostData?.highlightActorId;
+
 			// Render các bình luận mới vào cuối danh sách
 			if (comments.length > 0) {
-				const html = comments.map(createCommentHtml).join("");
+				const html = comments.map(c => createCommentHtml(c, highlightActorId)).join("");
 				commentListEl?.insertAdjacentHTML("beforeend", html);
 			}
 
@@ -333,6 +341,19 @@ export const initCommentModal = (options = {}) => {
 			if (!hasMoreCmts) {
 				showCommentEndMessage(commentListEl);
 			}
+
+			if (highlightActorId && !currentPostData.hasScrolledToHighlight) {
+				const highlightedEl = commentListEl?.querySelector("#highlighted-comment");
+				if (highlightedEl) {
+					// Dùng setTimeout cực nhỏ để nhường luồng cho trình duyệt render CSS xong thì mới cuộn
+					setTimeout(() => {
+						highlightedEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+					}, 100);
+					// Đánh dấu đã scroll để không bị nhảy lại nếu user tiếp tục cuộn chuột tải trang 2
+					currentPostData.hasScrolledToHighlight = true;
+				}
+			}
+
 		} catch (error) {
 			// Lỗi tải bình luận — không block toàn modal, chỉ log
 			console.error("[comment-modal] Lỗi khi tải bình luận:", error);

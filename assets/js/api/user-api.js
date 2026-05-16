@@ -122,6 +122,7 @@ export const userApi = {
 	 */
 	async getProfileById(userId) {
 		const resolvedUserId = normalizeUserId(userId);
+		if (resolvedUserId.length === 0) throw new Error("Missing user id.");
 
 		if (resolvedUserId.length === 0) {
 			throw new Error("Missing user id.");
@@ -168,4 +169,21 @@ export const userApi = {
 	async getMyProfile() {
 		return apiClient.get("/api/users/me/profile");
 	},
+
+	// TÍNH NĂNG MỚI: Thêm hàm Gọi API Follow
+	async followUser(userId) {
+		const resolvedUserId = normalizeUserId(userId);
+		if (resolvedUserId.length === 0) throw new Error("Missing user id.");
+
+		// Gửi POST payload trống lên backend theo đúng thiết kế
+		return apiClient.post(`/api/users/${encodeURIComponent(resolvedUserId)}/followers`, {});
+	},
+
+	// TÍNH NĂNG MỚI: Thêm hàm Gọi API Unfollow
+	async unfollowUser(userId) {
+		const resolvedUserId = normalizeUserId(userId);
+		if (resolvedUserId.length === 0) throw new Error("Missing user id.");
+
+		return apiClient.delete(`/api/users/${encodeURIComponent(resolvedUserId)}/followers`);
+	}
 };

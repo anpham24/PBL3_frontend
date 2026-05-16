@@ -218,14 +218,30 @@ const renderProfile = (response, isOwnProfile = true) => {
 	}
 
 	if (followButton) {
+		// Dùng cờ từ backend để chốt chính xác đây có phải profile của mình không
+		const isOwnProfile = getTargetUserIdFromQuery().length === 0 || response?.data?.isOwnProfile === true;
+		
+		const myProfileNavItem = document.querySelector('.side-nav .nav-item[href="profile.html"]');
+
 		if (isOwnProfile) {
+			// TRANG CỦA MÌNH: Ẩn nút follow, Bật sáng tab menu
 			followButton.classList.add("is-hidden");
+			
+			if (myProfileNavItem) {
+				myProfileNavItem.classList.add('active');
+			}
 		} else {
+			// TRANG NGƯỜI KHÁC: Hiện nút follow, Tắt sáng tab menu
 			const isFollowing = Boolean(response?.data?.isFollowing);
 			followButton.classList.remove("is-hidden");
 			followButton.classList.toggle("is-following", isFollowing);
-			followButton.textContent = isFollowing ? "Đang theo dõi" : "Theo dõi";
-			followButton.disabled = true; // Chức năng follow/unfollow sẽ tích hợp sau
+			followButton.textContent = isFollowing ? "Following" : "Follow";
+			followButton.disabled = false;
+			document.title = `${nickname} | DUTraveler`;
+
+			if (myProfileNavItem) {
+				myProfileNavItem.classList.remove('active');
+			}
 		}
 	}
 };
@@ -436,9 +452,14 @@ const loadPosts = async (targetUserId = "") => {
 	isLoadingPosts = true;
 
 	try {
-		const response = targetUserId.length > 0
-			? await userApi.getPostsByUserId(targetUserId, currentLastId)
-			: await postApi.getMyPosts(currentLastId);
+		const targetUserId = getTargetUserIdFromQuery();
+		let response;
+
+		if (targetUserId.length > 0) {
+			response = await postApi.getUserPosts(targetUserId, currentLastId);
+		} else {
+			response = await postApi.getMyPosts(currentLastId);
+		}
 
 		const data = response?.data;
 		const posts = Array.isArray(data?.postList) ? data.postList : [];
@@ -454,7 +475,6 @@ const loadPosts = async (targetUserId = "") => {
 			showEndOfFeedMessage();
 		}
 	} catch (error) {
-		// Lỗi khi tải bài — không block toàn trang, chỉ log
 		console.error("[profile] Lỗi khi tải danh sách bài viết:", error);
 	} finally {
 		isLoadingPosts = false;
@@ -530,9 +550,65 @@ const initGridClickHandler = () => {
 	});
 };
 
+const initFollowHandler = () => {
+	const followBtn = document.getElementById("profile-follow-button");
+	if (!followBtn) return;
+
+	followBtn.addEventListener("click", async () => {
+		const targetUserId = getTargetUserIdFromQuery();
+		if (!targetUserId) return;
+
+		const isFollowing = followBtn.classList.contains("is-following");
+		followBtn.disabled = true; // Khóa tạm nút để tránh click liên tục
+
+		try {
+			if (isFollowing) {
+				await userApi.unfollowUser(targetUserId);
+				followBtn.classList.remove("is-following");
+				followBtn.textContent = "Follow";
+			} else {
+				await userApi.followUser(targetUserId);
+				followBtn.classList.add("is-following");
+				followBtn.textContent = "Following";
+			}
+
+			// Optional: Có thể tăng/giảm followersCount trên UI ngay lập tức ở đây nếu muốn hoàn hảo hơn
+			const followersCountEl = document.getElementById("profile-followers-count");
+			if (followersCountEl) {
+				let currentCount = parseInt(followersCountEl.textContent, 10);
+				if (!isNaN(currentCount)) {
+					followersCountEl.textContent = isFollowing ? currentCount - 1 : currentCount + 1;
+				}
+			}
+
+		} catch (error) {
+			alert("Có lỗi xảy ra: " + toMessage(error, "Vui lòng thử lại"));
+		} finally {
+			followBtn.disabled = false;
+		}
+	});
+};
+
 // ---------------------------------------------------------------------------
 // Page initializer — chạy sau khi DOM sẵn sàng
 // ---------------------------------------------------------------------------
+
+/**
+ * Quyết định nav item nào trong sidebar được active.
+ * - Xem profile của chính mình (?id không có) → "Trang cá nhân" sáng.
+ * - Xem profile người khác (?id=xxx)          → không có nav nào sáng.
+ */
+const initSidebarActiveState = () => {
+	const profileNavItem = document.getElementById("nav-profile");
+	if (!profileNavItem) return;
+
+	const viewingOtherProfile = getTargetUserIdFromQuery().length > 0;
+	if (viewingOtherProfile) {
+		profileNavItem.classList.remove("active");
+	} else {
+		profileNavItem.classList.add("active");
+	}
+};
 
 const initProfilePage = () => {
 	// ── Xác định ngữ cảnh: xem hồ sơ của ai? ──────────────────────────────
