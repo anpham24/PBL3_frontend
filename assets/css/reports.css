@@ -29,8 +29,42 @@
 
 .reports-toolbar {
 	display: flex;
-	justify-content: flex-end;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
 	margin-bottom: 16px;
+}
+
+.reports-search {
+	flex: 1;
+	min-width: min(320px, 100%);
+	max-width: 420px;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	padding: 9px 12px;
+	background: #f9fafb;
+}
+
+.reports-search i {
+	font-size: 1.02rem;
+	color: #6b7280;
+}
+
+.reports-search input {
+	flex: 1;
+	min-width: 0;
+	border: none;
+	outline: none;
+	background: transparent;
+	font-size: 0.9rem;
+}
+
+.reports-search input::placeholder {
+	color: #9ca3af;
 }
 
 .reports-count-badge {
@@ -43,6 +77,13 @@
 	color: #9f1239;
 	font-size: 0.84rem;
 	font-weight: 600;
+}
+
+.reports-status {
+	margin-bottom: 12px;
+	font-size: 0.9rem;
+	font-weight: 500;
+	line-height: 1.4;
 }
 
 .report-meta {
@@ -63,10 +104,11 @@
 	padding: 0 16px 16px;
 	display: flex;
 	gap: 10px;
+	flex-wrap: wrap;
 }
 
 .report-action-btn {
-	flex: 1;
+	flex: 1 1 180px;
 	border: 1px solid var(--border);
 	border-radius: 10px;
 	padding: 10px 12px;
@@ -92,6 +134,16 @@
 	transform: translateY(0);
 }
 
+.report-reasons-btn {
+	background: #f8fafc;
+	color: #0f172a;
+	border-color: #cbd5e1;
+}
+
+.report-reasons-btn:hover {
+	background: #f1f5f9;
+}
+
 .report-delete-btn {
 	border-color: #dc2626;
 	background: #dc2626;
@@ -109,6 +161,54 @@
 
 .report-ignore-btn:hover {
 	background: #e5e7eb;
+}
+
+.report-reasons {
+	margin: 0 16px 16px;
+	padding: 12px;
+	border: 1px solid #dbeafe;
+	border-radius: 12px;
+	background: #f8fbff;
+}
+
+.report-reasons h4 {
+	font-size: 0.9rem;
+	font-weight: 700;
+	color: #1e3a8a;
+	margin-bottom: 8px;
+}
+
+.reason-list {
+	list-style: none;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.reason-item {
+	padding: 8px 10px;
+	border: 1px solid #dbeafe;
+	border-radius: 10px;
+	background: #ffffff;
+}
+
+.reason-title {
+	font-size: 0.86rem;
+	font-weight: 700;
+	color: #1f2937;
+}
+
+.reason-details {
+	margin-top: 4px;
+	font-size: 0.84rem;
+	line-height: 1.4;
+	color: #334155;
+}
+
+.reason-meta {
+	margin-top: 4px;
+	font-size: 0.78rem;
+	color: #64748b;
 }
 
 .reports-empty-state {
@@ -144,6 +244,11 @@
 
 	.reports-toolbar {
 		margin-bottom: 12px;
+		gap: 10px;
+	}
+
+	.reports-search {
+		max-width: 100%;
 	}
 
 	.reports-count-badge {
@@ -152,11 +257,15 @@
 	}
 
 	.report-actions {
-		flex-direction: column;
 		padding: 0 12px 14px;
 	}
 
 	.report-meta {
 		padding: 0 12px 10px;
+	}
+
+	.report-reasons {
+		margin: 0 12px 12px;
+		padding: 10px;
 	}
 }

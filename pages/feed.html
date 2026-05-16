@@ -1,10 +1,13 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Trang chủ</title>
+
+
+
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -15,38 +18,10 @@
 
 <body>
 	<div class="app-shell">
-		<aside class="sidebar">
-			<h1 class="brand">DUTraveler</h1>
-
-			<nav class="side-nav" aria-label="Sidebar navigation">
-				<a class="nav-item active" href="feed.html">
-					<i class="bx bx-home-alt-2"></i>
-					<span class="nav-label">Trang chủ</span>
-				</a>
-
-				<a class="nav-item create-post-link" href="feed.html">
-					<i class="bx bx-plus-circle"></i>
-					<span class="nav-label">Tạo bài đăng</span>
-				</a>
-
-				<a class="nav-item" href="profile.html">
-					<i class="bx bx-user"></i>
-					<span class="nav-label">Trang cá nhân</span>
-				</a>
-
-				<a class="nav-item" href="notifications.html">
-					<i class="bx bx-bell"></i>
-					<span class="nav-label">Thông báo</span>
-				</a>
-
-				<a class="nav-item" href="settings.html">
-					<i class="bx bx-cog"></i>
-					<span class="nav-label">Cài đặt</span>
-				</a>
-			</nav>
-		</aside>
+		<!-- sidebar injected by assets/js/components/sidebar.js -->
 
 		<main class="main-content">
+<<<<<<< HEAD
 			<header class="top-header">
 				<div class="header-inner">
 					<div class="search-wrap">
@@ -63,20 +38,33 @@
 				</div>
 			</header>
 
+=======
+>>>>>>> main
 			<section class="main-inner">
 				<div class="feed-page">
+					<div class="feed-tabs" role="tablist" aria-label="Lọc bảng tin">
+						<button id="feed-tab-explore" class="feed-tab is-active" type="button" data-feed-mode="EXPLORE"
+							role="tab" aria-selected="true">
+							Khám phá
+						</button>
+						<button id="feed-tab-following" class="feed-tab" type="button" data-feed-mode="FOLLOWING"
+							role="tab" aria-selected="false">
+							Đang theo dõi
+						</button>
+					</div>
+
 					<div class="feed-filters">
 						<label class="filter-chip" for="province-filter">
 							<i class="bx bx-map"></i>
 							<select id="province-filter" class="filter-select" aria-label="Lọc theo tỉnh">
-								<option value="">Tất cả tỉnh</option>
+								<option value="ALL">Tất cả tỉnh</option>
 							</select>
 						</label>
 
 						<label class="filter-chip" for="topic-filter">
 							<i class="bx bx-star"></i>
 							<select id="topic-filter" class="filter-select" aria-label="Lọc theo chủ đề">
-								<option value="">Tất cả chủ đề</option>
+								<option value="ALL">Tất cả chủ đề</option>
 							</select>
 						</label>
 					</div>
@@ -90,17 +78,32 @@
 		</main>
 	</div>
 
-	<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
-		<div class="create-post-dialog">
-			<div id="step-1-upload" class="modal-step">
-				<div class="upload-dropzone">
-					<i class="bx bx-images" aria-hidden="true"></i>
-					<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
-					<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
-					<input type="file" id="post-file-input" accept="image/*, video/*" hidden>
-				</div>
-			</div>
+	<!-- create-post-modal injected by assets/js/components/create-post-modal.js -->
 
+	<!-- comment-modal injected by assets/js/components/comment-modal.js -->
+
+	<div id="report-post-modal" class="report-post-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true"
+		aria-labelledby="report-post-title">
+		<div class="report-post-dialog">
+			<header class="report-post-header">
+				<h2 id="report-post-title">Báo cáo bài đăng</h2>
+				<button id="report-post-close" class="report-post-close" type="button" aria-label="Đóng">
+					<i class="bx bx-x"></i>
+				</button>
+			</header>
+
+			<form id="report-post-form" class="report-post-form" novalidate>
+				<p class="report-post-subtitle">Chọn lý do bạn muốn báo cáo bài đăng này.</p>
+
+				<div id="report-reasons-container" class="report-reasons-container" aria-live="polite">
+					<!-- Lý do báo cáo được render động bởi feed.js -->
+					<div id="report-reasons-loading" class="report-reasons-loading">
+						<span class="report-reasons-spinner" aria-label="Đang tải..."></span>
+						<span>Đang tải lý do...</span>
+					</div>
+				</div>
+
+<<<<<<< HEAD
 			<div id="step-2-details" class="modal-step is-hidden">
 				<header class="create-modal-header">
 					<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
@@ -255,9 +258,22 @@
 					<button class="comment-post-btn" type="button">Đăng</button>
 				</footer>
 			</div>
+=======
+				<p id="report-post-feedback" class="report-post-feedback is-hidden" role="status" aria-live="polite">
+				</p>
+
+				<div class="report-post-actions">
+					<button id="report-post-cancel" class="report-post-btn report-post-cancel"
+						type="button">Hủy</button>
+					<button id="report-post-submit" class="report-post-btn report-post-submit"
+						type="submit">Gửi</button>
+				</div>
+			</form>
+>>>>>>> main
 		</div>
 	</div>
 
+	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/feed.js"></script>
 </body>
 

@@ -51,6 +51,16 @@
 	cursor: pointer;
 }
 
+.follow-btn.is-following {
+	background: #e5e7eb;
+	color: #1f2937;
+}
+
+.follow-btn:disabled {
+	opacity: 0.7;
+	cursor: not-allowed;
+}
+
 .profile-stats {
 	display: flex;
 	flex-wrap: wrap;
@@ -72,6 +82,21 @@
 	color: #2563eb;
 	font-weight: 500;
 	word-break: break-word;
+}
+
+.profile-feedback {
+	max-width: 800px;
+	margin: 0 auto 14px;
+	font-size: 0.92rem;
+	line-height: 1.45;
+}
+
+.profile-feedback.is-error {
+	color: #b91c1c;
+}
+
+.profile-feedback.is-success {
+	color: #15803d;
 }
 
 .profile-tabs {
@@ -148,6 +173,53 @@
 	transform: scale(1.03);
 }
 
+/* Video overlay — icon Play góc trên bên phải */
+.grid-item__play-icon {
+	position: absolute;
+	top: 8px;
+	right: 8px;
+	z-index: 2;
+	background: rgba(0, 0, 0, 0.45);
+	border-radius: 50%;
+	width: 32px;
+	height: 32px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	pointer-events: none;
+}
+
+.grid-item__play-icon i {
+	font-size: 1.2rem;
+	color: #ffffff;
+	line-height: 1;
+}
+
+/* Bài viết không có media — placeholder */
+.grid-item__placeholder {
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: #f3f4f6;
+	color: #d1d5db;
+}
+
+.grid-item__placeholder i {
+	font-size: 2.5rem;
+}
+
+/* Thông báo "Bạn đã xem hết bài đăng" */
+.posts-end-message {
+	text-align: center;
+	color: #9ca3af;
+	font-size: 0.88rem;
+	padding: 20px 0 12px;
+	letter-spacing: 0.02em;
+}
+
+
 @media (max-width: 900px) {
 	.profile-header {
 		grid-template-columns: 160px 1fr;
@@ -213,3 +285,61 @@
 		gap: 3px;
 	}
 }
+
+/* ---------------------------------------------------------------------------
+   Skeleton loading state — applied while getMyProfile() is pending
+   --------------------------------------------------------------------------- */
+
+@keyframes skeleton-shimmer {
+	0%   { background-position: -400px 0; }
+	100% { background-position:  400px 0; }
+}
+
+/* .is-skeleton đã chuyển sang global.css để dùng chung trên mọi trang */
+
+/* Giữ nguyên hình tròn cho avatar khi skeleton */
+#profile-avatar.is-skeleton {
+	border-radius: 50%;
+}
+
+
+/* ---------------------------------------------------------------------------
+   Error state — hiển thị khi không tìm thấy người dùng (HTTP 404)
+   --------------------------------------------------------------------------- */
+
+.error-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	min-height: 65vh;
+	gap: 12px;
+	text-align: center;
+	padding: 40px 24px;
+	animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; transform: translateY(10px); }
+	to   { opacity: 1; transform: translateY(0); }
+}
+
+.error-state__icon {
+	font-size: 4rem;
+	color: #d1d5db;
+	line-height: 1;
+	margin-bottom: 4px;
+}
+
+.error-state__icon i {
+	display: block;
+}
+
+.error-state__title {
+	font-size: 1.25rem;
+	font-weight: 700;
+	color: #1f2937;
+	margin: 0;
+	letter-spacing: -0.01em;
+}
+

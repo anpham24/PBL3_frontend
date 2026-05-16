@@ -13,6 +13,14 @@ const normalizePostId = (postId) => {
 	return resolvedPostId;
 };
 
+const normalizeKeyword = (value) => {
+	if (typeof value !== "string") {
+		return "";
+	}
+
+	return value.trim();
+};
+
 export const postApi = {
 	async createPost(formData) {
 		if (!(formData instanceof FormData)) {
@@ -22,36 +30,32 @@ export const postApi = {
 		return apiClient.post("/api/posts", formData);
 	},
 
+	/**
+	 * Cập nhật bài đăng đã có.
+	 * PUT /api/posts/{postId}
+	 * @param {string} postId - ID bài đăng cần cập nhật.
+	 * @param {FormData} formData - Dữ liệu cập nhật (multipart/form-data).
+	 *   Các trường bắt buộc:
+	 *   - isMediaChanged (string "true"|"false")
+	 *   - oldUrls (string[]) — các URL media cũ được giữ lại
+	 *   - newFiles (File[])  — các file media mới
+	 *   - visibility, content, address
+	 * @returns {Promise<{code: number, message: string}>}
+	 */
+	async updatePost(postId, formData) {
+		const resolvedPostId = normalizePostId(postId);
+
+		if (!(formData instanceof FormData)) {
+			throw new Error("Dữ liệu cập nhật bài không hợp lệ.");
+		}
+
+		return apiClient.put(`/api/posts/${encodeURIComponent(resolvedPostId)}`, formData);
+	},
+
 	async toggleLike(postId) {
 		const resolvedPostId = normalizePostId(postId);
 
 		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/like`);
-	},
-
-	async likeCurrentPostFromCommentModal(liked) {
-		return apiClient.post("/api/posts/current/like", {
-			liked: toBoolean(liked),
-			source: "comment-modal"
-		});
-	},
-
-	async saveCurrentPostFromCommentModal(saved) {
-		return apiClient.post("/api/posts/current/save", {
-			saved: toBoolean(saved),
-			source: "comment-modal"
-		});
-	},
-
-	async likePost(postId, liked) {
-		return this.toggleLike(postId, liked);
-	},
-
-	async savePost(postId, saved) {
-		const resolvedPostId = toSafeId(postId, "post-1");
-
-		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/save`, {
-			saved: toBoolean(saved)
-		});
 	},
 
 	async likeComment(commentId, liked) {
@@ -112,7 +116,28 @@ export const postApi = {
 	 * Lấy danh sách bài viết của người dùng đang đăng nhập (cursor-based pagination).
 	 * GET /api/users/me/posts?last_id={lastId}
 	 * @param {string|null} lastId - ID bài cuối đã tải. Null = lần đầu tiên.
-	 * @returns {Promise<{data: {postList: object[], respLastPostId: string, hasMore: boolean}}>}
+	 * @returns {Promise<{
+	 *   data: {
+	 *     postList: Array<{
+	 *       id: string,
+	 *       authorId: string,
+	 *       authorName: string,
+	 *       avtUrl: string,
+	 *       createAt: string,
+	 *       visibility: string,
+	 *       province: string,
+	 *       topic: string,
+	 *       content: string,
+	 *       address: string,
+	 *       mediaList: Array<{mediaType: string, mediaUrl: string, thumbnailUrl: string|null}>,
+	 *       likeCount: number,
+	 *       commentCount: number,
+	 *       isOwner: boolean
+	 *     }>,
+	 *     respLastPostId: string,
+	 *     hasMore: boolean
+	 *   }
+	 * }>}
 	 */
 	async getMyPosts(lastId = null) {
 		const params = new URLSearchParams();

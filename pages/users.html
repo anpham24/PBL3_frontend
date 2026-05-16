@@ -1,9 +1,10 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Quản lý người dùng</title>
+
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,36 +14,7 @@
 </head>
 <body>
 	<div class="app-shell">
-		<aside class="sidebar">
-			<h1 class="brand">DUTraveler</h1>
-
-			<nav class="side-nav" aria-label="Sidebar navigation">
-				<a class="nav-item" href="feed.html">
-					<i class="bx bx-home-alt-2"></i>
-					<span class="nav-label">Trang chủ</span>
-				</a>
-
-				<a class="nav-item" href="profile.html">
-					<i class="bx bx-user"></i>
-					<span class="nav-label">Trang cá nhân</span>
-				</a>
-
-				<a class="nav-item" href="reports.html">
-					<i class="bx bx-shield-quarter"></i>
-					<span class="nav-label">Quản lý báo cáo</span>
-				</a>
-
-				<a class="nav-item active" href="users.html">
-					<i class="bx bx-group"></i>
-					<span class="nav-label">Quản lý người dùng</span>
-				</a>
-
-				<a class="nav-item" href="settings.html">
-					<i class="bx bx-cog"></i>
-					<span class="nav-label">Cài đặt</span>
-				</a>
-			</nav>
-		</aside>
+		<!-- sidebar injected by assets/js/components/sidebar.js -->
 
 		<main class="main-content users-main">
 			<section class="users-page" aria-label="Trang quản lý người dùng">
@@ -53,8 +25,14 @@
 
 				<section class="users-table-card" aria-label="Danh sách người dùng">
 					<div class="users-table-toolbar">
+						<label class="users-search" for="users-search-input">
+							<i class="bx bx-search"></i>
+							<input id="users-search-input" type="search" placeholder="Tìm kiếm người dùng..." autocomplete="off">
+						</label>
 						<span id="users-count-badge" class="users-count-badge">0 người dùng</span>
 					</div>
+
+					<p id="users-status" class="users-status is-hidden" role="status" aria-live="polite"></p>
 
 					<div class="users-table-scroll">
 						<table class="users-table">
@@ -79,7 +57,21 @@
 		</main>
 	</div>
 
-	<script src="../assets/js/pages/users.js"></script>
+	<div id="users-confirm-modal" class="users-confirm-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="users-confirm-title">
+		<div class="users-confirm-dialog">
+			<h3 id="users-confirm-title">Xác nhận hành động</h3>
+			<p id="users-confirm-message">Bạn có chắc chắn muốn thực hiện hành động này?</p>
+			<div class="users-confirm-actions">
+				<button id="users-confirm-cancel" class="users-confirm-btn users-confirm-cancel" type="button">Hủy</button>
+				<button id="users-confirm-accept" class="users-confirm-btn users-confirm-accept" type="button">Xác nhận</button>
+			</div>
+		</div>
+	</div>
+
+	<!-- create-post-modal injected by assets/js/components/create-post-modal.js -->
+	<!-- comment-modal injected by assets/js/components/comment-modal.js -->
+
+	<script type="module" src="../assets/js/components/sidebar.js"></script>
+	<script type="module" src="../assets/js/pages/users.js"></script>
 </body>
 </html>
-

@@ -122,9 +122,8 @@ export const removeUserRole = () => {
 };
 
 export const clearAuthStorage = () => {
+	// removeToken() đã xóa tất cả các key liên quan (token, userId, avtUrl, nickname)
 	removeToken();
-	removeUserId();
-	removeUserRole();
 };
 
 export const getAccessToken = () => getToken();

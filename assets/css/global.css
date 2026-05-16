@@ -155,23 +155,6 @@ img {
 	outline: none;
 }
 
-.header-avatar {
-	width: 40px;
-	height: 40px;
-	border: 1px solid var(--border);
-	border-radius: 50%;
-	overflow: hidden;
-	padding: 0;
-	background: var(--surface);
-	cursor: pointer;
-}
-
-.header-avatar img {
-	width: 100%;
-	height: 100%;
-	object-fit: cover;
-}
-
 .main-inner {
 	display: flex;
 	justify-content: center;
@@ -245,6 +228,7 @@ img {
 
 .post-menu-wrap {
 	flex-shrink: 0;
+	position: relative;
 }
 
 .post-menu-btn {
@@ -272,7 +256,7 @@ img {
 	position: absolute;
 	top: calc(100% - 2px);
 	right: 12px;
-	min-width: 170px;
+	width: 160px;
 	padding: 6px;
 	border: 1px solid var(--border);
 	border-radius: 12px;
@@ -302,11 +286,43 @@ img {
 
 .post-dropdown-item i {
 	font-size: 1rem;
-	color: #ef4444;
+	color: #6b7280;
 }
 
 .post-dropdown-item:hover {
 	background: #f3f4f6;
+}
+
+/* Edit post button */
+.post-dropdown-item--edit i {
+	color: #374151;
+}
+
+.post-dropdown-item--edit:hover {
+	background: #f3f4f6;
+	color: #111827;
+}
+
+.post-dropdown-item--edit:hover i {
+	color: #111827;
+}
+
+/* Delete post button — danger */
+.post-dropdown-item--delete {
+	color: #dc2626;
+}
+
+.post-dropdown-item--delete i {
+	color: #dc2626;
+}
+
+.post-dropdown-item--delete:hover {
+	background: #fef2f2;
+	color: #b91c1c;
+}
+
+.post-dropdown-item--delete:hover i {
+	color: #b91c1c;
 }
 
 .post-tags {
@@ -341,6 +357,12 @@ img {
 }
 
 .left-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.right-actions {
 	display: flex;
 	align-items: center;
 	gap: 4px;
@@ -413,7 +435,7 @@ img {
 }
 
 .is-hidden {
-	display: none;
+	display: none !important;
 }
 
 .create-post-modal {
@@ -432,7 +454,7 @@ img {
 }
 
 .create-post-dialog {
-	width: min(580px, 100%);
+	width: min(850px, 100%);
 	max-height: min(92vh, 820px);
 	background: var(--surface);
 	border: 1px solid var(--border);
@@ -441,16 +463,26 @@ img {
 	box-shadow: 0 30px 80px rgba(17, 24, 39, 0.22);
 }
 
-.modal-step {
-	padding: 22px;
+.create-post-dialog.split-layout {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	height: 560px;
+}
+
+.create-preview-col {
+	background: #f9fafb;
+	border-right: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	position: relative;
 }
 
 .upload-dropzone {
-	min-height: 360px;
+	flex: 1;
 	border: 2px dashed #d1d5db;
 	border-radius: 16px;
 	background: #fbfbfb;
-	padding: 24px;
+	margin: 20px;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -480,15 +512,181 @@ img {
 	cursor: pointer;
 }
 
-#step-2-details {
-	padding: 0;
+.draft-preview-container {
+	position: absolute;
+	inset: 0;
+	background: #000;
+	display: flex;
+	flex-direction: column;
+	z-index: 10;
+}
+
+.draft-preview-carousel {
+	flex: 1;
+	position: relative;
+	overflow: hidden;
+	display: flex;
+}
+
+.draft-preview-inner {
+	display: flex;
+	width: 100%;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+}
+
+.draft-preview-inner::-webkit-scrollbar {
+	display: none;
+}
+
+.draft-preview-inner .carousel-item {
+	min-width: 100%;
+	width: 100%;
+	scroll-snap-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.draft-preview-inner .carousel-item img,
+.draft-preview-inner .carousel-item video {
+	max-width: 100%;
+	max-height: 100%;
+	object-fit: contain;
+}
+
+.reselect-btn {
+	display: none !important;
+}
+
+/* ── Draft Thumbnail Strip ───────────────────────────────────────────────────── */
+
+.draft-thumbnail-strip {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 8px 10px;
+	background: rgba(0, 0, 0, 0.75);
+	overflow-x: auto;
+	scrollbar-width: thin;
+	scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+	flex-shrink: 0;
+	min-height: 72px;
+}
+
+.draft-thumbnail-strip::-webkit-scrollbar {
+	height: 4px;
+}
+
+.draft-thumbnail-strip::-webkit-scrollbar-track {
+	background: transparent;
+}
+
+.draft-thumbnail-strip::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.3);
+	border-radius: 999px;
+}
+
+.draft-thumbnail-item {
+	position: relative;
+	flex-shrink: 0;
+	width: 54px;
+	height: 54px;
+	border-radius: 8px;
+	overflow: hidden;
+	cursor: pointer;
+	border: 2px solid transparent;
+	transition: border-color 0.18s ease, transform 0.15s ease;
+}
+
+.draft-thumbnail-item:hover {
+	transform: scale(1.05);
+}
+
+.draft-thumbnail-item.is-active {
+	border-color: #ffffff;
+	box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.4);
+}
+
+.draft-thumbnail-item img,
+.draft-thumbnail-item video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+	pointer-events: none;
+}
+
+.draft-thumbnail-remove {
+	position: absolute;
+	top: 2px;
+	right: 2px;
+	width: 18px;
+	height: 18px;
+	border-radius: 50%;
+	background: rgba(17, 24, 39, 0.75);
+	border: none;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 2;
+	opacity: 0;
+	transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.draft-thumbnail-item:hover .draft-thumbnail-remove {
+	opacity: 1;
+}
+
+.draft-thumbnail-remove:hover {
+	background: #dc2626;
+}
+
+.draft-thumbnail-remove i {
+	font-size: 0.75rem;
+	color: #ffffff;
+	line-height: 1;
+}
+
+.draft-thumbnail-add {
+	flex-shrink: 0;
+	width: 54px;
+	height: 54px;
+	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.12);
+	border: 2px dashed rgba(255, 255, 255, 0.4);
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.draft-thumbnail-add:hover {
+	background: rgba(255, 255, 255, 0.22);
+	border-color: rgba(255, 255, 255, 0.7);
+}
+
+.draft-thumbnail-add i {
+	font-size: 1.4rem;
+	color: rgba(255, 255, 255, 0.85);
+}
+
+.create-form-col {
+	display: flex;
+	flex-direction: column;
+	background: #fff;
+	height: 100%;
 }
 
 .create-modal-header {
 	padding: 12px 16px;
 	border-bottom: 1px solid var(--border);
-	display: grid;
-	grid-template-columns: auto 1fr auto;
+	display: flex;
+	justify-content: space-between;
 	align-items: center;
 	gap: 10px;
 }
@@ -524,6 +722,12 @@ img {
 	border-radius: 999px;
 	font-weight: 600;
 	cursor: pointer;
+	transition: opacity 0.2s;
+}
+
+.publish-btn:disabled {
+	opacity: 0.38;
+	cursor: not-allowed;
 }
 
 .create-modal-body {
@@ -531,6 +735,15 @@ img {
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
+	flex: 1;
+	overflow-y: auto;
+}
+
+.create-modal-footer {
+	margin-top: auto;
+	padding-top: 12px;
+	display: flex;
+	justify-content: flex-end;
 }
 
 .comment-modal {
@@ -585,6 +798,30 @@ img {
 .comment-media-pane {
 	background: #000000;
 	min-height: 560px;
+	max-height: 90vh;
+	overflow: hidden;
+}
+
+.comment-media-gallery {
+	height: 100%;
+	display: flex;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+}
+
+.comment-media-gallery::-webkit-scrollbar {
+	display: none;
+}
+
+.comment-media-gallery img,
+.comment-media-gallery video {
+	min-width: 100%;
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	flex-shrink: 0;
+	scroll-snap-align: center;
 }
 
 .comment-media-pane img,
@@ -599,15 +836,19 @@ img {
 	flex-direction: column;
 	background: #ffffff;
 	min-height: 0;
+	max-height: 90vh;
 }
 
 .comment-panel-header {
 	padding: 12px 14px;
-	border-bottom: 1px solid var(--border);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
 	gap: 10px;
+	position: relative;
+	z-index: 10;
+	overflow: visible;
+	flex-shrink: 0;
 }
 
 .comment-header-user {
@@ -660,15 +901,10 @@ img {
 
 .comment-action-bar {
 	padding: 8px 14px;
-	border-bottom: 1px solid var(--border);
+	border-top: 1px solid var(--border);
 	display: flex;
-	justify-content: flex-end;
-}
-
-.comment-action-right {
-	display: inline-flex;
 	align-items: center;
-	gap: 6px;
+	justify-content: space-between;
 }
 
 .comment-action-btn {
@@ -690,6 +926,108 @@ img {
 
 .comment-action-btn:hover {
 	background: #f3f4f6;
+}
+
+/* ---------------------------------------------------------------------------
+   Post action buttons — dùng chung trên feed, profile, comment-modal
+   --------------------------------------------------------------------------- */
+
+.post-action-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: transparent;
+	border: none;
+	padding: 6px 10px;
+	border-radius: 18px;
+	cursor: pointer;
+	color: #4b5563;
+	font-weight: 600;
+	font-size: 0.95rem;
+	transition: background-color 0.2s;
+}
+
+.post-action-btn:hover {
+	background: #f3f4f6;
+}
+
+.post-action-btn i {
+	font-size: 1.4rem;
+	color: #1f2937;
+}
+
+.post-action-btn.is-liked i,
+.post-like-btn.is-liked i {
+	color: #ef4444;
+}
+
+.post-action-btn.active i {
+	color: #ef4444;
+}
+
+.post-save-btn.is-saved i {
+	color: #111827;
+}
+
+.post-like-btn:disabled {
+	opacity: 0.7;
+	cursor: wait;
+}
+
+.post-location {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.84rem;
+	color: #2563eb;
+	font-weight: 600;
+}
+
+.post-location i {
+	font-size: 1rem;
+}
+
+
+.comment-post-info {
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--border);
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.comment-post-caption {
+	font-size: 0.9rem;
+	line-height: 1.45;
+	color: #111827;
+}
+
+.comment-post-caption strong {
+	margin-right: 4px;
+	font-weight: 700;
+}
+
+.comment-post-tags {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+}
+
+.comment-info-chip {
+	border: 1px solid #dbeafe;
+	border-radius: 999px;
+	background: #f8fbff;
+	padding: 6px 10px;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.79rem;
+	font-weight: 600;
+	color: #1e3a8a;
+}
+
+.comment-info-chip i {
+	font-size: 0.95rem;
 }
 
 #btn-like-comment-modal.active i {
@@ -763,26 +1101,88 @@ img {
 	color: #9ca3af;
 }
 
-.comment-like-btn {
-	width: 26px;
-	height: 26px;
+/* ---------------------------------------------------------------------------
+   Skeleton shimmer — dùng chung cho profile, comment-modal, v.v.
+   --------------------------------------------------------------------------- */
+
+@keyframes skeleton-shimmer {
+	0% {
+		background-position: -400px 0;
+	}
+
+	100% {
+		background-position: 400px 0;
+	}
+}
+
+.is-skeleton {
+	color: transparent !important;
+	background: linear-gradient(90deg,
+			#e5e7eb 25%,
+			#f3f4f6 50%,
+			#e5e7eb 75%) !important;
+	background-size: 800px 100% !important;
+	animation: skeleton-shimmer 1.4s ease-in-out infinite;
+	border-radius: 6px;
+	pointer-events: none;
+	user-select: none;
+}
+
+.is-skeleton * {
+	visibility: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Comment list — end message & loading indicator
+   --------------------------------------------------------------------------- */
+
+/** Dòng "Đã hiển thị tất cả bình luận" */
+.comments-end-message {
+	text-align: center;
+	font-size: 0.8rem;
+	color: #9ca3af;
+	padding: 6px 0 2px;
+	letter-spacing: 0.02em;
+}
+
+/** Skeleton placeholder khi đang tải thêm bình luận */
+.comment-loading .comment-avatar {
+	background: #e5e7eb;
 	border: none;
-	border-radius: 50%;
+}
+
+
+.comment-like-btn {
+	width: auto;
+	min-width: 26px;
+	height: auto;
+	min-height: 26px;
+	padding: 2px 0;
+	border: none;
+	border-radius: 6px;
 	background: transparent;
 	display: inline-flex;
+	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	color: #9ca3af;
 	cursor: pointer;
 	flex-shrink: 0;
+	gap: 2px;
 }
 
 .comment-like-btn i {
 	font-size: 1rem;
 }
 
+.comment-like-btn .comment-like-count {
+	font-size: 0.72rem;
+	font-weight: 500;
+	line-height: 1;
+}
+
 .comment-like-btn:hover {
-	background: #f3f4f6;
+	background: transparent;
 	color: #ef4444;
 }
 
@@ -822,6 +1222,24 @@ img {
 	flex-wrap: wrap;
 }
 
+/* ── Author info block bên trong Create Post Modal ── */
+.create-post-author {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.create-post-author-nickname {
+	font-size: 0.95rem;
+	font-weight: 700;
+	color: #111827;
+	line-height: 1.2;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 180px;
+}
+
 .detail-avatar {
 	width: 42px;
 	height: 42px;
@@ -849,6 +1267,21 @@ img {
 	cursor: pointer;
 }
 
+.detail-chip-select {
+	padding-right: 10px;
+}
+
+.detail-chip-select select {
+	border: none;
+	outline: none;
+	background: transparent;
+	font: inherit;
+	color: var(--text);
+	min-width: 104px;
+	appearance: none;
+	cursor: pointer;
+}
+
 .post-caption-wrap {
 	border: 1px solid var(--border);
 	border-radius: 14px;
@@ -867,11 +1300,72 @@ img {
 	background: transparent;
 }
 
+#create-post-address {
+	width: 100%;
+	border: none;
+	outline: none;
+	box-shadow: none;
+	font-size: 0.94rem;
+	background: transparent;
+}
+
+#create-post-address:focus,
+#create-post-address:active {
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
+/* Modifier: bỏ viền wrapper khi dùng cho thanh địa điểm */
+.post-caption-wrap.location-input-wrap {
+	border: none;
+	outline: none;
+	box-shadow: none;
+	padding-left: 0;
+	padding-right: 0;
+}
+
+.post-caption-wrap.location-input-wrap:focus-within {
+	border: none;
+	outline: none;
+	box-shadow: none;
+}
+
+.create-post-feedback {
+	font-size: 0.9rem;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
 .draft-preview {
 	border: 1px solid var(--border);
 	border-radius: 14px;
 	overflow: hidden;
 	background: #f3f4f6;
+}
+
+.draft-preview-grid {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 8px;
+	min-height: 120px;
+	padding: 8px;
+}
+
+.draft-preview-item {
+	position: relative;
+	aspect-ratio: 1 / 1;
+	border-radius: 10px;
+	overflow: hidden;
+	background: #e5e7eb;
+}
+
+.draft-preview-item img,
+.draft-preview-item video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
 }
 
 #post-draft-preview {
@@ -1035,6 +1529,24 @@ img {
 		padding: 7px 12px;
 	}
 
+	.comment-post-info {
+		padding: 10px 12px;
+		gap: 8px;
+	}
+
+	.comment-post-caption {
+		font-size: 0.86rem;
+	}
+
+	.comment-post-tags {
+		gap: 6px;
+	}
+
+	.comment-info-chip {
+		font-size: 0.75rem;
+		padding: 5px 8px;
+	}
+
 	.comment-list {
 		padding: 12px;
 	}
@@ -1056,13 +1568,20 @@ img {
 		border-radius: 16px;
 	}
 
-	.modal-step {
-		padding: 14px;
+	.create-post-dialog.split-layout {
+		grid-template-columns: 1fr;
+		height: 90vh;
+	}
+
+	.create-preview-col {
+		border-right: none;
+		border-bottom: 1px solid var(--border);
+		min-height: 250px;
+		max-height: 40vh;
 	}
 
 	.upload-dropzone {
-		min-height: 250px;
-		padding: 16px;
+		margin: 12px;
 	}
 
 	.create-modal-body {
@@ -1072,4 +1591,200 @@ img {
 	#post-caption-input {
 		min-height: 110px;
 	}
+}
+
+/* ============================================================
+   Carousel — dùng chung cho post-media-carousel (feed card)
+   và draft-preview-carousel (Create Post Modal).
+   Đặt ở global.css để tất cả các trang đều có style đúng.
+   ============================================================ */
+
+.post-media-carousel {
+	position: relative;
+	width: 100%;
+	border-top: 1px solid var(--border);
+	border-bottom: 1px solid var(--border);
+	background: #000;
+	overflow: hidden;
+}
+
+.carousel-inner {
+	display: flex;
+	overflow-x: auto;
+	scroll-snap-type: x mandatory;
+	scrollbar-width: none;
+	width: 100%;
+}
+
+.carousel-inner::-webkit-scrollbar {
+	display: none;
+}
+
+.carousel-item {
+	min-width: 100%;
+	width: 100%;
+	scroll-snap-align: center;
+	flex-shrink: 0;
+	aspect-ratio: 5 / 4;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.carousel-item img,
+.carousel-item video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+/* Nút mũi tên — PHẢI có position: absolute và left/right
+   để nằm đúng 2 mép của khung ảnh trên mọi trang */
+.carousel-btn {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.85);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	z-index: 2;
+	color: #111;
+	transition: background 0.2s, opacity 0.2s;
+	opacity: 0.7;
+}
+
+.carousel-btn:hover {
+	background: #fff;
+	opacity: 1;
+}
+
+.carousel-btn i {
+	font-size: 1.4rem;
+}
+
+.carousel-btn.prev-btn {
+	left: 12px;
+}
+
+.carousel-btn.next-btn {
+	right: 12px;
+}
+
+/* ---------------------------------------------------------------------------
+   Location Auto-suggest — input wrapper & dropdown
+   --------------------------------------------------------------------------- */
+
+.location-input-wrap {
+	position: relative;
+}
+
+.location-input-label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	width: 100%;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 9px 12px;
+	background: #f9fafb;
+	cursor: text;
+	transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.location-input-label:focus-within {
+	border-color: #6b7280;
+	box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.12);
+	background: #fff;
+}
+
+.location-input-label>i {
+	font-size: 1.05rem;
+	color: var(--muted);
+	flex-shrink: 0;
+}
+
+.location-input-label>input {
+	flex: 1;
+	border: none;
+	background: transparent;
+	outline: none;
+	font-size: 0.9rem;
+	color: var(--text);
+	min-width: 0;
+}
+
+.location-input-label>input::placeholder {
+	color: #9ca3af;
+}
+
+/* Dropdown — position:fixed so it escapes overflow:hidden containers */
+.location-suggest-list {
+	position: fixed;
+	z-index: 200;
+	list-style: none;
+	margin: 0;
+	padding: 6px;
+	background: #ffffff;
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	box-shadow: 0 14px 30px rgba(17, 24, 39, 0.14);
+	max-height: 240px;
+	overflow-y: auto;
+	scrollbar-width: thin;
+}
+
+.location-suggest-list::-webkit-scrollbar {
+	width: 4px;
+}
+
+.location-suggest-list::-webkit-scrollbar-thumb {
+	background: #d1d5db;
+	border-radius: 4px;
+}
+
+.location-suggest-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 8px;
+	padding: 9px 10px;
+	border-radius: 8px;
+	cursor: pointer;
+	font-size: 0.875rem;
+	line-height: 1.4;
+	color: var(--text);
+	transition: background-color 0.12s ease;
+}
+
+.location-suggest-item:hover,
+.location-suggest-item:focus {
+	background: #f3f4f6;
+	outline: none;
+}
+
+.location-suggest-item>i {
+	font-size: 1rem;
+	color: #6b7280;
+	margin-top: 2px;
+	flex-shrink: 0;
+}
+
+.location-suggest-item>span {
+	flex: 1;
+	min-width: 0;
+	word-break: break-word;
+}
+
+.location-suggest-msg {
+	padding: 10px 12px;
+	font-size: 0.85rem;
+	color: var(--muted);
+	text-align: center;
 }

@@ -42,5 +42,13 @@ export const httpClient = {
 
 	async post(endpoint, data, options = {}) {
 		return apiClient.post(endpoint, data, options);
+	},
+
+	async put(endpoint, data, options = {}) {
+		return apiClient.put(endpoint, data, options);
+	},
+
+	async delete(endpoint, options = {}) {
+		return apiClient.delete(endpoint, options);
 	}
 };

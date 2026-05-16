@@ -1,49 +1,78 @@
 ﻿<!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>DUTraveler - Đăng nhập</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="../assets/css/global.css">
-    <link rel="stylesheet" href="../assets/css/login.css">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>DUTraveler - Đăng nhập</title>
+	
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+	
+	<link rel="stylesheet" href="../assets/css/global.css">
+	<link rel="stylesheet" href="../assets/css/login.css">
 </head>
 <body class="login-page">
-    <form id="login-form" class="login-wrapper" aria-label="Form đăng nhập DUTraveler" novalidate>
-        <h1 class="logo">DU<span>Traveler</span></h1>
+	<form id="login-form" class="login-wrapper" aria-label="Form đăng nhập DUTraveler" novalidate>
+		<h1 class="logo">DU<span>Traveler</span></h1>
 
-        <div class="field">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-                <path d="M4 20C4.96 16.93 7.93 15 12 15C16.07 15 19.04 16.93 20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <input id="login-username" name="username" type="text" placeholder="Tên người dùng" autocomplete="username" required>
-        </div>
+		<div class="field">
+			<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<path d="M12 12C14.7614 12 17 9.76142 17 7C17 4.23858 14.7614 2 12 2C9.23858 2 7 4.23858 7 7C7 9.76142 9.23858 12 12 12Z" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+				<path d="M4 20C4.96 16.93 7.93 15 12 15C16.07 15 19.04 16.93 20 20" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+			</svg>
+			<input id="login-username" name="username" type="text" placeholder="Tên đăng nhập" autocomplete="username" required>
+		</div>
 
-        <div class="field">
-            <svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-                <rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
-                <path d="M8 11V8.5C8 6.01 10.01 4 12.5 4C14.99 4 17 6.01 17 8.5V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-            </svg>
-            <input id="login-password" name="password" type="password" placeholder="Mật khẩu" autocomplete="current-password" required>
-        </div>
+		<div class="field">
+			<svg class="icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+				<rect x="5" y="11" width="14" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
+				<path d="M8 11V8.5C8 6.01 10.01 4 12.5 4C14.99 4 17 6.01 17 8.5V11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
+			</svg>
+			<input id="login-password" name="password" type="password" placeholder="Mật khẩu" autocomplete="current-password" required>
+		</div>
 
-        <p id="login-feedback" class="is-hidden" role="status" aria-live="polite"></p>
+		<p id="login-feedback" class="is-hidden" role="status" aria-live="polite"></p>
 
-        <button id="login-submit" class="login-button" type="submit">Đăng nhập</button>
+		<button id="login-submit" class="login-button" type="submit">Đăng nhập</button>
 
-        <a class="forgot-link" href="#">Quên mật khẩu?</a>
+		<p class="account-footer">
+			Bạn chưa có tài khoản?
+			<a href="register.html">Đăng ký ngay</a>
+		</p>
+	</form>
 
-        <p class="account-footer">
-            Bạn chưa có tài khoản?
-            <a href="register.html">Đăng ký</a>
-        </p>
-    </form>
+	<div id="account-locked-modal" class="account-locked-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true">
+		<div class="account-locked-dialog">
+			<div class="lock-icon-wrap">
+				<svg viewBox="0 0 24 24" fill="none">
+					<path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2"/>
+					<path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+				</svg>
+			</div>
 
-    <script type="module" src="../assets/js/pages/login.js"></script>
+			<h2 class="account-lock-title">Tài khoản bị khóa</h2>
+			<p id="account-lock-message" class="account-lock-message">Tài khoản của bạn đang bị khóa tạm thời.</p>
+
+			<ul class="account-lock-list" aria-label="Thông tin khóa tài khoản">
+				<li>
+					<span>Thời gian mở khóa</span>
+					<strong id="account-lock-until">Chưa có thông tin</strong>
+				</li>
+				<li>
+					<span>Lý do bị khóa</span>
+					<strong id="account-lock-reason">Chưa có thông tin</strong>
+				</li>
+				<li>
+					<span>Số lần vi phạm còn lại</span>
+					<strong id="account-lock-remaining">Chưa có thông tin</strong>
+				</li>
+			</ul>
+
+			<button id="account-lock-close" class="account-lock-close" type="button">Đã hiểu</button>
+		</div>
+	</div>
+
+	<script type="module" src="../assets/js/pages/login.js"></script>
 </body>
 </html>
-
-

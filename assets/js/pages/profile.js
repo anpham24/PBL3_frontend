@@ -213,24 +213,17 @@ const renderProfile = (response) => {
 	}
 
 	if (followButton) {
-<<<<<<< Updated upstream
-		const viewingOtherProfile = getTargetUserIdFromQuery().length > 0;
-=======
 		// Dùng cờ từ backend để chốt chính xác đây có phải profile của mình không
 		const isOwnProfile = getTargetUserIdFromQuery().length === 0 || response?.data?.isOwnProfile === true;
 
 		const myProfileNavItem = document.querySelector('.side-nav .nav-item[href="profile.html"]');
->>>>>>> Stashed changes
 
 		if (!viewingOtherProfile) {
 			followButton.classList.add("is-hidden");
-<<<<<<< Updated upstream
-=======
 
 			if (myProfileNavItem) {
 				myProfileNavItem.classList.add('active');
 			}
->>>>>>> Stashed changes
 		} else {
 			const isFollowing = Boolean(response?.data?.isFollowing);
 			followButton.classList.remove("is-hidden");
@@ -532,18 +525,28 @@ const initGridClickHandler = () => {
 // ---------------------------------------------------------------------------
 
 const initProfilePage = () => {
-	initCreatePostModal();
-	initCommentModal(".profile-grid .grid-item");
+	const resolvedTargetId = getTargetUserIdFromQuery();
+	const isOwnProfile = resolvedTargetId.length === 0;
+
+	// Chỉ gọi 1 lần
+	const createPostModalController = isOwnProfile ? initCreatePostModal() : null;
+
+	const commentModalController = initCommentModal({
+		onEditRequest: isOwnProfile
+			? (post) => {
+				if (createPostModalController) {
+					createPostModalController.openEdit(post);
+				}
+			}
+			: null
+	});
+
 	initPostInteractions();
-<<<<<<< Updated upstream
-=======
 	loadProfileData(isOwnProfile, resolvedTargetId);
 	initPostsInfiniteScroll(resolvedTargetId);
 	initGridClickHandler();
 	initFollowHandler();
 
-	// Chuyển hướng đến trang hồ sơ khi click vào avatar/nickname có class .open-profile-link
-	// (dành cho các element được inject động bởi comment-modal, v.v.)
 	document.addEventListener("click", (event) => {
 		const link = event.target.closest(".open-profile-link");
 		if (!link) return;
@@ -556,7 +559,6 @@ const initProfilePage = () => {
 		event.preventDefault();
 		window.location.href = `profile.html?id=${encodeURIComponent(userId)}`;
 	});
->>>>>>> Stashed changes
 };
 
 document.addEventListener("DOMContentLoaded", initProfilePage);

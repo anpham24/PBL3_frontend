@@ -1,5 +1,6 @@
 "use strict";
 
+import { API_BASE_URL } from "../config.js";
 import { clearAuthStorage, getToken } from "../utils/auth.js";
 
 // Đặt link server Backend Java của bạn ở đây
@@ -135,6 +136,11 @@ export const apiClient = {
 			credentials: "include"
 		});
 
+		if (credentials) {
+			fetchOptions.credentials = credentials;
+		}
+
+		const response = await fetch(resolveApiUrl(endpoint), fetchOptions);
 		const responseData = await parseJsonSafely(response);
 
 		// Nếu lỗi 401 (Hết hạn Token), văng luôn về trang Login
@@ -162,6 +168,29 @@ export const apiClient = {
 			...options,
 			method: "POST",
 			data
+		});
+	},
+
+	async put(endpoint, data, options = {}) {
+		return this.request(endpoint, {
+			...options,
+			method: "PUT",
+			data
+		});
+	},
+
+	async patch(endpoint, data, options = {}) {
+		return this.request(endpoint, {
+			...options,
+			method: "PATCH",
+			data
+		});
+	},
+
+	async delete(endpoint, options = {}) {
+		return this.request(endpoint, {
+			...options,
+			method: "DELETE"
 		});
 	}
 };

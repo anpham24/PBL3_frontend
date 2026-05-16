@@ -3,6 +3,35 @@
 	max-width: 600px;
 }
 
+.feed-tabs {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+	margin-bottom: 12px;
+}
+
+.feed-tab {
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: #f9fafb;
+	padding: 9px 12px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: #4b5563;
+	cursor: pointer;
+	transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.feed-tab:hover {
+	background: #f3f4f6;
+}
+
+.feed-tab.is-active {
+	background: #111827;
+	border-color: #111827;
+	color: #ffffff;
+}
+
 .feed-filters {
 	display: flex;
 	justify-content: center;
@@ -51,70 +80,13 @@
 	text-align: center;
 }
 
-.post-like-btn.is-liked i {
-	color: #ef4444;
-}
+/* .post-action-btn, .post-like-btn, .post-save-btn rules đã chuyển sang global.css
+   để dùng chung trên tất cả trang (feed, profile, ...). */
 
-.post-like-btn:disabled {
-	opacity: 0.7;
-	cursor: wait;
-}
 
-.detail-chip-select {
-	padding-right: 10px;
-}
 
-.detail-chip-select select {
-	border: none;
-	outline: none;
-	background: transparent;
-	font: inherit;
-	color: var(--text);
-	min-width: 104px;
-	appearance: none;
-	cursor: pointer;
-}
-
-#create-post-address {
-	width: 100%;
-	border: none;
-	outline: none;
-	font-size: 0.94rem;
-	background: transparent;
-}
-
-.create-post-feedback {
-	font-size: 0.9rem;
-	font-weight: 500;
-	line-height: 1.4;
-}
-
-.publish-btn {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-}
-
-.publish-btn:disabled {
-	opacity: 0.82;
-	cursor: wait;
-}
-
-.btn-spinner {
-	width: 14px;
-	height: 14px;
-	border-radius: 50%;
-	border: 2px solid rgba(255, 255, 255, 0.45);
-	border-top-color: #ffffff;
-	animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-	to {
-		transform: rotate(360deg);
-	}
-}
+/* Các rule #create-post-address, .create-post-feedback, .draft-preview-*,
+   .publish-btn, .btn-spinner, .detail-chip-select đã có trong global.css. */
 
 .post-image video {
 	width: 100%;
@@ -123,12 +95,187 @@
 	display: block;
 }
 
+.report-post-modal.is-hidden {
+	display: none;
+}
+
+.report-post-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 85;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(17, 24, 39, 0.56);
+}
+
+.report-post-dialog {
+	width: min(480px, 100%);
+	border: 1px solid var(--border);
+	border-radius: 16px;
+	background: #ffffff;
+	box-shadow: 0 20px 60px rgba(17, 24, 39, 0.24);
+	overflow: hidden;
+}
+
+.report-post-header {
+	padding: 12px 14px;
+	border-bottom: 1px solid var(--border);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 10px;
+}
+
+.report-post-header h2 {
+	font-size: 1rem;
+	font-weight: 700;
+}
+
+.report-post-close {
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--border);
+	border-radius: 50%;
+	background: #ffffff;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+}
+
+.report-post-close i {
+	font-size: 1.1rem;
+	color: #374151;
+}
+
+.report-post-form {
+	padding: 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+.report-post-subtitle {
+	font-size: 0.9rem;
+	line-height: 1.4;
+	color: #4b5563;
+}
+
+.report-reason-option {
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	padding: 10px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 0.9rem;
+	line-height: 1.35;
+	cursor: pointer;
+	background: #fcfcfd;
+}
+
+.report-reason-option input {
+	accent-color: #dc2626;
+	width: 16px;
+	height: 16px;
+	flex-shrink: 0;
+}
+
+.report-reason-option:hover {
+	background: #f8fafc;
+}
+
+.report-post-feedback {
+	font-size: 0.88rem;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
+.report-post-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	margin-top: 4px;
+}
+
+.report-post-btn {
+	border: 1px solid transparent;
+	border-radius: 10px;
+	padding: 9px 14px;
+	font-size: 0.88rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.report-post-cancel {
+	background: #f3f4f6;
+	border-color: #e5e7eb;
+	color: #374151;
+}
+
+.report-post-cancel:hover {
+	background: #e5e7eb;
+}
+
+.report-post-submit {
+	background: #dc2626;
+	border-color: #dc2626;
+	color: #ffffff;
+}
+
+.report-post-submit:hover {
+	background: #b91c1c;
+}
+
+.post-tags-inline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.post-tag-chip {
+	border: 1px solid #dbeafe;
+	border-radius: 999px;
+	background: #f8fbff;
+	padding: 4px 8px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #1e3a8a;
+}
+
+.post-tag-chip i {
+	font-size: 0.9rem;
+}
+
+/* Các rule carousel (.post-media-carousel, .carousel-inner, .carousel-item,
+   .carousel-btn, .prev-btn, .next-btn) đã được chuyển sang global.css
+   để dùng chung trên tất cả các trang. */
+
 @media (max-width: 640px) {
 	.feed-filters {
 		flex-wrap: wrap;
 	}
+
+	.report-post-form {
+		padding: 12px;
+	}
+
+	.report-post-actions {
+		flex-direction: column;
+	}
+
+	.report-post-btn {
+		width: 100%;
+	}
 }
 
+<<<<<<< HEAD
 .address-autocomplete-wrap {
 	position: relative;
 	width: 100%;
@@ -326,4 +473,111 @@
 
 .custom-dropdown-list li.no-result:hover {
 	background-color: transparent;
+=======
+/* ─── Report Reasons Container ───────────────────────────────────────────── */
+
+.report-reasons-container {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	min-height: 48px;
+}
+
+.report-reasons-loading {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	padding: 12px 8px;
+	color: #6b7280;
+	font-size: 0.88rem;
+}
+
+.report-reasons-spinner {
+	display: inline-block;
+	width: 18px;
+	height: 18px;
+	border: 2px solid #e5e7eb;
+	border-top-color: #dc2626;
+	border-radius: 50%;
+	animation: report-spin 0.7s linear infinite;
+	flex-shrink: 0;
+}
+
+@keyframes report-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.report-reasons-error {
+	font-size: 0.88rem;
+	color: #dc2626;
+	padding: 6px 0;
+}
+
+/* ─── Toast Notification System ──────────────────────────────────────────── */
+
+.toast-container {
+	position: fixed;
+	bottom: 24px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 9999;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 8px;
+	pointer-events: none;
+}
+
+.toast {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	padding: 11px 20px;
+	border-radius: 12px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	box-shadow: 0 8px 24px rgba(17, 24, 39, 0.2);
+	opacity: 0;
+	transform: translateY(12px) scale(0.97);
+	transition: opacity 0.28s ease, transform 0.28s ease;
+	pointer-events: none;
+	white-space: nowrap;
+	max-width: min(480px, 90vw);
+	white-space: normal;
+	text-align: center;
+}
+
+.toast--visible {
+	opacity: 1;
+	transform: translateY(0) scale(1);
+}
+
+.toast--success {
+	background: #052e16;
+	color: #bbf7d0;
+	border: 1px solid #166534;
+}
+
+.toast--error {
+	background: #450a0a;
+	color: #fecaca;
+	border: 1px solid #991b1b;
+}
+
+.toast--info {
+	background: #1e3a5f;
+	color: #bfdbfe;
+	border: 1px solid #1d4ed8;
+}
+
+.post-author .avatar,
+.post-meta h3 {
+	cursor: pointer;
+}
+
+.post-meta h3:hover {
+	text-decoration: underline;
+>>>>>>> main
 }

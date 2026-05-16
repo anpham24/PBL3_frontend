@@ -5,6 +5,95 @@ import { getAvtUrl, getNickname } from "../utils/auth.js";
 import { apiClient } from "../api/api-client.js";
 
 const DEFAULT_PUBLISH_LABEL = "Đăng";
+const DEFAULT_EDIT_LABEL = "Lưu";
+
+// ─── HTML Template ────────────────────────────────────────────────────────────
+
+const CREATE_POST_MODAL_HTML = `
+<div id="create-post-modal" class="create-post-modal" aria-hidden="true" role="dialog" aria-modal="true">
+	<div class="create-post-dialog split-layout">
+		<div class="create-preview-col">
+			<div class="upload-dropzone">
+				<i class="bx bx-images" aria-hidden="true"></i>
+				<p>Chọn ảnh hoặc video để bắt đầu tạo bài đăng mới</p>
+				<button id="choose-file-btn" class="choose-file-btn" type="button">Chọn từ máy tính</button>
+				<input type="file" id="post-file-input" accept="image/*,video/*" multiple hidden>
+			</div>
+			<div id="draft-preview-container" class="draft-preview-container is-hidden">
+				<div id="post-draft-preview-carousel" class="draft-preview-carousel">
+					<div id="post-draft-preview-inner" class="draft-preview-inner"></div>
+					<button id="draft-prev-btn" class="carousel-btn prev-btn is-hidden" type="button"
+						aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
+					<button id="draft-next-btn" class="carousel-btn next-btn is-hidden" type="button"
+						aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
+				</div>
+				<div id="draft-thumbnail-strip" class="draft-thumbnail-strip" aria-label="Danh sách ảnh đã chọn" role="list"></div>
+			</div>
+		</div>
+
+		<div class="create-form-col">
+			<header class="create-modal-header">
+				<h2 id="create-post-title">Tạo bài đăng</h2>
+				<button id="close-create-modal" class="modal-close-btn" type="button" aria-label="Đóng">
+					<i class="bx bx-x"></i>
+				</button>
+			</header>
+
+			<form id="create-post-form" class="create-modal-body" novalidate>
+				<div class="create-detail-top">
+					<div class="create-post-author">
+						<img class="detail-avatar" id="create-post-author-avatar"
+							src="../assets/images/225-default-avatar.png"
+							alt="Avatar người dùng">
+						<span class="create-post-author-nickname">Người dùng</span>
+					</div>
+
+					<div class="detail-chips">
+						<label class="detail-chip detail-chip-select" for="create-post-visibility">
+							<i class="bx bx-lock-alt"></i>
+							<select id="create-post-visibility" aria-label="Quyền riêng tư bài đăng" required>
+								<option value="PUBLIC">Công khai</option>
+								<option value="PRIVATE">Chỉ mình tôi</option>
+							</select>
+						</label>
+					</div>
+				</div>
+
+				<div class="post-caption-wrap">
+					<textarea id="post-caption-input" placeholder="Viết chú thích cho bài đăng..."></textarea>
+				</div>
+
+				<div class="post-caption-wrap location-input-wrap">
+					<label class="location-input-label" for="create-post-address">
+						<i class="bx bx-map-pin" aria-hidden="true"></i>
+						<input id="create-post-address" type="text" placeholder="Nhập địa điểm..." required
+							autocomplete="off" aria-autocomplete="list"
+							aria-controls="location-suggest-list" aria-expanded="false">
+					</label>
+					<ul id="location-suggest-list" class="location-suggest-list is-hidden"
+						role="listbox" aria-label="Gợi ý địa điểm"></ul>
+				</div>
+
+				<p id="create-post-feedback" class="create-post-feedback is-hidden" role="status"
+					aria-live="polite"></p>
+
+				<div class="create-modal-footer">
+					<button id="publish-post-btn" class="publish-btn" type="submit">Đăng</button>
+				</div>
+			</form>
+		</div>
+	</div>
+</div>
+`;
+
+/**
+ * Chèn HTML của create-post-modal vào cuối <body> nếu chưa tồn tại.
+ * Idempotent: gọi nhiều lần cũng chỉ inject một lần.
+ */
+const injectCreatePostModal = () => {
+	if (document.getElementById("create-post-modal")) return;
+	document.body.insertAdjacentHTML("beforeend", CREATE_POST_MODAL_HTML);
+};
 
 // ─── Debounce utility ────────────────────────────────────────────────────────
 
@@ -27,21 +116,6 @@ const debounce = (fn, delay) => {
 const NOMINATIM_URL =
 	"https://nominatim.openstreetmap.org/search?format=json&addressdetails=1&limit=5&countrycodes=vn&q=";
 
-/**
- * Bóc tách tỉnh/thành từ object address trả về bởi Nominatim.
- * Thứ tự ưu tiên: state → city → province → county → ""
- * @param {object} address
- * @returns {string}
- */
-const extractProvince = (address) => {
-	if (!address || typeof address !== "object") return "";
-	return (
-		address.state ||
-		address.city ||
-		address.province ||
-		""
-	);
-};
 
 // ─── Carousel (dùng chung cho feed card và draft preview) ────────────────────
 
@@ -100,50 +174,6 @@ const removePostalCode = (address) => {
 		.trim();
 };
 
-/**
- * Bản đồ chuyển đổi tên tỉnh/thành sang mã provinceCode từ Master Data.
- * @param {string} provinceName - Tên tỉnh/thành từ Nominatim (extractProvince)
- * @param {Array} provincesList - Danh sách tỉnh/thành từ API
- * @returns {string} Mã provinceCode hoặc "" nếu không khớp
- */
-const mapProvinceToCode = (provinceName, provincesList) => {
-	if (typeof provinceName !== "string" || provinceName.trim().length === 0) return "";
-	if (!Array.isArray(provincesList) || provincesList.length === 0) return "";
-
-	const normalize = (str) => {
-		return str
-			.normalize("NFD")
-			.replace(/[\u0300-\u036f]/g, "")
-			.replace(/đ/gi, "d")
-			.toLowerCase()
-			.replace(/^(tinh|thanh pho|tp\.?\s*)\s*/i, "")
-			.trim();
-	};
-
-	const target = normalize(provinceName);
-
-	// Ưu tiên khớp chính xác
-	for (const prov of provincesList) {
-		if (prov && typeof prov.name === "string") {
-			const pName = normalize(prov.name);
-			if (pName === target) {
-				return prov.code || "";
-			}
-		}
-	}
-
-	// Khớp tương đối nếu không có khớp chính xác
-	for (const prov of provincesList) {
-		if (prov && typeof prov.name === "string") {
-			const pName = normalize(prov.name);
-			if (pName.includes(target) || target.includes(pName)) {
-				return prov.code || "";
-			}
-		}
-	}
-
-	return "";
-};
 
 // ─── Khởi tạo component ──────────────────────────────────────────────────────
 
@@ -161,14 +191,14 @@ const mapProvinceToCode = (provinceName, provincesList) => {
 export const initCreatePostModal = (options = {}) => {
 	const { closeOnPublish = true, onPublish = null } = options;
 
+	// Inject HTML vào DOM nếu chưa có (idempotent)
+	injectCreatePostModal();
+
 	// Đăng ký carousel handler toàn cục (idempotent)
 	initCarouselHandler();
 
 	// ── Lấy elements ──────────────────────────────────────────────────────────
 	const createPostModal = document.getElementById("create-post-modal");
-	if (!createPostModal) {
-		return null;
-	}
 
 	const uploadDropzone = document.querySelector(".upload-dropzone");
 	const draftPreviewContainer = document.getElementById("draft-preview-container");
@@ -188,104 +218,266 @@ export const initCreatePostModal = (options = {}) => {
 	const createPostFormElement = document.getElementById("create-post-form");
 	const locationSuggestList = document.getElementById("location-suggest-list");
 
-	const previewObjectUrls = [];
-
-	// ── State địa điểm đã chọn ───────────────────────────────────────────────
-	// Lưu province được bóc tách khi người dùng click chọn gợi ý
-	let selectedProvince = "";
-
 	// Bug 3 fix: flag idempotent — đảm bảo listeners chỉ gắn một lần
 	let locationSuggestInitialized = false;
 
-	// ── Master Data Tỉnh/Thành ───────────────────────────────────────────────
-	let masterProvinces = [];
+	// ── State quản lý media ───────────────────────────────────────────────────
+	/**
+	 * Mảng mediaItems — nguồn truth duy nhất cho toàn bộ preview.
+	 * Mỗi phần tử là một trong hai cấu trúc:
+	 *   - Media cũ (từ server): { id, type: 'old', url, mediaType: 'image'|'video' }
+	 *   - File mới (upload):    { id, type: 'new', file: File }
+	 */
+	let mediaItems = [];
 
-	const fetchMasterProvinces = async () => {
-		try {
-			const response = await apiClient.get("/api/master-data", { requiresAuth: false });
-			if (response?.data?.provinces && Array.isArray(response.data.provinces)) {
-				masterProvinces = response.data.provinces;
-			} else if (response?.provinces && Array.isArray(response.provinces)) {
-				masterProvinces = response.provinces;
-			} else if (Array.isArray(response?.data)) {
-				masterProvinces = response.data;
-			} else if (Array.isArray(response)) {
-				masterProvinces = response;
-			}
-		} catch (error) {
-			console.error("Lỗi khi tải danh sách tỉnh/thành:", error);
+	/** Index của item đang hiển thị trong Main Preview. */
+	let activePreviewIndex = 0;
+
+	// ── Edit state ────────────────────────────────────────────────────────────
+	/** null = chế độ Create; string = chế độ Edit (postId đang sửa). */
+	let editPostId = null;
+
+	/** Snapshot URL media gốc khi mở Edit, dùng để phát hiện xóa media cũ. */
+	let originalMediaUrls = [];
+
+	// ── Object URL cache (chỉ cho File mới) ──────────────────────────────────
+	/** WeakMap lưu objectURL tương ứng với từng File để tránh tạo trùng lặp. */
+	const fileUrlMap = new WeakMap();
+
+	const getObjectUrl = (file) => {
+		if (fileUrlMap.has(file)) return fileUrlMap.get(file);
+		const url = URL.createObjectURL(file);
+		fileUrlMap.set(file, url);
+		return url;
+	};
+
+	/**
+	 * Lấy URL hiển thị của một mediaItem.
+	 * - type 'old': trả về item.url trực tiếp.
+	 * - type 'new': tạo/lấy objectURL từ fileUrlMap.
+	 * @param {{ type: string, url?: string, file?: File }} item
+	 * @returns {string}
+	 */
+	const getMediaUrl = (item) => {
+		if (item.type === "old") return item.url;
+		return getObjectUrl(item.file);
+	};
+
+	/**
+	 * Xác định mediaType (image/video) của một mediaItem.
+	 * @param {{ type: string, mediaType?: string, file?: File }} item
+	 * @returns {'image'|'video'}
+	 */
+	const getMediaType = (item) => {
+		if (item.type === "old") return item.mediaType || "image";
+		return item.file.type.startsWith("video/") ? "video" : "image";
+	};
+
+	/** Giải phóng objectURL nếu item là 'new'. */
+	const revokeItemUrl = (item) => {
+		if (item.type === "new" && fileUrlMap.has(item.file)) {
+			URL.revokeObjectURL(fileUrlMap.get(item.file));
 		}
 	};
 
-	// Gọi ngay khi khởi tạo component
-	fetchMasterProvinces();
+	// Lấy element thumbnail strip (được thêm vào HTML)
+	const draftThumbnailStrip = document.getElementById("draft-thumbnail-strip");
 
 	// ── Preview ảnh/video ─────────────────────────────────────────────────────
 
 	const resetPreviewGrid = () => {
-		while (previewObjectUrls.length > 0) {
-			const objectUrl = previewObjectUrls.pop();
-			if (typeof objectUrl === "string" && objectUrl.length > 0) {
-				URL.revokeObjectURL(objectUrl);
-			}
-		}
+		mediaItems.forEach(revokeItemUrl);
+		mediaItems = [];
+		activePreviewIndex = 0;
 
-		if (draftPreviewInner) {
-			draftPreviewInner.innerHTML = "";
-		}
+		if (draftPreviewInner) draftPreviewInner.innerHTML = "";
+		if (draftThumbnailStrip) draftThumbnailStrip.innerHTML = "";
 
 		uploadDropzone?.classList.remove("is-hidden");
 		draftPreviewContainer?.classList.add("is-hidden");
 	};
 
-	const renderPreviewGrid = (files) => {
-		const safeFiles = Array.from(files || []).filter((file) => {
-			if (!(file instanceof File)) return false;
-			return file.type.startsWith("image/") || file.type.startsWith("video/");
+	const scrollMainPreviewTo = (index) => {
+		if (!draftPreviewInner) return;
+		const item = draftPreviewInner.children[index];
+		if (item) item.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "start" });
+	};
+
+	const updateThumbnailActive = (index) => {
+		if (!draftThumbnailStrip) return;
+		draftThumbnailStrip.querySelectorAll(".draft-thumbnail-item").forEach((el, i) => {
+			el.classList.toggle("is-active", i === index);
 		});
+		activePreviewIndex = index;
+	};
 
-		resetPreviewGrid();
+	const renderThumbnailStrip = () => {
+		if (!draftThumbnailStrip) return;
+		draftThumbnailStrip.innerHTML = "";
 
-		if (safeFiles.length === 0) return;
+		mediaItems.forEach((mediaItem, index) => {
+			const mediaUrl = getMediaUrl(mediaItem);
+			const mediaType = getMediaType(mediaItem);
+			const item = document.createElement("div");
+			item.className = "draft-thumbnail-item";
+			if (index === activePreviewIndex) item.classList.add("is-active");
+			item.setAttribute("role", "button");
+			item.setAttribute("tabindex", "0");
+			item.setAttribute("aria-label", `Xem ảnh ${index + 1}`);
 
-		if (draftPreviewInner) {
-			safeFiles.forEach((file) => {
-				const previewItem = document.createElement("div");
-				previewItem.className = "carousel-item";
+			if (mediaType === "video") {
+				const videoEl = document.createElement("video");
+				videoEl.src = mediaUrl;
+				videoEl.muted = true;
+				item.appendChild(videoEl);
+			} else {
+				const imgEl = document.createElement("img");
+				imgEl.src = mediaUrl;
+				imgEl.alt = `Ảnh ${index + 1}`;
+				item.appendChild(imgEl);
+			}
 
-				const objectUrl = URL.createObjectURL(file);
-				previewObjectUrls.push(objectUrl);
+			// Nút X xóa media
+			const removeBtn = document.createElement("button");
+			removeBtn.className = "draft-thumbnail-remove";
+			removeBtn.type = "button";
+			removeBtn.setAttribute("aria-label", `Xóa ảnh ${index + 1}`);
+			removeBtn.innerHTML = '<i class="bx bx-x"></i>';
+			removeBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				removeFileAtIndex(index);
+			});
+			item.appendChild(removeBtn);
 
-				if (file.type.startsWith("video/")) {
-					const videoElement = document.createElement("video");
-					videoElement.src = objectUrl;
-					videoElement.muted = true;
-					videoElement.loop = true;
-					videoElement.playsInline = true;
-					videoElement.controls = true;
-					videoElement.setAttribute("aria-label", file.name || "Video bản nháp");
-					previewItem.appendChild(videoElement);
-				} else {
-					const imageElement = document.createElement("img");
-					imageElement.src = objectUrl;
-					imageElement.alt = file.name || "Ảnh bản nháp";
-					previewItem.appendChild(imageElement);
+			// Click → navigate
+			item.addEventListener("click", () => {
+				activePreviewIndex = index;
+				scrollMainPreviewTo(index);
+				updateThumbnailActive(index);
+			});
+			item.addEventListener("keydown", (e) => {
+				if (e.key === "Enter" || e.key === " ") {
+					e.preventDefault();
+					activePreviewIndex = index;
+					scrollMainPreviewTo(index);
+					updateThumbnailActive(index);
 				}
-
-				draftPreviewInner.appendChild(previewItem);
 			});
 
-			uploadDropzone?.classList.add("is-hidden");
-			draftPreviewContainer?.classList.remove("is-hidden");
+			draftThumbnailStrip.appendChild(item);
+		});
 
-			if (safeFiles.length > 1) {
-				draftPrevBtn?.classList.remove("is-hidden");
-				draftNextBtn?.classList.remove("is-hidden");
+		// Nút + thêm ảnh
+		const addBtn = document.createElement("button");
+		addBtn.className = "draft-thumbnail-add";
+		addBtn.type = "button";
+		addBtn.setAttribute("aria-label", "Thêm ảnh");
+		addBtn.innerHTML = '<i class="bx bx-plus"></i>';
+		addBtn.addEventListener("click", () => postFileInput?.click());
+		draftThumbnailStrip.appendChild(addBtn);
+	};
+
+	const renderMainPreview = () => {
+		if (!draftPreviewInner) return;
+		draftPreviewInner.innerHTML = "";
+
+		mediaItems.forEach((mediaItem) => {
+			const mediaUrl = getMediaUrl(mediaItem);
+			const mediaType = getMediaType(mediaItem);
+			const previewItem = document.createElement("div");
+			previewItem.className = "carousel-item";
+
+			if (mediaType === "video") {
+				const videoElement = document.createElement("video");
+				videoElement.src = mediaUrl;
+				videoElement.muted = true;
+				videoElement.loop = true;
+				videoElement.playsInline = true;
+				videoElement.controls = true;
+				videoElement.setAttribute("aria-label", "Video bản nháp");
+				previewItem.appendChild(videoElement);
 			} else {
-				draftPrevBtn?.classList.add("is-hidden");
-				draftNextBtn?.classList.add("is-hidden");
+				const imageElement = document.createElement("img");
+				imageElement.src = mediaUrl;
+				imageElement.alt = "Ảnh bản nháp";
+				previewItem.appendChild(imageElement);
 			}
+
+			draftPreviewInner.appendChild(previewItem);
+		});
+	};
+
+	/**
+	 * Render toàn bộ preview (main + thumbnail). Gọi mỗi khi mediaItems thay đổi.
+	 */
+	const renderPreview = () => {
+		if (mediaItems.length === 0) {
+			uploadDropzone?.classList.remove("is-hidden");
+			draftPreviewContainer?.classList.add("is-hidden");
+			return;
 		}
+
+		uploadDropzone?.classList.add("is-hidden");
+		draftPreviewContainer?.classList.remove("is-hidden");
+
+		renderMainPreview();
+		renderThumbnailStrip();
+
+		if (activePreviewIndex >= mediaItems.length) {
+			activePreviewIndex = Math.max(0, mediaItems.length - 1);
+		}
+
+		requestAnimationFrame(() => {
+			scrollMainPreviewTo(activePreviewIndex);
+			updateThumbnailActive(activePreviewIndex);
+		});
+
+		if (mediaItems.length > 1) {
+			draftPrevBtn?.classList.remove("is-hidden");
+			draftNextBtn?.classList.remove("is-hidden");
+		} else {
+			draftPrevBtn?.classList.add("is-hidden");
+			draftNextBtn?.classList.add("is-hidden");
+		}
+	};
+
+	const removeFileAtIndex = (index) => {
+		if (index < 0 || index >= mediaItems.length) return;
+		const wasActive = index === activePreviewIndex;
+		revokeItemUrl(mediaItems[index]);
+		mediaItems.splice(index, 1);
+
+		if (mediaItems.length === 0) {
+			resetPreviewGrid();
+			return;
+		}
+
+		if (wasActive) {
+			activePreviewIndex = Math.min(index, mediaItems.length - 1);
+		} else if (index < activePreviewIndex) {
+			activePreviewIndex = activePreviewIndex - 1;
+		}
+
+		renderPreview();
+	};
+
+	/**
+	 * Thêm (append) các file mới vào mediaItems — KHÔNG ghi đè media cũ.
+	 * Mỗi File được wrap thành mediaItem { type: 'new', file, id }.
+	 * @param {FileList|File[]} newFiles
+	 */
+	const appendFiles = (newFiles) => {
+		const validFiles = Array.from(newFiles || []).filter(
+			(file) =>
+				file instanceof File &&
+				(file.type.startsWith("image/") || file.type.startsWith("video/"))
+		);
+		if (validFiles.length === 0) return;
+		activePreviewIndex = mediaItems.length; // trỏ đến item đầu tiên vừa thêm
+		validFiles.forEach((file) => {
+			mediaItems.push({ id: `new-${Date.now()}-${Math.random()}`, type: "new", file });
+		});
+		renderPreview();
 	};
 
 	// ── Feedback ──────────────────────────────────────────────────────────────
@@ -307,21 +499,29 @@ export const initCreatePostModal = (options = {}) => {
 	// ── Reset form ────────────────────────────────────────────────────────────
 
 	const resetCreateModalState = () => {
+		// Xóa edit state
+		editPostId = null;
+		originalMediaUrls = [];
+
 		if (postFileInput) postFileInput.value = "";
 		if (postCaptionInput) postCaptionInput.value = "";
 		if (createPostAddressInput) createPostAddressInput.value = "";
 
 		if (createPostVisibilityInput) createPostVisibilityInput.selectedIndex = 0;
 
-		// Xóa province đã chọn và đóng dropdown
-		selectedProvince = "";
+		// Đóng dropdown gợi ý địa chỉ
 		hideSuggestList();
 
 		clearFeedback();
 		resetPreviewGrid();
 
-		// Đặt lại nút Đăng về disabled khi reset form
-		if (publishPostBtn) publishPostBtn.disabled = true;
+		// Khôi phục tiêu đề và nút submit về chế độ Create
+		const modalTitle = createPostModal.querySelector(".create-post-modal-title");
+		if (modalTitle) modalTitle.textContent = "Tạo bài viết";
+		if (publishPostBtn) {
+			publishPostBtn.textContent = DEFAULT_PUBLISH_LABEL;
+			publishPostBtn.disabled = true;
+		}
 	};
 
 	// ── Nominatim Location Auto-suggest ───────────────────────────────────────
@@ -374,7 +574,6 @@ export const initCreatePostModal = (options = {}) => {
 				// mousedown thay vì click để chạy trước blur của input
 				e.preventDefault();
 				createPostAddressInput.value = cleanedDisplayName;
-				selectedProvince = extractProvince(place.address);
 				hideSuggestList();
 			});
 
@@ -423,9 +622,6 @@ export const initCreatePostModal = (options = {}) => {
 		createPostAddressInput.addEventListener("input", () => {
 			const query = createPostAddressInput.value.trim();
 
-			// Nếu người dùng thay đổi nội dung thủ công → xóa province đã chọn trước
-			selectedProvince = "";
-
 			if (query.length === 0) {
 				hideSuggestList();
 				locationSuggestList.innerHTML = "";
@@ -456,10 +652,6 @@ export const initCreatePostModal = (options = {}) => {
 	const openCreateModal = () => {
 		resetCreateModalState();
 		populateAuthorInfo();
-
-		if (masterProvinces.length === 0) {
-			fetchMasterProvinces();
-		}
 
 		createPostModal.classList.add("open");
 		createPostModal.setAttribute("aria-hidden", "false");
@@ -520,21 +712,20 @@ export const initCreatePostModal = (options = {}) => {
 		publishPostBtn.disabled = isSubmitting;
 
 		if (isSubmitting) {
-			publishPostBtn.innerHTML =
-				'<span class="btn-spinner" aria-hidden="true"></span><span>Đang đăng...</span>';
+			const loadingLabel = editPostId ? "Đang lưu..." : "Đang đăng...";
+			publishPostBtn.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${loadingLabel}</span>`;
 			return;
 		}
 
-		publishPostBtn.textContent = DEFAULT_PUBLISH_LABEL;
+		publishPostBtn.textContent = editPostId ? DEFAULT_EDIT_LABEL : DEFAULT_PUBLISH_LABEL;
 	};
 
-	const buildFormData = ({ files, visibility, content, address, provinceCode }) => {
+	const buildFormData = ({ files, visibility, content, address }) => {
 		const formData = new FormData();
 		files.forEach((file) => formData.append("files", file));
 		formData.append("visibility", visibility);
 		formData.append("content", content);
 		formData.append("address", address);
-		formData.append("provinceCode", provinceCode);
 		return formData;
 	};
 
@@ -549,7 +740,7 @@ export const initCreatePostModal = (options = {}) => {
 	};
 
 	const handleSubmit = async () => {
-		if (!postFileInput || !postCaptionInput) return;
+		if (!postCaptionInput) return;
 
 		clearFeedback();
 
@@ -560,17 +751,6 @@ export const initCreatePostModal = (options = {}) => {
 			return;
 		}
 
-		const selectedFiles = Array.from(postFileInput.files || []).filter(
-			(file) =>
-				file instanceof File &&
-				(file.type.startsWith("image/") || file.type.startsWith("video/"))
-		);
-
-		if (selectedFiles.length === 0) {
-			setFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
-			return;
-		}
-
 		const address = normalizeString(createPostAddressInput?.value);
 		if (address.length === 0) {
 			setFeedback("Vui lòng nhập địa chỉ cụ thể cho bài đăng.");
@@ -578,27 +758,68 @@ export const initCreatePostModal = (options = {}) => {
 		}
 
 		const cleanedAddress = removePostalCode(address);
-		const resolvedProvinceCode = mapProvinceToCode(selectedProvince, masterProvinces);
-
-		const payload = {
-			files: selectedFiles,
-			visibility: normalizeString(createPostVisibilityInput?.value) || "PUBLIC",
-			content: normalizeString(postCaptionInput.value),
-			address: cleanedAddress, // Giữ lại địa chỉ đầy đủ (không provinceCode) như hợp đồng API yêu cầu "address (Chuỗi địa chỉ đầy đủ)"
-			provinceCode: resolvedProvinceCode
-		};
+		const visibility = normalizeString(createPostVisibilityInput?.value) || "PUBLIC";
 
 		setPublishSubmittingState(true);
 
 		try {
-			const response = await postApi.createPost(buildFormData(payload));
+			if (editPostId) {
+				// ── Chế độ Edit ─────────────────────────────────────────────
+				if (mediaItems.length === 0) {
+					setFeedback("Vui lòng giữ lại hoặc thêm ít nhất một ảnh/video.");
+					return;
+				}
 
-			// Thành công 201
-			setFeedback("Lưu bài thành công, Đang chờ AI kiểm duyệt.", "success");
+				// Tách old URL (giữ lại) và new File (mới upload)
+				const oldUrls = mediaItems
+					.filter((item) => item.type === "old")
+					.map((item) => item.url);
+				const newFiles = mediaItems.filter((item) => item.type === "new");
 
-			const createdPost = response?.data?.post || response?.data;
-			if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
-				onPublish(createdPost);
+				// isMediaChanged = true nếu có file mới HOẶC có url cũ bị xóa
+				const isMediaChanged =
+					newFiles.length > 0 ||
+					oldUrls.length !== originalMediaUrls.length ||
+					!oldUrls.every((url) => originalMediaUrls.includes(url));
+
+				const formData = new FormData();
+				formData.append("isMediaChanged", isMediaChanged.toString());
+				oldUrls.forEach((url) => formData.append("oldUrls", url));
+				newFiles.forEach((item) => formData.append("newFiles", item.file));
+				formData.append("content", contentValue);
+				formData.append("visibility", visibility);
+				formData.append("address", cleanedAddress);
+
+				await postApi.updatePost(editPostId, formData);
+
+				setFeedback("Lưu bài thành công!", "success");
+
+				if (typeof options.onUpdate === "function") {
+					options.onUpdate(editPostId);
+				}
+			} else {
+				// ── Chế độ Create ────────────────────────────────────────────
+				if (mediaItems.length === 0) {
+					setFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
+					return;
+				}
+
+				const newFilesOnly = mediaItems.map((item) => item.file);
+				const payload = {
+					files: newFilesOnly,
+					visibility,
+					content: contentValue,
+					address: cleanedAddress
+				};
+
+				const response = await postApi.createPost(buildFormData(payload));
+
+				setFeedback("Lưu bài thành công, Đang chờ AI kiểm duyệt.", "success");
+
+				const createdPost = response?.data?.post || response?.data;
+				if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
+					onPublish(createdPost);
+				}
 			}
 
 			// Đợi một chút để người dùng thấy thông báo thành công
@@ -615,14 +836,79 @@ export const initCreatePostModal = (options = {}) => {
 			} else if (error?.status === 500) {
 				setFeedback("Lỗi hệ thống. Vui lòng thử lại sau.");
 			} else {
-				setFeedback(toMessage(error, "Đăng bài thất bại. Vui lòng thử lại."));
+				setFeedback(toMessage(error, editPostId ? "Cập nhật bài thất bại. Vui lòng thử lại." : "Đăng bài thất bại. Vui lòng thử lại."));
 			}
 		} finally {
 			setPublishSubmittingState(false);
 		}
 	};
 
-	// ── Gắn event listeners ───────────────────────────────────────────────────
+	// ── Open / Edit ───────────────────────────────────────────────────────────
+
+	/**
+	 * Mở modal ở chế độ Edit, populate dữ liệu từ postData.
+	 * @param {{
+	 *   id: string,
+	 *   content?: string,
+	 *   address?: string,
+	 *   visibility?: string,
+	 *   mediaList?: Array<{mediaType: string, mediaUrl: string}>
+	 * }} postData
+	 */
+	const openEdit = (postData) => {
+		if (!postData?.id) {
+			console.warn("openEdit: postData.id bị thiếu.");
+			return;
+		}
+
+		resetCreateModalState();
+		editPostId = postData.id;
+
+		// Đổ nội dung text
+		if (postCaptionInput) {
+			postCaptionInput.value = postData.content || "";
+		}
+		if (createPostAddressInput) {
+			createPostAddressInput.value = postData.address || "";
+		}
+		if (createPostVisibilityInput && postData.visibility) {
+			const opt = Array.from(createPostVisibilityInput.options).find(
+				(o) => o.value === postData.visibility
+			);
+			if (opt) createPostVisibilityInput.value = postData.visibility;
+		}
+
+		// Đổ mediaList thành mediaItems type 'old'
+		const mediaList = Array.isArray(postData.mediaList) ? postData.mediaList : [];
+		mediaItems = mediaList.map((m, i) => ({
+			id: `old-${i}-${m.mediaUrl}`,
+			type: "old",
+			url: m.mediaUrl,
+			mediaType: m.mediaType === "VIDEO" || m.mediaType === "video" ? "video" : "image"
+		}));
+
+		// Lưu snapshot URL gốc để so sánh khi submit
+		originalMediaUrls = mediaItems.map((item) => item.url);
+
+		// Populate avatar/nickname
+		populateAuthorInfo();
+
+		// Cập nhật tiêu đề và nút submit
+		const modalTitle = createPostModal.querySelector(".create-post-modal-title");
+		if (modalTitle) modalTitle.textContent = "Chỉnh sửa bài viết";
+		if (publishPostBtn) {
+			publishPostBtn.textContent = DEFAULT_EDIT_LABEL;
+			publishPostBtn.disabled = false;
+		}
+
+		// Render media preview nếu có
+		activePreviewIndex = 0;
+		renderPreview();
+
+		createPostModal.classList.add("open");
+		createPostModal.setAttribute("aria-hidden", "false");
+		document.body.style.overflow = "hidden";
+	};
 
 	// Mở modal từ bất kỳ link nào có class .create-post-link
 	document.body.addEventListener("click", (event) => {
@@ -638,22 +924,10 @@ export const initCreatePostModal = (options = {}) => {
 	});
 
 	postFileInput?.addEventListener("change", (event) => {
-		const selectedFiles = Array.from(event.target.files || []).filter(
-			(file) =>
-				file instanceof File &&
-				(file.type.startsWith("image/") || file.type.startsWith("video/"))
-		);
-
-		if (selectedFiles.length === 0) {
-			resetPreviewGrid();
-			return;
-		}
-
-		renderPreviewGrid(selectedFiles);
-	});
-
-	reselectFileBtn?.addEventListener("click", () => {
-		postFileInput?.click();
+		// Dùng appendFiles để THÊM vào danh sách, không ghi đè ảnh cũ
+		appendFiles(event.target.files);
+		// Reset input value để có thể chọn lại cùng một file sau khi xóa
+		event.target.value = "";
 	});
 
 	// Điều khiển trạng thái disabled của nút Đăng theo nội dung textarea
@@ -695,6 +969,7 @@ export const initCreatePostModal = (options = {}) => {
 
 	return {
 		open: openCreateModal,
+		openEdit,
 		close: closeCreateModal,
 		reset: resetCreateModalState,
 		elements: {

@@ -3,7 +3,6 @@
 import { authApi } from "../api/auth-api.js";
 
 const REDIRECT_DELAY_MS = 1200;
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const setFeedback = (feedbackElement, message, variant) => {
 	if (!feedbackElement) {
@@ -46,21 +45,27 @@ const setSubmittingState = (button, isSubmitting) => {
 	button.textContent = isSubmitting ? "Đang đăng ký..." : "Đăng ký";
 };
 
-const validateRegisterPayload = ({ username, password, nickname, email }) => {
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const validateRegisterPayload = ({ username, email, password, nickname }) => {
 	if (username.length < 3) {
 		return "Tên đăng nhập phải có ít nhất 3 ký tự.";
-	}
-
-	if (password.length < 6) {
-		return "Mật khẩu phải có ít nhất 6 ký tự.";
 	}
 
 	if (nickname.length === 0) {
 		return "Vui lòng nhập nickname.";
 	}
 
-	if (!EMAIL_PATTERN.test(email)) {
-		return "Email không hợp lệ.";
+	if (email.length === 0) {
+		return "Vui lòng nhập địa chỉ email.";
+	}
+
+	if (!isValidEmail(email)) {
+		return "Địa chỉ email không hợp lệ.";
+	}
+
+	if (password.length < 6) {
+		return "Mật khẩu phải có ít nhất 6 ký tự.";
 	}
 
 	return "";
@@ -73,13 +78,13 @@ const initRegisterPage = () => {
 	}
 
 	const usernameInput = document.getElementById("register-username");
-	const passwordInput = document.getElementById("register-password");
 	const nicknameInput = document.getElementById("register-nickname");
 	const emailInput = document.getElementById("register-email");
+	const passwordInput = document.getElementById("register-password");
 	const submitButton = document.getElementById("register-submit");
 	const feedbackElement = document.getElementById("register-feedback");
 
-	if (!usernameInput || !passwordInput || !nicknameInput || !emailInput) {
+	if (!usernameInput || !nicknameInput || !emailInput || !passwordInput) {
 		return;
 	}
 
@@ -89,9 +94,9 @@ const initRegisterPage = () => {
 
 		const payload = {
 			username: usernameInput.value.trim(),
-			password: passwordInput.value.trim(),
 			nickname: nicknameInput.value.trim(),
-			email: emailInput.value.trim()
+			email: emailInput.value.trim(),
+			password: passwordInput.value.trim()
 		};
 
 		const validationMessage = validateRegisterPayload(payload);

@@ -3,6 +3,44 @@
 import { postApi } from "../api/post-api.js";
 import { toSafeId } from "../utils/helpers.js";
 
+// Cache danh sách lý do báo cáo — shared giữa các lần mở modal
+let _reportReasonsCache = null;
+
+// ─── HTML Template cho report-post-modal ────────────────────────────────────
+
+const REPORT_MODAL_HTML = `
+<div id="report-post-modal" class="report-post-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true">
+	<div class="report-post-dialog">
+		<header class="report-post-header">
+			<h2 class="report-post-title">Báo cáo bài đăng</h2>
+			<button id="report-post-close" class="report-post-close" type="button" aria-label="Đóng">
+				<i class="bx bx-x"></i>
+			</button>
+		</header>
+		<form id="report-post-form" class="report-post-form" novalidate>
+			<p class="report-post-instruction">Vui lòng chọn lý do báo cáo:</p>
+			<div id="report-reasons-container" class="report-reasons-list">
+				<!-- Reasons dynamically injected -->
+			</div>
+			<p id="report-post-feedback" class="report-post-feedback is-hidden" role="alert" aria-live="assertive"></p>
+			<div class="report-post-actions">
+				<button id="report-post-cancel" class="btn btn--ghost" type="button">Hủy</button>
+				<button id="report-post-submit" class="btn btn--primary" type="submit">Gửi</button>
+			</div>
+		</form>
+	</div>
+</div>
+`;
+
+/**
+ * Chèn HTML của report-post-modal vào cuối <body> nếu chưa tồn tại.
+ * Idempotent: gọi nhiều lần cũng chỉ inject một lần.
+ */
+const injectReportModal = () => {
+	if (document.getElementById("report-post-modal")) return;
+	document.body.insertAdjacentHTML("beforeend", REPORT_MODAL_HTML);
+};
+
 // ---------------------------------------------------------------------------
 // Helpers nội bộ
 // ---------------------------------------------------------------------------
@@ -145,6 +183,36 @@ const handleLikeClick = async (btn) => {
 };
 
 // ---------------------------------------------------------------------------
+// Toast notification (dùng cho report modal)
+// ---------------------------------------------------------------------------
+
+const showReportToast = (message, variant = "info") => {
+	const containerId = "post-interactions-toast-container";
+	let container = document.getElementById(containerId);
+	if (!container) {
+		container = document.createElement("div");
+		container.id = containerId;
+		container.className = "toast-container";
+		document.body.appendChild(container);
+	}
+
+	const toast = document.createElement("div");
+	toast.className = `toast toast--${variant}`;
+	toast.setAttribute("role", "status");
+	toast.setAttribute("aria-live", "polite");
+	toast.textContent = message;
+	container.appendChild(toast);
+
+	void toast.offsetWidth;
+	toast.classList.add("toast--visible");
+
+	window.setTimeout(() => {
+		toast.classList.remove("toast--visible");
+		toast.addEventListener("transitionend", () => toast.remove(), { once: true });
+	}, 3500);
+};
+
+// ---------------------------------------------------------------------------
 // Report modal helpers (giữ nguyên logic cũ, không thay đổi)
 // ---------------------------------------------------------------------------
 
@@ -171,7 +239,7 @@ const closeReportModal = (reportPostModal, reportPostFeedback, stateRef) => {
 	document.body.style.overflow = "";
 };
 
-const openReportModal = (reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId) => {
+const openReportModal = (reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId, reasonsContainer) => {
 	if (
 		!reportPostModal ||
 		!reportPostForm ||
@@ -187,6 +255,61 @@ const openReportModal = (reportPostModal, reportPostForm, reportPostFeedback, st
 	reportPostModal.classList.remove("is-hidden");
 	reportPostModal.setAttribute("aria-hidden", "false");
 	document.body.style.overflow = "hidden";
+
+	// Load lý do báo cáo động (có cache)
+	if (reasonsContainer) {
+		void loadReportReasons(reasonsContainer);
+	}
+};
+
+/**
+ * Tải danh sách lý do báo cáo từ API vào container, có cache.
+ * @param {HTMLElement} container - Phần tử chứa các radio button.
+ */
+const loadReportReasons = async (container) => {
+	if (!container) return;
+
+	// Render từ cache nếu đã có
+	if (Array.isArray(_reportReasonsCache) && _reportReasonsCache.length > 0) {
+		renderReportReasons(container, _reportReasonsCache);
+		return;
+	}
+
+	// Hiển thị spinner
+	container.innerHTML = `
+		<div class="report-reasons-loading">
+			<span class="report-reasons-spinner" aria-label="Đang tải..."></span>
+			<span>Đang tải lý do...</span>
+		</div>`;
+
+	try {
+		const response = await postApi.getReportReasons();
+		const reasons = Array.isArray(response?.data?.reportReasons)
+			? response.data.reportReasons
+			: [];
+		_reportReasonsCache = reasons;
+		renderReportReasons(container, reasons);
+	} catch (err) {
+		console.error("[post-interactions] loadReportReasons error:", err);
+		container.innerHTML = `<p class="report-reasons-error">Đã có lỗi khi tải lý do. Vui lòng thử lại.</p>`;
+	}
+};
+
+/**
+ * Render danh sách lý do vào container.
+ * @param {HTMLElement} container
+ * @param {Array<{code: string, reason: string}>} reasons
+ */
+const renderReportReasons = (container, reasons) => {
+	if (!container) return;
+	const escHtml = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+	const html = reasons.map(item => {
+		const code = escHtml(String(item?.code ?? "").trim());
+		const reason = escHtml(String(item?.reason ?? "").trim());
+		if (!code || !reason) return "";
+		return `<label class="report-reason-option"><input type="radio" name="report-reason" value="${code}"><span>${reason}</span></label>`;
+	}).join("");
+	container.innerHTML = html || `<p class="report-reasons-error">Không có lý do nào được tải.</p>`;
 };
 
 // ---------------------------------------------------------------------------
@@ -194,6 +317,10 @@ const openReportModal = (reportPostModal, reportPostForm, reportPostFeedback, st
 // ---------------------------------------------------------------------------
 
 export const initPostInteractions = () => {
+	// Inject report modal vào DOM nếu chưa có (idempotent)
+	// — đảm bảo hoạt động trên cả feed.html (đã có HTML tĩnh) và profile.html (không có)
+	injectReportModal();
+
 	const reportPostModal = document.getElementById("report-post-modal");
 	const reportPostForm = document.getElementById("report-post-form");
 	const reportPostCloseButton = document.getElementById("report-post-close");
@@ -221,7 +348,8 @@ export const initPostInteractions = () => {
 			if (reportButton) {
 				event.preventDefault();
 				const postId = toSafeId(reportButton.dataset.postId, "");
-				openReportModal(reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId);
+				const reasonsContainer = reportPostModal.querySelector("#report-reasons-container");
+				openReportModal(reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId, reasonsContainer);
 				return;
 			}
 		}
@@ -261,12 +389,21 @@ export const initPostInteractions = () => {
 			clearReportFeedback(reportPostFeedback);
 
 			try {
-				await postApi.reportPost(stateRef.activeReportPostId, reasonCode);
-				setReportFeedback(reportPostFeedback, "Đã gửi báo cáo thành công.", "success");
+				const response = await postApi.reportPost(stateRef.activeReportPostId, reasonCode);
+				// HTTP 201 — thành công
+				const successMsg = String(response?.message ?? "").trim() || "Báo cáo thành công.";
+				showReportToast(successMsg, "success");
 				window.setTimeout(() => doClose(), 500);
 			} catch (error) {
 				console.error("[post-interactions] reportPost error:", error);
-				setReportFeedback(reportPostFeedback, "Không thể gửi báo cáo. Vui lòng thử lại.");
+				// HTTP 404 hoặc 409 — dùng chính xác message từ API
+				const errMsg =
+					(typeof error?.data?.message === "string" && error.data.message.trim().length > 0)
+						? error.data.message.trim()
+						: (typeof error?.message === "string" && error.message.trim().length > 0)
+							? error.message.trim()
+							: "Không thể gửi báo cáo. Vui lòng thử lại.";
+				showReportToast(errMsg, "error");
 			} finally {
 				if (reportPostSubmitButton) reportPostSubmitButton.disabled = false;
 			}

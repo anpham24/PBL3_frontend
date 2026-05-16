@@ -18,6 +18,13 @@ const SIDEBAR_BASE_ITEMS = [
 		activePages: []
 	},
 	{
+		id: "search",
+		label: "Tìm kiếm",
+		href: "search.html",
+		icon: "bx-search-alt",
+		activePages: ["search.html"]
+	},
+	{
 		id: "profile",
 		label: "Trang cá nhân",
 		href: "profile.html",
@@ -58,6 +65,10 @@ const SIDEBAR_MANAGEMENT_ITEMS = [
 		activePages: ["users.html"]
 	}
 ];
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const normalizeRole = (value) => {
 	if (typeof value !== "string") {
@@ -122,6 +133,48 @@ const getVisibleSidebarItems = (userRole) => {
 	return SIDEBAR_BASE_ITEMS.concat(visibleManagementItems);
 };
 
+// ---------------------------------------------------------------------------
+// Sidebar HTML injection
+// ---------------------------------------------------------------------------
+
+/**
+ * Tạo và inject phần tử <aside class="sidebar"> vào đầu .app-shell.
+ * Nếu .app-shell không tồn tại, bỏ qua.
+ */
+const injectSidebarHTML = () => {
+	const appShell = document.querySelector(".app-shell");
+	if (!appShell) {
+		return;
+	}
+
+	// Nếu sidebar đã có trong DOM (do server-side hoặc lần chạy trước), xóa đi
+	const existing = appShell.querySelector(":scope > aside.sidebar");
+	if (existing) {
+		existing.remove();
+	}
+
+	const aside = document.createElement("aside");
+	aside.className = "sidebar";
+
+	const brand = document.createElement("h1");
+	brand.className = "brand";
+	brand.textContent = "DUTraveler";
+
+	const nav = document.createElement("nav");
+	nav.className = "side-nav";
+	nav.setAttribute("aria-label", "Sidebar navigation");
+
+	aside.appendChild(brand);
+	aside.appendChild(nav);
+
+	// Chèn sidebar vào đầu .app-shell (trước .main-content)
+	appShell.insertBefore(aside, appShell.firstChild);
+};
+
+// ---------------------------------------------------------------------------
+// Nav item rendering
+// ---------------------------------------------------------------------------
+
 const renderSideNavItems = (sideNav, items, currentPage) => {
 	if (!sideNav) {
 		return;
@@ -149,10 +202,19 @@ const syncSidebarItems = () => {
 	});
 };
 
+// ---------------------------------------------------------------------------
+// Bootstrap
+// ---------------------------------------------------------------------------
+
+const initSidebar = () => {
+	injectSidebarHTML();
+	syncSidebarItems();
+};
+
 export const refreshSidebarItems = syncSidebarItems;
 
 if (document.readyState === "loading") {
-	document.addEventListener("DOMContentLoaded", syncSidebarItems);
+	document.addEventListener("DOMContentLoaded", initSidebar);
 } else {
-	syncSidebarItems();
+	initSidebar();
 }

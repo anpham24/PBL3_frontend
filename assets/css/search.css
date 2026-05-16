@@ -1,0 +1,323 @@
+/* ──────────────────────────────────────────────────────────────────────────
+   Search Page
+   ────────────────────────────────────────────────────────────────────────── */
+
+.search-page {
+	width: 100%;
+	max-width: 680px;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+/* ─── Hero Search Bar ─────────────────────────────────────────────────────── */
+
+.search-hero {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.search-hero-box {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	border: 1.5px solid var(--border);
+	background: #f9fafb;
+	border-radius: 999px;
+	padding: 12px 18px;
+	transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.search-hero-box:focus-within {
+	border-color: #111827;
+	background: #ffffff;
+	box-shadow: 0 0 0 3px rgba(17, 24, 39, 0.07);
+}
+
+.search-hero-box>i {
+	font-size: 1.25rem;
+	color: var(--muted);
+	flex-shrink: 0;
+}
+
+.search-hero-box input {
+	flex: 1;
+	border: none;
+	background: transparent;
+	outline: none;
+	font-size: 1rem;
+	font-weight: 500;
+	color: var(--text);
+}
+
+.search-hero-box input::placeholder {
+	color: #9ca3af;
+	font-weight: 400;
+}
+
+.search-clear-btn {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 22px;
+	height: 22px;
+	border: none;
+	background: #e5e7eb;
+	border-radius: 50%;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background 0.15s ease;
+}
+
+.search-clear-btn i {
+	font-size: 0.95rem;
+	color: #4b5563;
+}
+
+.search-clear-btn:hover {
+	background: #d1d5db;
+}
+
+/* ─── Post Filters (tái sử dụng style từ feed) ───────────────────────────── */
+
+.feed-filters {
+	display: flex;
+	justify-content: center;
+	gap: 12px;
+	margin-bottom: 4px;
+	flex-wrap: wrap;
+}
+
+.filter-chip {
+	border: 1px solid var(--border);
+	background: var(--chip-bg, #f3f4f6);
+	border-radius: 999px;
+	padding: 9px 14px;
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 500;
+	cursor: default;
+}
+
+.filter-chip i {
+	font-size: 1.05rem;
+	color: #4b5563;
+}
+
+.filter-select {
+	border: none;
+	background: transparent;
+	outline: none;
+	font: inherit;
+	color: var(--text);
+	min-width: 124px;
+	padding-right: 6px;
+	cursor: pointer;
+	appearance: none;
+}
+
+.filter-select option {
+	color: #111827;
+}
+
+/* ─── Tabs ────────────────────────────────────────────────────────────────── */
+
+.search-tabs {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+}
+
+.search-tab {
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	background: #f9fafb;
+	padding: 10px 14px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: #4b5563;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.search-tab i {
+	font-size: 1.1rem;
+}
+
+.search-tab:hover {
+	background: #f3f4f6;
+}
+
+.search-tab.is-active {
+	background: #111827;
+	border-color: #111827;
+	color: #ffffff;
+}
+
+/* ─── Result Containers ───────────────────────────────────────────────────── */
+
+.search-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+}
+
+.search-results-container {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	min-height: 120px;
+}
+
+/* ─── Empty / Loading State ───────────────────────────────────────────────── */
+
+.search-empty-state {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 48px 24px;
+	color: var(--muted);
+	text-align: center;
+}
+
+.search-empty-state i {
+	font-size: 2.8rem;
+	color: #d1d5db;
+}
+
+.search-empty-state p {
+	font-size: 0.95rem;
+	font-weight: 500;
+}
+
+/* ─── User Result Card ────────────────────────────────────────────────────── */
+
+.search-user-card {
+	display: flex;
+	align-items: center;
+	gap: 14px;
+	padding: 14px 16px;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	background: var(--surface);
+	transition: background 0.18s ease, border-color 0.18s ease;
+	cursor: pointer;
+}
+
+.search-user-card:hover {
+	background: #f9fafb;
+	border-color: #d1d5db;
+}
+
+.search-user-avatar {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.search-user-info {
+	flex: 1;
+	min-width: 0;
+}
+
+.search-user-name {
+	font-size: 0.97rem;
+	font-weight: 700;
+	color: var(--text);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.search-user-bio {
+	font-size: 0.83rem;
+	color: var(--muted);
+	margin-top: 2px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.search-user-action {
+	flex-shrink: 0;
+}
+
+.search-view-profile-btn {
+	border: 1px solid var(--border);
+	background: #f3f4f6;
+	color: #374151;
+	padding: 7px 14px;
+	border-radius: 999px;
+	font-size: 0.82rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.18s ease, border-color 0.18s ease;
+}
+
+.search-view-profile-btn:hover {
+	background: #e5e7eb;
+	border-color: #d1d5db;
+}
+
+/* ─── Loading spinner ─────────────────────────────────────────────────────── */
+
+.search-loading {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	padding: 36px 24px;
+	color: var(--muted);
+	font-size: 0.9rem;
+}
+
+.search-spinner {
+	display: inline-block;
+	width: 20px;
+	height: 20px;
+	border: 2.5px solid #e5e7eb;
+	border-top-color: #111827;
+	border-radius: 50%;
+	animation: search-spin 0.65s linear infinite;
+	flex-shrink: 0;
+}
+
+@keyframes search-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* ─── Status / Error messages ─────────────────────────────────────────────── */
+
+.search-status {
+	font-size: 0.88rem;
+	font-weight: 500;
+	color: var(--muted);
+	text-align: center;
+	padding: 8px 0;
+}
+
+.search-status.is-error {
+	color: #dc2626;
+}
+
+/* ─── Responsive ──────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+	.feed-filters {
+		flex-wrap: wrap;
+	}
+}
