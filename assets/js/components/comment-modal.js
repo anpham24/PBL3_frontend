@@ -213,8 +213,6 @@ const createCommentHtml = (comment, highlightActorId = null) => {
 	const authorId = escapeHtml(normalizeString(comment.authorId || comment.author_id));
 	const profileAttr = authorId.length > 0 ? ` data-user-id="${authorId}"` : "";
 
-	const authorId = normalizeString(comment.authorId || comment.author_id);
-
 	const isHighlight = highlightActorId && authorId === highlightActorId;
 	const highlightClass = isHighlight ? " highlight-comment" : "";
 	const highlightIdAttr = isHighlight ? ' id="highlighted-comment"' : "";
