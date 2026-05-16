@@ -90,5 +90,41 @@ export const feedApi = {
 
 	async getFollowingFeed(lastId, provinceCode, topicCode) {
 		return apiClient.get(buildFeedUrl(lastId, provinceCode, topicCode, "FOLLOWING"));
+	},
+
+	/**
+	 * Tìm kiếm bài viết theo keyword, hỗ trợ cursor-based pagination và bộ lọc.
+	 * GET /api/posts?keyword=...&lastPostId=...&provinceCode=...&topicCode=...
+	 * @param {string} keyword - Từ khóa tìm kiếm.
+	 * @param {string} lastPostId - Cursor phân trang.
+	 * @param {string} provinceCode - Mã tỉnh ("" = tất cả).
+	 * @param {string} topicCode - Mã chủ đề ("" = tất cả).
+	 * @returns {Promise<{data: {postList: object[], respLastPostId: string, hasMore: boolean}}>}
+	 */
+	async searchPosts(keyword = "", lastPostId = "", provinceCode = "", topicCode = "") {
+		const params = new URLSearchParams();
+
+		const safeKeyword = normalizeValue(keyword);
+		if (safeKeyword.length > 0) {
+			params.set("keyword", safeKeyword);
+		}
+
+		const safeLastPostId = normalizeValue(lastPostId);
+		if (safeLastPostId.length > 0) {
+			params.set("lastPostId", safeLastPostId);
+		}
+
+		const safeProvinceCode = normalizeValue(provinceCode);
+		if (safeProvinceCode.length > 0 && safeProvinceCode !== "ALL") {
+			params.set("provinceCode", safeProvinceCode);
+		}
+
+		const safeTopicCode = normalizeValue(topicCode);
+		if (safeTopicCode.length > 0 && safeTopicCode !== "ALL") {
+			params.set("topicCode", safeTopicCode);
+		}
+
+		const queryString = params.toString();
+		return apiClient.get(queryString.length > 0 ? `/api/posts?${queryString}` : "/api/posts");
 	}
 };

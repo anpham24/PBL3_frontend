@@ -51,6 +51,24 @@ export const userApi = {
 		return apiClient.patch("/api/users/me/profile", formData);
 	},
 
+	async searchUsers(keyword = "", lastUserId = "") {
+		const resolvedKeyword = normalizeKeyword(keyword);
+
+		if (resolvedKeyword.length === 0) {
+			throw new Error("Vui lòng nhập từ khóa tìm kiếm");
+		}
+
+		const params = new URLSearchParams();
+		params.set("keyword", resolvedKeyword);
+
+		const resolvedLastUserId = normalizeKeyword(lastUserId);
+		if (resolvedLastUserId.length > 0) {
+			params.set("lastUserId", resolvedLastUserId);
+		}
+
+		return apiClient.get(`/api/users?${params.toString()}`);
+	},
+
 	async getUsers(keyword = "") {
 		const resolvedKeyword = normalizeKeyword(keyword);
 		const params = new URLSearchParams();
