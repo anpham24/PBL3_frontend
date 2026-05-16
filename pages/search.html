@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>DUTraveler - Tìm kiếm</title>
+	<meta name="description" content="Tìm kiếm người dùng và bài viết du lịch trên DUTraveler.">
+
+	<link rel="preconnect" href="https://fonts.googleapis.com">
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+	<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
+	<link rel="stylesheet" href="../assets/css/global.css">
+	<link rel="stylesheet" href="../assets/css/search.css">
+</head>
+
+<body>
+	<div class="app-shell">
+		<!-- sidebar injected by assets/js/components/sidebar.js -->
+
+		<main class="main-content">
+			<section class="main-inner">
+				<div class="search-page">
+
+					<!-- Hero search bar -->
+					<div class="search-hero">
+						<label class="search-hero-box" for="search-main-input">
+							<i class="bx bx-search"></i>
+							<input id="search-main-input" type="text" placeholder="Tìm kiếm" autocomplete="off"
+								aria-label="Tìm kiếm">
+							<button id="search-clear-btn" class="search-clear-btn is-hidden" type="button"
+								aria-label="Xóa tìm kiếm">
+								<i class="bx bx-x"></i>
+							</button>
+						</label>
+					</div>
+
+					<!-- Tabs: Người dùng / Bài viết -->
+					<div class="search-tabs" role="tablist" aria-label="Loại kết quả tìm kiếm">
+						<button id="search-tab-users" class="search-tab is-active" type="button" role="tab"
+							aria-selected="true" aria-controls="search-panel-users" data-tab="users">
+							<i class="bx bx-group"></i>
+							Người dùng
+						</button>
+						<button id="search-tab-posts" class="search-tab" type="button" role="tab" aria-selected="false"
+							aria-controls="search-panel-posts" data-tab="posts">
+							<i class="bx bx-news"></i>
+							Bài viết
+						</button>
+					</div>
+
+					<!-- Tab panel: Người dùng -->
+					<div id="search-panel-users" class="search-panel" role="tabpanel"
+						aria-labelledby="search-tab-users">
+						<!-- Kết quả người dùng sẽ được render vào đây -->
+						<div id="search-results-container" class="search-results-container">
+							<div id="search-empty-state" class="search-empty-state">
+								<i class="bx bx-search-alt"></i>
+								<p>Nhập từ khóa để tìm kiếm người dùng</p>
+							</div>
+						</div>
+					</div>
+
+					<!-- Tab panel: Bài viết -->
+					<div id="search-panel-posts" class="search-panel is-hidden" role="tabpanel"
+						aria-labelledby="search-tab-posts">
+						<!-- Bộ lọc tỉnh & chủ đề — dùng lại class feed-filters / filter-chip từ feed.css -->
+						<div class="feed-filters" id="search-post-filters">
+							<label class="filter-chip" for="search-province-filter">
+								<i class="bx bx-map"></i>
+								<select id="search-province-filter" class="filter-select" aria-label="Lọc theo tỉnh">
+									<option value="ALL">Tất cả tỉnh</option>
+								</select>
+							</label>
+
+							<label class="filter-chip" for="search-topic-filter">
+								<i class="bx bx-star"></i>
+								<select id="search-topic-filter" class="filter-select" aria-label="Lọc theo chủ đề">
+									<option value="ALL">Tất cả chủ đề</option>
+								</select>
+							</label>
+						</div>
+
+						<!-- Kết quả bài viết sẽ được render vào đây -->
+						<div id="search-posts-container" class="search-results-container">
+							<div id="search-posts-empty-state" class="search-empty-state">
+								<i class="bx bx-news"></i>
+								<p>Nhập từ khóa để tìm kiếm bài viết</p>
+							</div>
+						</div>
+					</div>
+
+				</div>
+			</section>
+		</main>
+	</div>
+
+	<!-- create-post-modal injected by assets/js/components/create-post-modal.js -->
+
+	<script type="module" src="../assets/js/components/sidebar.js"></script>
+	<script type="module" src="../assets/js/pages/search.js"></script>
+</body>
+
+</html>
