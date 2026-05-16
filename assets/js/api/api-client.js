@@ -137,9 +137,6 @@ export const apiClient = {
 
 		const responseData = await parseJsonSafely(response);
 
-		const response = await fetch(resolveApiUrl(endpoint), fetchOptions);
-		const responseData = await parseJsonSafely(response);
-
 		// Nếu lỗi 401 (Hết hạn Token), văng luôn về trang Login
 		if (response.status === 401 && !skipAuthRedirect) {
 			handleUnauthorized();

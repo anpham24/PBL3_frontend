@@ -3,6 +3,8 @@
 const TOKEN_KEY = "authToken";
 const USER_ID_KEY = "authUserId";
 const USER_ROLE_KEY = "authRole";
+const AVT_URL_KEY = "authAvtUrl";
+const NICKNAME_KEY = "authNickname";
 
 const normalizeStoredValue = (value) => {
 	if (typeof value !== "string") {
@@ -117,12 +119,6 @@ export const setUserRole = (role) => {
 
 export const removeUserRole = () => {
 	localStorage.removeItem(USER_ROLE_KEY);
-};
-
-export const saveAuthSession = ({ token, userId, role } = {}) => {
-	setToken(token);
-	setUserId(userId);
-	setUserRole(role);
 };
 
 export const clearAuthStorage = () => {
