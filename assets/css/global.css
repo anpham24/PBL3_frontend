@@ -1,3 +1,15 @@
+/* =============================================================================
+   Component imports — mỗi file phụ trách đúng một component/nhóm.
+   Thứ tự: base tokens → layout → components → modals
+   ============================================================================= */
+@import url("sidebar.css");
+@import url("post-card.css");
+@import url("post-menu.css");
+@import url("modals.css");
+
+/* =============================================================================
+   Global design tokens
+   ============================================================================= */
 :root {
 	--bg: #ffffff;
 	--surface: #ffffff;

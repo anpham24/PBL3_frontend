@@ -1,10 +1,23 @@
+/**
+ * @file search.js
+ * @module pages/search
+ *
+ * Trang tìm kiếm — kiến trúc đồng nhất với feed.js:
+ *  - HTML bài đăng: dùng renderPostCard() từ post-card.js (một nguồn duy nhất)
+ *  - Tương tác:     initPostInteractions() xử lý toàn bộ (Like, Comment→modal,
+ *                   Edit, Delete, Report, Navigate to profile)
+ *  - Xử lý state:   lắng nghe postDeleted / postLikeUpdated để đồng bộ in-memory cache
+ */
+
 "use strict";
 
 import { feedApi } from "../api/feed-api.js";
 import { userApi } from "../api/user-api.js";
+import { renderPostCard } from "../components/post-card.js";
 import { initCommentModal } from "../components/comment-modal.js";
+import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
-import { generateDropdownMenuHtml, initPostMenus } from "../components/post-menu.js";
+import { initPostMenus } from "../components/post-menu.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -22,7 +35,7 @@ const userSearchState = {
 	lastUserId: "",
 	hasMore: false,
 	isLoading: false,
-	users: [],         // in-memory cache để tra cứu khi cần
+	users: [],
 };
 
 /** State cho tab Bài viết */
@@ -33,7 +46,7 @@ const postSearchState = {
 	lastPostId: "",
 	hasMore: false,
 	isLoading: false,
-	posts: [],         // in-memory cache để mở comment-modal
+	posts: [],   // in-memory cache — dùng cho getPostData callback
 };
 
 /** Tab đang active */
@@ -41,6 +54,9 @@ let activeTab = "users"; // "users" | "posts"
 
 /** Controller của comment-modal */
 let commentModalController = null;
+
+/** Controller của create-post-modal (dùng cho Edit) */
+let createPostModalController = null;
 
 // ---------------------------------------------------------------------------
 // DOM helpers
@@ -54,7 +70,7 @@ const showEl = (el) => el?.classList.remove("is-hidden");
 const hideEl = (el) => el?.classList.add("is-hidden");
 
 // ---------------------------------------------------------------------------
-// Utility / formatting (mirror feed.js)
+// Utility helpers
 // ---------------------------------------------------------------------------
 
 const normalizeString = (value) => {
@@ -76,158 +92,41 @@ const escapeHtml = (value) =>
 		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#039;");
 
-const formatCompactNumber = (num) => {
-	const n = normalizeNumber(num, 0);
-	if (n === 0) return "";
-	if (n >= 1000000) return (n / 1000000).toFixed(1).replace(".", ",").replace(",0", "") + "M";
-	if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",").replace(",0", "") + "K";
-	return n.toString();
-};
-
-const isTruthyLike = (value) =>
-	value === true || value === "true" || value === 1 || value === "1";
-
-const timeAgo = (dateString) => {
-	if (!dateString) return "";
-	const date = new Date(dateString);
-	if (isNaN(date.getTime())) return "";
-	const seconds = Math.floor((new Date() - date) / 1000);
-	if (seconds < 0) return "Vừa xong";
-	let interval = seconds / 31536000;
-	if (interval >= 1) return Math.floor(interval) + " năm trước";
-	interval = seconds / 2592000;
-	if (interval >= 1) return Math.floor(interval) + " tháng trước";
-	interval = seconds / 86400;
-	if (interval >= 1) return Math.floor(interval) + " ngày trước";
-	interval = seconds / 3600;
-	if (interval >= 1) return Math.floor(interval) + " giờ trước";
-	interval = seconds / 60;
-	if (interval >= 1) return Math.floor(interval) + " phút trước";
-	return "Vừa xong";
-};
-
 // ---------------------------------------------------------------------------
-// Post card rendering (giống feed.js)
+// Post data lookup (dùng bởi getPostData callback)
 // ---------------------------------------------------------------------------
 
-const resolvePostMediaItems = (post) => {
-	if (Array.isArray(post?.mediaList)) {
-		return post.mediaList.reduce((acc, m) => {
-			const url = normalizeString(m?.mediaUrl);
-			if (url.length === 0) return acc;
-			const isVideo = normalizeString(m?.mediaType).toUpperCase() === "VIDEO";
-			const thumbnailUrl = normalizeString(m?.thumbnailUrl);
-			acc.push({ url, isVideo, thumbnailUrl });
-			return acc;
-		}, []);
-	}
-	return [];
+const findPostById = (postId) => {
+	const safe = normalizeString(postId);
+	if (!safe) return null;
+	return postSearchState.posts.find((p) => normalizeString(p?.id) === safe) ?? null;
 };
 
-const createMediaHtml = (post, authorName) => {
-	const mediaItems = resolvePostMediaItems(post);
-	if (mediaItems.length === 0) return "";
-
-	const renderItem = (item, altSuffix = "") => {
-		if (item.isVideo) {
-			const posterAttr = item.thumbnailUrl.length > 0
-				? ` poster="${escapeHtml(item.thumbnailUrl)}"`
-				: "";
-			return `<video src="${escapeHtml(item.url)}" controls preload="metadata"${posterAttr}></video>`;
-		}
-		return `<img src="${escapeHtml(item.url)}" alt="Bài viết của ${escapeHtml(authorName)}${altSuffix}">`;
-	};
-
-	if (mediaItems.length === 1) {
-		const item = mediaItems[0];
-		if (item.isVideo) {
-			return `<div class="post-image">${renderItem(item)}</div>`;
-		}
-		return `<img class="post-image" src="${escapeHtml(item.url)}" alt="Bài viết của ${escapeHtml(authorName)}">`;
-	}
-
-	const carouselItems = mediaItems.map((item, i) => `
-		<div class="carousel-item">
-			${renderItem(item, ` - phần ${i + 1}`)}
-		</div>
-	`).join("");
-
-	return `
-		<div class="post-media-carousel">
-			<div class="carousel-inner">
-				${carouselItems}
-			</div>
-			<button class="carousel-btn prev-btn" type="button" aria-label="Ảnh trước"><i class="bx bx-chevron-left"></i></button>
-			<button class="carousel-btn next-btn" type="button" aria-label="Ảnh tiếp theo"><i class="bx bx-chevron-right"></i></button>
-		</div>
-	`;
-};
-
-const createPostCardHtml = (post) => {
+/**
+ * Đọc trạng thái like mới nhất từ DOM data-attribute (ghi bởi post-interactions.js).
+ * @param {object} post
+ * @returns {object}
+ */
+const readLatestPostDataFromDom = (post) => {
 	const postId = normalizeString(post?.id);
-	const authorId = normalizeString(post?.authorId);
-	const authorName = normalizeString(post?.authorName || post?.username) || "Người dùng";
-	const avatarUrl =
-		normalizeString(post?.avtUrl) ||
-		"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
-	const content = normalizeString(post?.content);
-	const isLiked = isTruthyLike(post?.isLiked);
-	const likeCount = normalizeNumber(post?.likeCount, 0);
-	const commentCount = normalizeNumber(post?.commentCount, 0);
-	const address = normalizeString(post?.address);
-	const province = normalizeString(post?.province);
-	const topic = normalizeString(post?.topic);
-	const timeText = timeAgo(normalizeString(post?.createAt));
-	const mediaHtml = createMediaHtml(post, authorName);
+	if (!postId) return post;
 
-	return `
-		<article class="post-card" data-post-id="${escapeHtml(postId)}"${authorId ? ` data-author-id="${escapeHtml(authorId)}"` : ""}>
-			<header class="post-header">
-				<div class="post-author">
-					<img class="avatar open-profile-link" src="${escapeHtml(avatarUrl)}" alt="Avatar ${escapeHtml(authorName)}"${authorId ? ` data-user-id="${escapeHtml(authorId)}"` : ""} style="cursor:pointer;">
-					<div class="post-meta">
-						<div class="post-meta-row">
-							<h3>
-								<span class="open-profile-link"${authorId ? ` data-user-id="${escapeHtml(authorId)}"` : ""} style="cursor:pointer;">${escapeHtml(authorName)}</span>
-								${timeText ? `<span class="post-time"> &bull; ${escapeHtml(timeText)}</span>` : ""}
-							</h3>
-						</div>
-						${(province || topic || address) ? `
-						<div class="post-tags-inline">
-							${province ? `<span class="post-tag-chip"><i class="bx bx-map"></i><span>${escapeHtml(province)}</span></span>` : ""}
-							${topic ? `<span class="post-tag-chip"><i class="bx bx-category"></i><span>${escapeHtml(topic)}</span></span>` : ""}
-							${address ? `<span class="post-tag-chip"><i class="bx bx-current-location"></i><span>${escapeHtml(address)}</span></span>` : ""}
-						</div>` : ""}
-					</div>
-				</div>
-				${generateDropdownMenuHtml({ type: "post", itemId: postId, authorId })}
-			</header>
+	const cssId =
+		typeof CSS !== "undefined" && typeof CSS.escape === "function"
+			? CSS.escape(postId)
+			: postId;
+	const card = document.querySelector(`.post-card[data-post-id="${cssId}"]`);
+	if (!card) return post;
 
-			${mediaHtml}
-
-			<div class="post-actions">
-				<div class="left-actions">
-					<button
-						class="post-action-btn btn-like${isLiked ? " active is-liked" : ""}"
-						type="button"
-						data-post-id="${escapeHtml(postId)}"
-						aria-label="${isLiked ? "Bỏ tim bài viết" : "Thả tim bài viết"}"
-					>
-						<i class="bx ${isLiked ? "bxs-heart" : "bx-heart"}"></i>
-						<span class="action-count" data-role="like-count">${escapeHtml(formatCompactNumber(likeCount))}</span>
-					</button>
-					<button class="post-action-btn post-comment-btn" type="button" aria-label="Bình luận bài viết">
-						<i class="bx bx-message-rounded"></i>
-						<span class="action-count">${escapeHtml(formatCompactNumber(commentCount))}</span>
-					</button>
-				</div>
-			</div>
-
-			<footer class="post-footer">
-				<p class="caption"><strong>${escapeHtml(authorName)}</strong> ${escapeHtml(content)}</p>
-			</footer>
-		</article>
-	`;
+	return {
+		...post,
+		...(card.dataset.isLiked !== undefined
+			? { isLiked: card.dataset.isLiked === "true" }
+			: {}),
+		...(card.dataset.newLikeCount !== undefined
+			? { newLikeCount: normalizeNumber(card.dataset.newLikeCount, post.newLikeCount ?? 0) }
+			: {}),
+	};
 };
 
 // ---------------------------------------------------------------------------
@@ -279,7 +178,6 @@ const setPostsStatus = (message, variant = "info") => {
 
 const clearPostsStatus = () => setPostsStatus("");
 
-/** Show/hide the scroll-loading spinner appended inside container */
 const showScrollSpinner = (container, id) => {
 	if (!container || container.querySelector(`#${id}`)) return;
 	const div = document.createElement("div");
@@ -348,7 +246,6 @@ const searchUsers = async (isLoadMore = false) => {
 	if (!container) return;
 
 	if (userSearchState.isLoading) return;
-	if (!isLoadMore && !userSearchState.hasMore && isLoadMore) return;
 	if (!isLoadMore && userSearchState.query.length === 0) return;
 
 	userSearchState.isLoading = true;
@@ -376,9 +273,7 @@ const searchUsers = async (isLoadMore = false) => {
 
 		hideScrollSpinner(container, "search-users-scroll-spinner");
 
-		if (!isLoadMore) {
-			container.innerHTML = "";
-		}
+		if (!isLoadMore) container.innerHTML = "";
 
 		if (users.length === 0 && !isLoadMore) {
 			renderEmpty(container, "bx-search-alt", `Không tìm thấy người dùng nào cho "${escapeHtml(userSearchState.query)}"`);
@@ -397,23 +292,19 @@ const searchUsers = async (isLoadMore = false) => {
 		if (!hasMore && userSearchState.users.length > 0) {
 			setUsersStatus("Đã tải hết người dùng.");
 		}
-
 	} catch (err) {
 		hideScrollSpinner(container, "search-users-scroll-spinner");
 		console.error("[search] searchUsers error:", err);
 		const msg = normalizeString(err?.data?.message || err?.message) || "Không thể tìm kiếm. Vui lòng thử lại.";
-		if (!isLoadMore) {
-			renderError(container, msg);
-		} else {
-			setUsersStatus(msg, "error");
-		}
+		if (!isLoadMore) renderError(container, msg);
+		else setUsersStatus(msg, "error");
 	} finally {
 		userSearchState.isLoading = false;
 	}
 };
 
 // ---------------------------------------------------------------------------
-// Search: Bài viết
+// Search: Bài viết — dùng renderPostCard() để render
 // ---------------------------------------------------------------------------
 
 const searchPosts = async (isLoadMore = false) => {
@@ -450,9 +341,7 @@ const searchPosts = async (isLoadMore = false) => {
 
 		hideScrollSpinner(container, "search-posts-scroll-spinner");
 
-		if (!isLoadMore) {
-			container.innerHTML = "";
-		}
+		if (!isLoadMore) container.innerHTML = "";
 
 		if (posts.length === 0 && !isLoadMore) {
 			renderEmpty(container, "bx-news", `Không tìm thấy bài viết nào cho "${escapeHtml(postSearchState.query)}"`);
@@ -461,7 +350,8 @@ const searchPosts = async (isLoadMore = false) => {
 		}
 
 		if (posts.length > 0) {
-			const html = posts.map(createPostCardHtml).join("");
+			// Dùng renderPostCard() — nguồn HTML duy nhất, giống feed.js
+			const html = posts.map(renderPostCard).join("");
 			container.insertAdjacentHTML("beforeend", html);
 			posts.forEach((p) => postSearchState.posts.push(p));
 		}
@@ -472,23 +362,19 @@ const searchPosts = async (isLoadMore = false) => {
 		if (!hasMore && postSearchState.posts.length > 0) {
 			setPostsStatus("Đã tải hết bài đăng.");
 		}
-
 	} catch (err) {
 		hideScrollSpinner(container, "search-posts-scroll-spinner");
 		console.error("[search] searchPosts error:", err);
 		const msg = normalizeString(err?.data?.message || err?.message) || "Không thể tìm kiếm. Vui lòng thử lại.";
-		if (!isLoadMore) {
-			renderError(container, msg);
-		} else {
-			setPostsStatus(msg, "error");
-		}
+		if (!isLoadMore) renderError(container, msg);
+		else setPostsStatus(msg, "error");
 	} finally {
 		postSearchState.isLoading = false;
 	}
 };
 
 // ---------------------------------------------------------------------------
-// Orchestrator
+// Orchestrator — điều phối tìm kiếm theo tab hiện tại
 // ---------------------------------------------------------------------------
 
 const runSearch = () => {
@@ -534,26 +420,20 @@ const clearResults = () => {
 const initSearchBar = () => {
 	const mainInput = getEl("search-main-input");
 	const clearBtn = getEl("search-clear-btn");
-
 	if (!mainInput) return;
 
 	const syncClearBtn = () => {
-		if (mainInput.value.trim().length > 0) {
-			showEl(clearBtn);
-		} else {
-			hideEl(clearBtn);
-		}
+		if (mainInput.value.trim().length > 0) showEl(clearBtn);
+		else hideEl(clearBtn);
 	};
 
 	mainInput.addEventListener("input", syncClearBtn);
-
 	clearBtn?.addEventListener("click", () => {
 		mainInput.value = "";
 		syncClearBtn();
 		mainInput.focus();
 		clearResults();
 	});
-
 	mainInput.addEventListener("keydown", (e) => {
 		if (e.key === "Enter") {
 			e.preventDefault();
@@ -594,10 +474,8 @@ const initTabs = () => {
 
 			activeTab = targetTab;
 
-			// Nếu đã có query, tự động chạy tìm kiếm trong tab mới
 			const mainInput = getEl("search-main-input");
-			const query = normalizeString(mainInput?.value ?? "");
-			if (query.length > 0) {
+			if (normalizeString(mainInput?.value).length > 0) {
 				runSearch();
 			}
 		});
@@ -653,68 +531,6 @@ const initDropdownFilters = async () => {
 };
 
 // ---------------------------------------------------------------------------
-// Comment modal — mở khi click nút bình luận trên bài viết kết quả tìm kiếm
-// ---------------------------------------------------------------------------
-
-const initPostListInteractions = () => {
-	const container = getEl("search-posts-container");
-	if (!container) return;
-
-	container.addEventListener("click", (event) => {
-		const commentBtn = event.target.closest(".post-comment-btn");
-		if (!commentBtn) return;
-
-		event.preventDefault();
-		const postCard = commentBtn.closest(".post-card");
-		const postId = normalizeString(postCard?.dataset.postId);
-		if (postId.length === 0) return;
-
-		// Đọc lại trạng thái like mới nhất từ DOM (data-attribute)
-		const domIsLiked = postCard.dataset.isLiked;
-		const domLikeCount = postCard.dataset.newLikeCount;
-
-		const post = postSearchState.posts.find(
-			(p) => normalizeString(p?.id) === postId
-		);
-		if (!post || !commentModalController) return;
-
-		const latestPost = {
-			...post,
-			...(domIsLiked !== undefined ? { isLiked: domIsLiked === "true" } : {}),
-			...(domLikeCount !== undefined ? { newLikeCount: normalizeNumber(domLikeCount, post.likeCount ?? 0) } : {}),
-		};
-		commentModalController.open(latestPost);
-	});
-
-	// Đồng bộ postSearchState.posts khi like được toggle
-	document.addEventListener("postLikeUpdated", (event) => {
-		const { postId, newLikeCount, isLiked } = event.detail ?? {};
-		const safePostId = normalizeString(postId);
-		if (safePostId.length === 0) return;
-
-		postSearchState.posts = postSearchState.posts.map((p) => {
-			if (normalizeString(p?.id) !== safePostId) return p;
-			return {
-				...p,
-				isLiked: Boolean(isLiked),
-				...(newLikeCount !== undefined ? { newLikeCount: normalizeNumber(newLikeCount, 0) } : {}),
-			};
-		});
-	});
-
-	// Chuyển hướng về trang hồ sơ khi click avatar/tên tác giả
-	document.addEventListener("click", (event) => {
-		const link = event.target.closest(".open-profile-link");
-		if (!link) return;
-		const userId = normalizeString(link.dataset.userId);
-		if (userId.length === 0) return;
-		if (event.defaultPrevented) return;
-		event.preventDefault();
-		window.location.href = `profile.html?id=${encodeURIComponent(userId)}`;
-	});
-};
-
-// ---------------------------------------------------------------------------
 // URL query pre-fill (?q=...)
 // ---------------------------------------------------------------------------
 
@@ -732,13 +548,12 @@ const prefillFromQuery = () => {
 };
 
 // ---------------------------------------------------------------------------
-// Infinite scroll handler (mirrors feed.js handleScrollToBottom)
+// Infinite scroll handler
 // ---------------------------------------------------------------------------
 
 const handleScrollToBottom = () => {
 	const currentScroll = window.innerHeight + window.scrollY;
 	const scrollBottom = document.documentElement.scrollHeight - SCROLL_BOTTOM_THRESHOLD;
-
 	if (currentScroll < scrollBottom) return;
 
 	if (activeTab === "users") {
@@ -759,21 +574,77 @@ const handleScrollToBottom = () => {
 const initSearchPage = () => {
 	initSearchBar();
 	initTabs();
-	initDropdownFilters();
+	void initDropdownFilters();
 
-	// Khởi tạo comment modal (không có onEditRequest vì đây là trang tìm kiếm read-only)
-	commentModalController = initCommentModal({ onEditRequest: null });
+	// ── Create-post modal (dùng khi Edit bài viết) ────────────────────────────
+	// Trang search chỉ xem không tạo bài, nhưng người dùng có thể edit bài của mình.
+	createPostModalController = initCreatePostModal({
+		closeOnPublish: true,
+		onUpdate: () => {
+			// Sau khi chỉnh sửa thành công, reload kết quả tìm kiếm
+			if (postSearchState.query.length > 0) {
+				void searchPosts(false);
+			}
+		},
+	});
 
-	// Khởi tạo like / report interactions (event delegation toàn cục)
-	initPostInteractions();
+	// ── Comment modal ─────────────────────────────────────────────────────────
+	commentModalController = initCommentModal({
+		onEditRequest: (post) => {
+			if (createPostModalController) {
+				createPostModalController.openEdit(post);
+			}
+		},
+		onDeleteSuccess: (postId) => {
+			// DOM card đã bị post-interactions.js xóa; dọn in-memory state
+			const safeId = normalizeString(postId);
+			postSearchState.posts = postSearchState.posts.filter(
+				(p) => normalizeString(p?.id) !== safeId
+			);
+		},
+	});
 
-	// Khởi tạo dropdown menu 3 chấm cho bài viết
+	// ── post-interactions.js — xử lý toàn bộ sự kiện giống hệt feed.js ────────
+	//   Like, Comment→modal, Edit, Delete, Report, Navigate to profile
+	initPostInteractions({
+		commentModalController,
+		createModalController: createPostModalController,
+		getPostData: (postId) => {
+			const post = findPostById(postId);
+			return post ? readLatestPostDataFromDom(post) : null;
+		},
+	});
+
+	// ── Dropdown 3-chấm ──────────────────────────────────────────────────────
 	initPostMenus();
 
-	// Gắn click handler cho danh sách bài viết (comment modal)
-	initPostListInteractions();
+	// ── Đồng bộ in-memory posts khi like được toggle ──────────────────────────
+	document.addEventListener("postLikeUpdated", (event) => {
+		const { postId, newLikeCount, isLiked } = event.detail ?? {};
+		const safeId = normalizeString(postId);
+		if (!safeId) return;
+		postSearchState.posts = postSearchState.posts.map((p) => {
+			if (normalizeString(p?.id) !== safeId) return p;
+			return {
+				...p,
+				isLiked: Boolean(isLiked),
+				...(newLikeCount !== undefined
+					? { newLikeCount: normalizeNumber(newLikeCount, 0) }
+					: {}),
+			};
+		});
+	});
 
-	// Infinite scroll — tải thêm khi cuộn gần chân trang
+	// ── Dọn state khi bài viết bị xóa (bởi post-interactions.js) ────────────
+	document.addEventListener("postDeleted", (event) => {
+		const postId = normalizeString(event.detail?.postId ?? "");
+		if (!postId) return;
+		postSearchState.posts = postSearchState.posts.filter(
+			(p) => normalizeString(p?.id) !== postId
+		);
+	});
+
+	// ── Infinite scroll ───────────────────────────────────────────────────────
 	window.addEventListener("scroll", handleScrollToBottom, { passive: true });
 
 	prefillFromQuery();

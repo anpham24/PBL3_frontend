@@ -1,76 +1,93 @@
+/**
+ * @file post-interactions.js
+ * @module components/post-interactions
+ *
+ * Trung tâm xử lý tương tác bài viết — Event Delegation toàn cục trên `document`.
+ *
+ * ── Trách nhiệm (Single Responsibility) ────────────────────────────────────────
+ *  Module này là "bộ não" duy nhất cho 6 hành động bài viết:
+ *    1. Like       — toggle like, đồng bộ tất cả nút cùng postId trên trang
+ *    2. Comment    — mở comment-modal với post data mới nhất
+ *    3. Edit       — mở create-post-modal ở chế độ Edit
+ *    4. Delete     — xác nhận, gọi API, xóa DOM card, dispatch 'postDeleted'
+ *    5. Report     — delegate sang ReportPostModal.open()
+ *    6. Navigate   — click avatar / tên tác giả → chuyển hướng trang cá nhân
+ *
+ * ── Nguyên tắc ─────────────────────────────────────────────────────────────────
+ *  - KHÔNG chứa HTML template của bất kỳ modal nào.
+ *  - Nhận controllers (comment, createPost) và hàm getter (getPostData) qua options.
+ *  - Idempotent: gọi nhiều lần chỉ đăng ký listener 1 lần.
+ *  - Hoạt động với mọi post card được render động sau khi init (không cần re-init).
+ *
+ * ── Protocol với các component khác ────────────────────────────────────────────
+ *  Selector bắt sự kiện:
+ *    .btn-like[data-post-id]                   → Like
+ *    .post-comment-btn[data-post-id]           → Comment (mở modal)
+ *    [data-action="edit-post"][data-post-id]   → Edit
+ *    [data-action="delete-post"][data-post-id] → Delete
+ *    [data-action="report-post"][data-post-id] → Report
+ *    .open-profile-link[data-user-id]          → Navigate to profile
+ *
+ *  CustomEvent dispatch (để page-level JS đồng bộ state):
+ *    document → 'postLikeUpdated'  { detail: { postId, newLikeCount, isLiked } }
+ *    document → 'postDeleted'      { detail: { postId } }
+ *
+ * @example
+ *   // Trong feed.js / search.js / profile.js:
+ *   initPostInteractions({
+ *     commentModalController: commentModal,   // object { open, close }
+ *     createModalController:  createModal,    // object { openEdit }
+ *     getPostData: (postId) => findPost(postId), // function → post object | null
+ *   });
+ */
+
 "use strict";
 
-import { postApi } from "../api/post-api.js";
-import { toSafeId } from "../utils/helpers.js";
+import { postApi }        from "../api/post-api.js";
+import { toSafeId }       from "../utils/helpers.js";
+import { ReportPostModal } from "./report-post-modal.js";
 
-// Cache danh sách lý do báo cáo — shared giữa các lần mở modal
-let _reportReasonsCache = null;
+// ─── Idempotency guard ────────────────────────────────────────────────────────
+let _isInstalled = false;
 
-// ─── HTML Template cho report-post-modal ────────────────────────────────────
+// ─── Helpers nội bộ ──────────────────────────────────────────────────────────
 
-const REPORT_MODAL_HTML = `
-<div id="report-post-modal" class="report-post-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true">
-	<div class="report-post-dialog">
-		<header class="report-post-header">
-			<h2 class="report-post-title">Báo cáo bài đăng</h2>
-			<button id="report-post-close" class="report-post-close" type="button" aria-label="Đóng">
-				<i class="bx bx-x"></i>
-			</button>
-		</header>
-		<form id="report-post-form" class="report-post-form" novalidate>
-			<p class="report-post-instruction">Vui lòng chọn lý do báo cáo:</p>
-			<div id="report-reasons-container" class="report-reasons-list">
-				<!-- Reasons dynamically injected -->
-			</div>
-			<p id="report-post-feedback" class="report-post-feedback is-hidden" role="alert" aria-live="assertive"></p>
-			<div class="report-post-actions">
-				<button id="report-post-cancel" class="btn btn--ghost" type="button">Hủy</button>
-				<button id="report-post-submit" class="btn btn--primary" type="submit">Gửi</button>
-			</div>
-		</form>
-	</div>
-</div>
-`;
-
-/**
- * Chèn HTML của report-post-modal vào cuối <body> nếu chưa tồn tại.
- * Idempotent: gọi nhiều lần cũng chỉ inject một lần.
- */
-const injectReportModal = () => {
-	if (document.getElementById("report-post-modal")) return;
-	document.body.insertAdjacentHTML("beforeend", REPORT_MODAL_HTML);
-};
-
-// ---------------------------------------------------------------------------
-// Helpers nội bộ
-// ---------------------------------------------------------------------------
-
-const normalizeString = (value) => {
+const _str = (value) => {
 	if (typeof value !== "string") return "";
-	const trimmed = value.trim();
-	return trimmed.length > 0 ? trimmed : "";
+	const t = value.trim();
+	return t.length > 0 ? t : "";
 };
 
-const normalizeNumber = (value, fallback = 0) => {
+const _num = (value, fallback = 0) => {
 	const n = Number(value);
 	return Number.isFinite(n) ? n : fallback;
 };
 
-const formatCompactNumber = (num) => {
-	const n = normalizeNumber(num, 0);
+const _compact = (num) => {
+	const n = _num(num, 0);
 	if (n === 0) return "";
-	if (n >= 1000000) return (n / 1000000).toFixed(1).replace(".", ",").replace(",0", "") + "M";
-	if (n >= 1000) return (n / 1000).toFixed(1).replace(".", ",").replace(",0", "") + "K";
+	if (n >= 1_000_000) return (n / 1_000_000).toFixed(1).replace(".", ",").replace(",0", "") + "M";
+	if (n >= 1_000)     return (n / 1_000).toFixed(1).replace(".", ",").replace(",0", "") + "K";
 	return n.toString();
 };
 
-// ---------------------------------------------------------------------------
-// Cập nhật visual state cho MỘT nút .btn-like
-// ---------------------------------------------------------------------------
+/**
+ * CSS.escape an ID để dùng trong querySelector.
+ * @param {string} id
+ * @returns {string}
+ */
+const _cssEscape = (id) =>
+	typeof CSS !== "undefined" && typeof CSS.escape === "function"
+		? CSS.escape(id)
+		: id.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 
-const applyLikeVisualState = (btn, isLiked, newLikeCount) => {
+// ─── Like: Visual state helpers ──────────────────────────────────────────────
+
+/**
+ * Cập nhật visual state cho MỘT nút .btn-like.
+ */
+const _applyLikeVisual = (btn, isLiked, newLikeCount) => {
 	if (!btn) return;
-
 	const liked = Boolean(isLiked);
 	btn.classList.toggle("active", liked);
 	btn.classList.toggle("is-liked", liked);
@@ -78,86 +95,62 @@ const applyLikeVisualState = (btn, isLiked, newLikeCount) => {
 
 	const icon = btn.querySelector("i");
 	if (icon) {
-		icon.classList.toggle("bx-heart", !liked);
+		icon.classList.toggle("bx-heart",  !liked);
 		icon.classList.toggle("bxs-heart", liked);
 	}
 
 	if (newLikeCount !== undefined) {
 		const countEl = btn.querySelector('[data-role="like-count"]');
-		if (countEl) {
-			countEl.textContent = formatCompactNumber(newLikeCount);
-		}
+		if (countEl) countEl.textContent = _compact(newLikeCount);
 	}
 };
 
-// ---------------------------------------------------------------------------
-// Đồng bộ TẤT CẢ các nút .btn-like[data-post-id="<id>"] trên trang
-// (bao gồm cả nút trong feed lẫn trong comment-modal)
-// ---------------------------------------------------------------------------
+/**
+ * Đồng bộ TẤT CẢ nút .btn-like[data-post-id="<id>"] trên trang
+ * (kể cả nút bên trong comment-modal).
+ */
+const _syncAllLikeButtons = (postId, isLiked, newLikeCount) => {
+	const safe = _str(postId);
+	if (!safe) return;
 
-const syncAllLikeButtons = (postId, isLiked, newLikeCount) => {
-	const safePostId = normalizeString(postId);
-	if (safePostId.length === 0) return;
-
-	// Dùng CSS.escape nếu có (tránh lỗi với id chứa ký tự đặc biệt)
-	const escapedId =
-		typeof CSS !== "undefined" && typeof CSS.escape === "function"
-			? CSS.escape(safePostId)
-			: safePostId.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
-
-	const allLikeBtns = document.querySelectorAll(`.btn-like[data-post-id="${escapedId}"]`);
-	allLikeBtns.forEach((btn) => {
-		applyLikeVisualState(btn, isLiked, newLikeCount);
-	});
-
-	// Đồng bộ riêng phần tử hiển thị like count ngoài nút (comment-modal)
-	const modalLikeCountEl = document.getElementById("comment-modal-like-count");
-	if (modalLikeCountEl) {
-		const modalLikeBtn = document.getElementById("btn-like-comment-modal");
-		const modalPostId = normalizeString(modalLikeBtn?.dataset.postId);
-		if (modalPostId === safePostId && newLikeCount !== undefined) {
-			modalLikeCountEl.textContent = formatCompactNumber(newLikeCount);
-		}
-	}
+	document
+		.querySelectorAll(`.btn-like[data-post-id="${_cssEscape(safe)}"]`)
+		.forEach((btn) => _applyLikeVisual(btn, isLiked, newLikeCount));
 };
 
-// ---------------------------------------------------------------------------
-// Xử lý click like (được gọi từ Event Delegation)
-// ---------------------------------------------------------------------------
+// ─── Like: API handler ────────────────────────────────────────────────────────
 
-const handleLikeClick = async (btn) => {
+const _handleLikeClick = async (btn) => {
 	const postId = toSafeId(btn.dataset.postId, "");
-	if (postId.length === 0) return;
+	if (!postId) return;
 
 	// Chống spam double-click
 	if (btn.dataset.loading === "true") return;
 
-	// Disable tạm tất cả nút cùng postId để tránh race condition
-	const escapedId =
-		typeof CSS !== "undefined" && typeof CSS.escape === "function"
-			? CSS.escape(postId)
-			: postId;
-	const relatedBtns = document.querySelectorAll(`.btn-like[data-post-id="${escapedId}"]`);
+	// Disable tạm tất cả nút cùng postId
+	const relatedBtns = document.querySelectorAll(
+		`.btn-like[data-post-id="${_cssEscape(postId)}"]`
+	);
 	relatedBtns.forEach((b) => {
 		b.dataset.loading = "true";
 		b.disabled = true;
 	});
 
 	try {
-		const response = await postApi.toggleLike(postId);
-
-		// Đọc đúng key theo API contract: newLikeCount và isLiked (camelCase)
-		const newLikeCount = normalizeNumber(response?.data?.newLikeCount, undefined);
+		const response    = await postApi.toggleLike(postId);
+		const newLikeCount = _num(response?.data?.newLikeCount, undefined);
 		const isLiked =
 			typeof response?.data?.isLiked === "boolean"
 				? response.data.isLiked
-				: btn.classList.contains("is-liked");
+				: btn.classList.contains("is-liked"); // fallback optimistic
 
-		// 1. Cập nhật DOM: tất cả nút .btn-like cùng postId trên trang
-		syncAllLikeButtons(postId, isLiked, newLikeCount);
+		// 1. Cập nhật DOM
+		_syncAllLikeButtons(postId, isLiked, newLikeCount);
 
-		// 2. Ghi data-attribute lên .post-card (nguồn truth cho JS state khi mở modal)
-		const postCard = document.querySelector(`.post-card[data-post-id="${escapedId}"]`);
+		// 2. Ghi data-attribute lên .post-card để page-level JS đọc lại khi mở modal
+		const postCard = document.querySelector(
+			`.post-card[data-post-id="${_cssEscape(postId)}"]`
+		);
 		if (postCard) {
 			postCard.dataset.isLiked = String(isLiked);
 			if (newLikeCount !== undefined) {
@@ -165,7 +158,7 @@ const handleLikeClick = async (btn) => {
 			}
 		}
 
-		// 3. Dispatch CustomEvent để feed.js đồng bộ in-memory state
+		// 3. Dispatch để feed.js / search.js đồng bộ in-memory state
 		document.dispatchEvent(
 			new CustomEvent("postLikeUpdated", {
 				bubbles: false,
@@ -182,231 +175,198 @@ const handleLikeClick = async (btn) => {
 	}
 };
 
-// ---------------------------------------------------------------------------
-// Toast notification (dùng cho report modal)
-// ---------------------------------------------------------------------------
+// ─── Delete: API handler ──────────────────────────────────────────────────────
 
-const showReportToast = (message, variant = "info") => {
-	const containerId = "post-interactions-toast-container";
-	let container = document.getElementById(containerId);
-	if (!container) {
-		container = document.createElement("div");
-		container.id = containerId;
-		container.className = "toast-container";
-		document.body.appendChild(container);
-	}
+const _handleDeleteClick = async (btn) => {
+	const postId = toSafeId(btn.dataset.postId, "");
+	if (!postId) return;
 
-	const toast = document.createElement("div");
-	toast.className = `toast toast--${variant}`;
-	toast.setAttribute("role", "status");
-	toast.setAttribute("aria-live", "polite");
-	toast.textContent = message;
-	container.appendChild(toast);
+	// 1. Xác nhận
+	const confirmed = window.confirm(
+		"Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác."
+	);
+	if (!confirmed) return;
 
-	void toast.offsetWidth;
-	toast.classList.add("toast--visible");
-
-	window.setTimeout(() => {
-		toast.classList.remove("toast--visible");
-		toast.addEventListener("transitionend", () => toast.remove(), { once: true });
-	}, 3500);
-};
-
-// ---------------------------------------------------------------------------
-// Report modal helpers (giữ nguyên logic cũ, không thay đổi)
-// ---------------------------------------------------------------------------
-
-const clearReportFeedback = (reportPostFeedback) => {
-	if (!reportPostFeedback) return;
-	reportPostFeedback.textContent = "";
-	reportPostFeedback.classList.add("is-hidden");
-	reportPostFeedback.style.color = "";
-};
-
-const setReportFeedback = (reportPostFeedback, message, variant = "error") => {
-	if (!reportPostFeedback) return;
-	reportPostFeedback.textContent = message;
-	reportPostFeedback.classList.remove("is-hidden");
-	reportPostFeedback.style.color = variant === "error" ? "#dc2626" : "#15803d";
-};
-
-const closeReportModal = (reportPostModal, reportPostFeedback, stateRef) => {
-	if (!reportPostModal) return;
-	reportPostModal.classList.add("is-hidden");
-	reportPostModal.setAttribute("aria-hidden", "true");
-	stateRef.activeReportPostId = "";
-	clearReportFeedback(reportPostFeedback);
-	document.body.style.overflow = "";
-};
-
-const openReportModal = (reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId, reasonsContainer) => {
-	if (
-		!reportPostModal ||
-		!reportPostForm ||
-		typeof postId !== "string" ||
-		postId.trim().length === 0
-	) {
-		return;
-	}
-
-	stateRef.activeReportPostId = postId.trim();
-	reportPostForm.reset();
-	clearReportFeedback(reportPostFeedback);
-	reportPostModal.classList.remove("is-hidden");
-	reportPostModal.setAttribute("aria-hidden", "false");
-	document.body.style.overflow = "hidden";
-
-	// Load lý do báo cáo động (có cache)
-	if (reasonsContainer) {
-		void loadReportReasons(reasonsContainer);
-	}
-};
-
-/**
- * Tải danh sách lý do báo cáo từ API vào container, có cache.
- * @param {HTMLElement} container - Phần tử chứa các radio button.
- */
-const loadReportReasons = async (container) => {
-	if (!container) return;
-
-	// Render từ cache nếu đã có
-	if (Array.isArray(_reportReasonsCache) && _reportReasonsCache.length > 0) {
-		renderReportReasons(container, _reportReasonsCache);
-		return;
-	}
-
-	// Hiển thị spinner
-	container.innerHTML = `
-		<div class="report-reasons-loading">
-			<span class="report-reasons-spinner" aria-label="Đang tải..."></span>
-			<span>Đang tải lý do...</span>
-		</div>`;
+	// 2. Disable nút
+	btn.disabled = true;
 
 	try {
-		const response = await postApi.getReportReasons();
-		const reasons = Array.isArray(response?.data?.reportReasons)
-			? response.data.reportReasons
-			: [];
-		_reportReasonsCache = reasons;
-		renderReportReasons(container, reasons);
-	} catch (err) {
-		console.error("[post-interactions] loadReportReasons error:", err);
-		container.innerHTML = `<p class="report-reasons-error">Đã có lỗi khi tải lý do. Vui lòng thử lại.</p>`;
+		// 3. Gọi API
+		await postApi.deletePost(postId);
+
+		// 4. Xóa post card khỏi DOM
+		const postCard = document.querySelector(
+			`.post-card[data-post-id="${_cssEscape(postId)}"]`
+		);
+		postCard?.remove();
+
+		// 5. Dispatch để page-level JS dọn state
+		document.dispatchEvent(
+			new CustomEvent("postDeleted", {
+				bubbles: false,
+				detail: { postId },
+			})
+		);
+	} catch (error) {
+		console.error("[post-interactions] deletePost error:", error);
+		const errMsg =
+			_str(error?.data?.message) ||
+			_str(error?.message) ||
+			"Xóa bài thất bại. Vui lòng thử lại.";
+		alert(errMsg);
+		btn.disabled = false;
 	}
 };
 
+// ─── Export chính ─────────────────────────────────────────────────────────────
+
 /**
- * Render danh sách lý do vào container.
- * @param {HTMLElement} container
- * @param {Array<{code: string, reason: string}>} reasons
+ * Khởi tạo Event Delegation toàn cục cho tất cả tương tác bài viết.
+ * Idempotent: gọi nhiều lần chỉ thực sự chạy lần đầu tiên.
+ *
+ * @param {object}   [options]
+ * @param {object}   [options.commentModalController]
+ *   Controller từ initCommentModal() — cần có method `open(post)`.
+ * @param {object}   [options.createModalController]
+ *   Controller từ initCreatePostModal() — cần có method `openEdit(post)`.
+ * @param {function} [options.getPostData]
+ *   Hàm nhận postId → trả về post object (từ in-memory state của page)
+ *   hoặc null/undefined nếu không tìm thấy.
+ *   Dùng để mở comment-modal / edit modal với đúng dữ liệu.
+ * @param {function} [options.navigateTo]
+ *   Hàm điều hướng trang cá nhân, nhận userId.
+ *   Mặc định: `window.location.href = 'profile.html?id=<userId>'`.
  */
-const renderReportReasons = (container, reasons) => {
-	if (!container) return;
-	const escHtml = (s) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-	const html = reasons.map(item => {
-		const code = escHtml(String(item?.code ?? "").trim());
-		const reason = escHtml(String(item?.reason ?? "").trim());
-		if (!code || !reason) return "";
-		return `<label class="report-reason-option"><input type="radio" name="report-reason" value="${code}"><span>${reason}</span></label>`;
-	}).join("");
-	container.innerHTML = html || `<p class="report-reasons-error">Không có lý do nào được tải.</p>`;
-};
+export const initPostInteractions = (options = {}) => {
+	if (_isInstalled) return;
+	_isInstalled = true;
 
-// ---------------------------------------------------------------------------
-// Export chính: init với Event Delegation trên document
-// ---------------------------------------------------------------------------
+	const {
+		commentModalController = null,
+		createModalController  = null,
+		getPostData            = null,
+		navigateTo             = null,
+	} = options;
 
-export const initPostInteractions = () => {
-	// Inject report modal vào DOM nếu chưa có (idempotent)
-	// — đảm bảo hoạt động trên cả feed.html (đã có HTML tĩnh) và profile.html (không có)
-	injectReportModal();
+	/**
+	 * Điều hướng đến trang cá nhân của userId.
+	 * Dùng callback `navigateTo` nếu được cung cấp, ngược lại fallback window.location.
+	 * @param {string} userId
+	 */
+	const _goToProfile = (userId) => {
+		const safeId = _str(userId);
+		if (!safeId) return;
+		if (typeof navigateTo === "function") {
+			navigateTo(safeId);
+		} else {
+			window.location.href = `profile.html?id=${encodeURIComponent(safeId)}`;
+		}
+	};
 
-	const reportPostModal = document.getElementById("report-post-modal");
-	const reportPostForm = document.getElementById("report-post-form");
-	const reportPostCloseButton = document.getElementById("report-post-close");
-	const reportPostCancelButton = document.getElementById("report-post-cancel");
-	const reportPostSubmitButton = document.getElementById("report-post-submit");
-	const reportPostFeedback = document.getElementById("report-post-feedback");
+	// ── Event Delegation duy nhất trên document ──────────────────────────────
+	document.addEventListener("click", async (event) => {
 
-	const stateRef = { activeReportPostId: "" };
-
-	// ------------------------------------------------------------------
-	// Event Delegation trên document — lắng nghe TẤT CẢ nút .btn-like
-	// Hoạt động với cả bài viết render động (feed) và bên trong modal
-	// ------------------------------------------------------------------
-	document.addEventListener("click", (event) => {
+		// ── 1. LIKE ──────────────────────────────────────────────────────────
 		const likeBtn = event.target.closest(".btn-like");
 		if (likeBtn) {
 			event.preventDefault();
-			void handleLikeClick(likeBtn);
+			void _handleLikeClick(likeBtn);
 			return;
 		}
 
-		// Report post (backward-compatible với nút data-action="report-post")
-		if (reportPostModal && reportPostForm) {
-			const reportButton = event.target.closest('[data-action="report-post"]');
-			if (reportButton) {
-				event.preventDefault();
-				const postId = toSafeId(reportButton.dataset.postId, "");
-				const reasonsContainer = reportPostModal.querySelector("#report-reasons-container");
-				openReportModal(reportPostModal, reportPostForm, reportPostFeedback, stateRef, postId, reasonsContainer);
-				return;
+		// ── 2. COMMENT (mở comment-modal) ────────────────────────────────────
+		const commentBtn = event.target.closest(".post-comment-btn");
+		if (commentBtn) {
+			event.preventDefault();
+			if (!commentModalController) return;
+
+			// Ưu tiên đọc postId từ nút, fallback lên .post-card cha
+			const postCard = commentBtn.closest(".post-card");
+			const postId   = _str(commentBtn.dataset.postId || postCard?.dataset.postId);
+			if (!postId) return;
+
+			// Lấy post data — ưu tiên callback getPostData (in-memory state),
+			// fallback đọc từ data-attribute của card (đã cập nhật bởi like handler)
+			let post = typeof getPostData === "function" ? getPostData(postId) : null;
+
+			// Đồng bộ like state mới nhất vào post object trước khi mở modal
+			if (post && postCard) {
+				const domIsLiked      = postCard.dataset.isLiked;
+				const domNewLikeCount = postCard.dataset.newLikeCount;
+				post = {
+					...post,
+					...(domIsLiked      !== undefined ? { isLiked:      domIsLiked === "true" }     : {}),
+					...(domNewLikeCount !== undefined ? { newLikeCount: _num(domNewLikeCount, 0) }   : {}),
+				};
 			}
+
+			if (post) commentModalController.open(post);
+			return;
+		}
+
+		// ── 3. EDIT ──────────────────────────────────────────────────────────
+		const editBtn = event.target.closest('[data-action="edit-post"]');
+		if (editBtn) {
+			event.preventDefault();
+			event.stopPropagation(); // tránh đóng dropdown quá sớm
+			if (!createModalController) return;
+
+			const postId = _str(editBtn.dataset.postId);
+			if (!postId) return;
+
+			// Nếu được trigger từ bên trong comment-modal, đóng modal đó trước
+			if (editBtn.closest("#comment-modal")) {
+				document.dispatchEvent(new CustomEvent("closeCommentModalRequested"));
+			}
+
+			const post = typeof getPostData === "function" ? getPostData(postId) : null;
+			if (post) {
+				createModalController.openEdit(post);
+			} else {
+				console.warn("[post-interactions] edit-post: không tìm thấy post data cho", postId);
+			}
+			return;
+		}
+
+		// ── 4. DELETE ─────────────────────────────────────────────────────────
+		const deleteBtn = event.target.closest('[data-action="delete-post"]');
+		if (deleteBtn) {
+			event.preventDefault();
+			event.stopPropagation();
+			void _handleDeleteClick(deleteBtn);
+			return;
+		}
+
+		// ── 5. REPORT ─────────────────────────────────────────────────────────
+		const reportBtn = event.target.closest('[data-action="report-post"]');
+		if (reportBtn) {
+			event.preventDefault();
+			event.stopPropagation();
+			const postId = _str(reportBtn.dataset.postId);
+			if (postId) ReportPostModal.open(postId);
+			return;
+		}
+
+		// ── 6. NAVIGATE TO PROFILE ────────────────────────────────────────────
+		// Bắt click vào bất kỳ phần tử nào có class .open-profile-link + data-user-id.
+		// Giao thức này dùng chung cho: avatar/tên trên post-card, tên tác giả trong
+		// comment-modal, avatar trong danh sách bình luận, v.v.
+		const profileLink = event.target.closest(".open-profile-link");
+		if (profileLink) {
+			const userId = _str(profileLink.dataset.userId);
+			if (!userId) return; // không có userId → bỏ qua, không preventDefault
+			// Bỏ qua nếu click đã bị xử lý bởi handler trước (ví dụ: nút trong dropdown)
+			if (event.defaultPrevented) return;
+			event.preventDefault();
+			_goToProfile(userId);
+			return;
 		}
 	});
 
-	// ------------------------------------------------------------------
-	// Report modal: đóng / submit (giữ nguyên)
-	// ------------------------------------------------------------------
-	if (reportPostModal && reportPostForm) {
-		const doClose = () =>
-			closeReportModal(reportPostModal, reportPostFeedback, stateRef);
-
-		reportPostCloseButton?.addEventListener("click", doClose);
-		reportPostCancelButton?.addEventListener("click", doClose);
-
-		reportPostModal.addEventListener("click", (event) => {
-			if (event.target === reportPostModal) doClose();
-		});
-
-		reportPostForm.addEventListener("submit", async (event) => {
-			event.preventDefault();
-
-			const reasonInput = reportPostForm.querySelector('input[name="report-reason"]:checked');
-			const reasonCode = toSafeId(reasonInput?.value, "");
-
-			if (stateRef.activeReportPostId.length === 0) {
-				setReportFeedback(reportPostFeedback, "Không xác định được bài đăng cần báo cáo.");
-				return;
-			}
-
-			if (reasonCode.length === 0) {
-				setReportFeedback(reportPostFeedback, "Vui lòng chọn lý do báo cáo.");
-				return;
-			}
-
-			if (reportPostSubmitButton) reportPostSubmitButton.disabled = true;
-			clearReportFeedback(reportPostFeedback);
-
-			try {
-				const response = await postApi.reportPost(stateRef.activeReportPostId, reasonCode);
-				// HTTP 201 — thành công
-				const successMsg = String(response?.message ?? "").trim() || "Báo cáo thành công.";
-				showReportToast(successMsg, "success");
-				window.setTimeout(() => doClose(), 500);
-			} catch (error) {
-				console.error("[post-interactions] reportPost error:", error);
-				// HTTP 404 hoặc 409 — dùng chính xác message từ API
-				const errMsg =
-					(typeof error?.data?.message === "string" && error.data.message.trim().length > 0)
-						? error.data.message.trim()
-						: (typeof error?.message === "string" && error.message.trim().length > 0)
-							? error.message.trim()
-							: "Không thể gửi báo cáo. Vui lòng thử lại.";
-				showReportToast(errMsg, "error");
-			} finally {
-				if (reportPostSubmitButton) reportPostSubmitButton.disabled = false;
-			}
-		});
-	}
+	// ── Lắng nghe CustomEvent 'postReportRequested' từ comment-modal.js ──────
+	// comment-modal dispatch event thay vì gọi trực tiếp để tránh coupling.
+	document.addEventListener("postReportRequested", (event) => {
+		const postId = _str(event.detail?.postId ?? "");
+		if (postId) ReportPostModal.open(postId);
+	});
 };

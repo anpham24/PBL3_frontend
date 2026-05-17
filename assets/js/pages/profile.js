@@ -1,3 +1,28 @@
+/**
+ * @file profile.js
+ * @module pages/profile
+ *
+ * Trang hồ sơ cá nhân — kiến trúc đồng nhất với feed.js / search.js:
+ *
+ *  ── Lưới ảnh (Post Grid) ────────────────────────────────────────────────────
+ *  - Mỗi ô lưới chỉ hiển thị thumbnail/ảnh đại diện bài viết.
+ *  - Click vào một ô → mở comment-modal với đầy đủ dữ liệu bài đó.
+ *
+ *  ── Modal & tương tác ───────────────────────────────────────────────────────
+ *  - comment-modal.js inject + quản lý UI bình luận.
+ *  - initPostInteractions() xử lý toàn bộ sự kiện trong modal (Like, Edit, Delete, Report)
+ *    qua Event Delegation toàn cục. Các nút này hoạt động ngay cả khi được
+ *    render động bởi comment-modal.
+ *  - getPostData callback được truyền vào initPostInteractions() để nó luôn
+ *    tìm được post object chính xác từ cachedPosts[].
+ *
+ *  ── Dữ liệu ─────────────────────────────────────────────────────────────────
+ *  - cachedPosts[]: mảng in-memory tất cả bài đăng đã tải — nguồn sự thật duy nhất.
+ *  - Được cập nhật khi like toggle (postLikeUpdated) để comment-modal
+ *    luôn nhận state mới nhất.
+ *  - Được dọn khi bài bị xóa (postDeleted).
+ */
+
 "use strict";
 
 import { userApi } from "../api/user-api.js";
@@ -5,80 +30,70 @@ import { postApi } from "../api/post-api.js";
 import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
+import { initPostMenus } from "../components/post-menu.js";
 import { getUserId } from "../utils/auth.js";
+
+// ---------------------------------------------------------------------------
+// Constants
+// ---------------------------------------------------------------------------
 
 const DEFAULT_AVATAR_URL =
 	"https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=520&q=70";
+
+// ---------------------------------------------------------------------------
+// Utility helpers
+// ---------------------------------------------------------------------------
+
+const normalizeString = (value, fallback = "") => {
+	if (typeof value !== "string") return fallback;
+	const t = value.trim();
+	return t.length > 0 ? t : fallback;
+};
+
+const normalizeNumber = (value, fallback = 0) => {
+	const n = Number(value);
+	return Number.isFinite(n) ? n : fallback;
+};
+
+const safeCount = (value) => {
+	if (typeof value === "number" && Number.isFinite(value)) return String(value);
+	if (typeof value === "string" && value.trim().length > 0) return value.trim();
+	return "0";
+};
 
 const toMessage = (error, fallbackMessage) => {
 	if (typeof error?.data?.message === "string" && error.data.message.trim().length > 0) {
 		return error.data.message.trim();
 	}
-
 	if (typeof error?.message === "string" && error.message.trim().length > 0) {
 		return error.message.trim();
 	}
-
 	return fallbackMessage;
 };
 
-const safeText = (value, fallback = "") => {
-	if (typeof value !== "string") {
-		return fallback;
-	}
-
-	const trimmedValue = value.trim();
-	return trimmedValue.length > 0 ? trimmedValue : fallback;
+const setFeedback = (el, message, variant) => {
+	if (!el) return;
+	el.textContent = message;
+	el.classList.remove("is-hidden", "is-error", "is-success");
+	el.classList.add(variant === "error" ? "is-error" : "is-success");
 };
 
-const safeCount = (value) => {
-	if (typeof value === "number" && Number.isFinite(value)) {
-		return String(value);
-	}
-
-	if (typeof value === "string") {
-		const trimmedValue = value.trim();
-		if (trimmedValue.length > 0) {
-			return trimmedValue;
-		}
-	}
-
-	return "0";
-};
-
-const setFeedback = (feedbackElement, message, variant) => {
-	if (!feedbackElement) {
-		return;
-	}
-
-	feedbackElement.textContent = message;
-	feedbackElement.classList.remove("is-hidden", "is-error", "is-success");
-	feedbackElement.classList.add(variant === "error" ? "is-error" : "is-success");
-};
-
-const clearFeedback = (feedbackElement) => {
-	if (!feedbackElement) {
-		return;
-	}
-
-	feedbackElement.textContent = "";
-	feedbackElement.classList.add("is-hidden");
-	feedbackElement.classList.remove("is-error", "is-success");
+const clearFeedback = (el) => {
+	if (!el) return;
+	el.textContent = "";
+	el.classList.add("is-hidden");
+	el.classList.remove("is-error", "is-success");
 };
 
 const getTargetUserIdFromQuery = () => {
 	const query = new URLSearchParams(window.location.search);
-	return safeText(query.get("id"));
+	return normalizeString(query.get("id"));
 };
 
 // ---------------------------------------------------------------------------
 // Loading skeleton helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Danh sách các phần tử hồ sơ cần hiển thị trạng thái skeleton
- * trong khi chờ API phản hồi.
- */
 const SKELETON_SELECTORS = [
 	"#profile-avatar",
 	"#profile-nickname",
@@ -89,20 +104,14 @@ const SKELETON_SELECTORS = [
 ];
 
 const showSkeleton = () => {
-	SKELETON_SELECTORS.forEach((selector) => {
-		const el = document.querySelector(selector);
-		if (el) {
-			el.classList.add("is-skeleton");
-		}
+	SKELETON_SELECTORS.forEach((sel) => {
+		document.querySelector(sel)?.classList.add("is-skeleton");
 	});
 };
 
 const hideSkeleton = () => {
-	SKELETON_SELECTORS.forEach((selector) => {
-		const el = document.querySelector(selector);
-		if (el) {
-			el.classList.remove("is-skeleton");
-		}
+	SKELETON_SELECTORS.forEach((sel) => {
+		document.querySelector(sel)?.classList.remove("is-skeleton");
 	});
 };
 
@@ -111,8 +120,8 @@ const hideSkeleton = () => {
 // ---------------------------------------------------------------------------
 
 const resolveLoginPath = () => {
-	const currentPath = window.location.pathname.toLowerCase();
-	return currentPath.includes("/pages/") ? "login.html" : "./pages/login.html";
+	const p = window.location.pathname.toLowerCase();
+	return p.includes("/pages/") ? "login.html" : "./pages/login.html";
 };
 
 const redirectToLogin = () => {
@@ -123,18 +132,10 @@ const redirectToLogin = () => {
 // Error state helpers
 // ---------------------------------------------------------------------------
 
-/**
- * Ẩn toàn bộ nội dung hồ sơ và render khối lỗi ở giữa màn hình.
- * @param {string} message - Thông điệp lỗi hiển thị cho người dùng.
- */
 const showErrorState = (message) => {
-	// Ẩn toàn bộ container chứa thông tin hồ sơ + danh sách bài viết
 	const profilePage = document.querySelector(".profile-page");
-	if (profilePage) {
-		profilePage.style.display = "none";
-	}
+	if (profilePage) profilePage.style.display = "none";
 
-	// Tạo khối error-state và chèn vào .main-inner
 	const container = document.querySelector(".main-inner");
 	const errorDiv = document.createElement("div");
 	errorDiv.className = "error-state";
@@ -145,76 +146,48 @@ const showErrorState = (message) => {
 		<p class="error-state__title">Không tìm thấy người dùng</p>
 	`;
 
-	if (container) {
-		container.appendChild(errorDiv);
-	} else {
-		document.body.appendChild(errorDiv);
-	}
+	if (container) container.appendChild(errorDiv);
+	else document.body.appendChild(errorDiv);
 };
 
 // ---------------------------------------------------------------------------
-// Render helpers
+// Profile data rendering
 // ---------------------------------------------------------------------------
 
-/**
- * @param {object} response - Response từ API getMyProfile() hoặc getProfileById().
- * @param {boolean} isOwnProfile - true nếu đang xem hồ sơ của chính mình.
- */
 const renderProfile = (response, isOwnProfile = true) => {
 	const user = response?.data?.user;
+	if (!user) throw new Error("Không tìm thấy thông tin người dùng.");
 
-	if (!user) {
-		throw new Error("Không tìm thấy thông tin người dùng.");
-	}
+	const avatarEl       = document.getElementById("profile-avatar");
+	const nicknameEl     = document.getElementById("profile-nickname");
+	const bioEl          = document.getElementById("profile-bio");
+	const postsCountEl   = document.getElementById("profile-posts-count");
+	const followersCountEl = document.getElementById("profile-followers-count");
+	const followingCountEl = document.getElementById("profile-following-count");
+	const followButton   = document.getElementById("profile-follow-button");
+	const linkEl         = document.getElementById("profile-link");
 
-	const avatarElement = document.getElementById("profile-avatar");
-	const nicknameElement = document.getElementById("profile-nickname");
-	const bioElement = document.getElementById("profile-bio");
-	const postsCountElement = document.getElementById("profile-posts-count");
-	const followersCountElement = document.getElementById("profile-followers-count");
-	const followingCountElement = document.getElementById("profile-following-count");
-	const followButton = document.getElementById("profile-follow-button");
-	const linkElement = document.getElementById("profile-link");
+	const nickname = normalizeString(user.nickname, "Người dùng");
+	const avatar   = normalizeString(user.avtUrl, DEFAULT_AVATAR_URL);
+	const bio      = normalizeString(user.bio, "Chưa cập nhật bio.");
+	const website  = normalizeString(user.website || user.link);
 
-	const nickname = safeText(user.nickname, "Người dùng");
-	const avatar = safeText(user.avtUrl, DEFAULT_AVATAR_URL);
-	const bio = safeText(user.bio, "Chưa cập nhật bio.");
-	const website = safeText(user.website || user.link);
+	if (avatarEl)   { avatarEl.src = avatar; avatarEl.alt = `Avatar ${nickname}`; }
+	if (nicknameEl) nicknameEl.textContent = nickname;
+	if (bioEl)      bioEl.textContent = bio;
+	if (postsCountEl)    postsCountEl.textContent    = safeCount(user.postsCount);
+	if (followersCountEl) followersCountEl.textContent = safeCount(user.followersCount);
+	if (followingCountEl) followingCountEl.textContent = safeCount(user.followingCount);
 
-	if (avatarElement) {
-		avatarElement.src = avatar;
-		avatarElement.alt = `Avatar ${nickname}`;
-	}
-
-	if (nicknameElement) {
-		nicknameElement.textContent = nickname;
-	}
-
-	if (bioElement) {
-		bioElement.textContent = bio;
-	}
-
-	if (postsCountElement) {
-		postsCountElement.textContent = safeCount(user.postsCount);
-	}
-
-	if (followersCountElement) {
-		followersCountElement.textContent = safeCount(user.followersCount);
-	}
-
-	if (followingCountElement) {
-		followingCountElement.textContent = safeCount(user.followingCount);
-	}
-
-	if (linkElement) {
+	if (linkEl) {
 		if (website.length > 0) {
-			linkElement.textContent = website;
-			linkElement.href = website;
-			linkElement.classList.remove("is-hidden");
+			linkEl.textContent = website;
+			linkEl.href = website;
+			linkEl.classList.remove("is-hidden");
 		} else {
-			linkElement.textContent = "";
-			linkElement.href = "#";
-			linkElement.classList.add("is-hidden");
+			linkEl.textContent = "";
+			linkEl.href = "#";
+			linkEl.classList.add("is-hidden");
 		}
 	}
 
@@ -232,61 +205,25 @@ const renderProfile = (response, isOwnProfile = true) => {
 };
 
 // ---------------------------------------------------------------------------
-// Core data-loading function
+// Load profile data
 // ---------------------------------------------------------------------------
 
-/**
- * Gọi API GET /api/users/me/profile và cập nhật DOM.
- *
- * Flow:
- * 1. Hiển thị skeleton loading trên các phần tử hồ sơ.
- * 2. Gọi userApi.getMyProfile() (hoặc getProfileById nếu có ?id=...).
- * 3. Nếu thành công → renderProfile() cập nhật toàn bộ DOM.
- * 4. Nếu HTTP 401 → token hết hạn, redirect về trang đăng nhập (xử lý bởi apiClient).
- * 5. Nếu HTTP 404 → hiển thị inline "Lỗi: Không tìm thấy người dùng.".
- * 6. Lỗi mạng / server → hiển thị thông báo lỗi inline qua #profile-feedback.
- * 7. Luôn ẩn skeleton trong khối finally.
- */
-/**
- * @param {boolean} isOwnProfile - true nếu đang xem hồ sơ của chính mình.
- * @param {string} resolvedTargetId - userId cần xem. Rỗng nếu là chính mình.
- */
 const loadProfileData = async (isOwnProfile = true, resolvedTargetId = "") => {
-	const feedbackElement = document.getElementById("profile-feedback");
-	clearFeedback(feedbackElement);
+	const feedbackEl = document.getElementById("profile-feedback");
+	clearFeedback(feedbackEl);
 	showSkeleton();
 
 	try {
-		// Không có targetId → xem hồ sơ của chính mình (GET /api/users/me/profile)
-		// Có targetId       → xem hồ sơ người khác  (GET /api/users/{id}/profile)
 		const response = isOwnProfile
 			? await userApi.getMyProfile()
 			: await userApi.getProfileById(resolvedTargetId);
-
 		renderProfile(response, isOwnProfile);
 	} catch (error) {
 		const httpStatus = Number(error?.status);
-
-		if (httpStatus === 401) {
-			// Token hết hạn hoặc không hợp lệ → chuyển về trang đăng nhập
-			redirectToLogin();
-			return;
-		}
-
-		if (httpStatus === 404) {
-			// Không tìm thấy người dùng → ẩn khung profile, hiển thị error-state ở giữa màn hình
-			showErrorState("Lỗi: Không tìm thấy người dùng.");
-			return;
-		}
-
-		// Lỗi mạng hoặc lỗi server → hiển thị inline
-		setFeedback(
-			feedbackElement,
-			toMessage(error, "Không thể tải thông tin hồ sơ."),
-			"error"
-		);
+		if (httpStatus === 401) { redirectToLogin(); return; }
+		if (httpStatus === 404) { showErrorState("Lỗi: Không tìm thấy người dùng."); return; }
+		setFeedback(feedbackEl, toMessage(error, "Không thể tải thông tin hồ sơ."), "error");
 	} finally {
-		// Luôn ẩn skeleton dù thành công hay thất bại
 		hideSkeleton();
 	}
 };
@@ -295,28 +232,29 @@ const loadProfileData = async (isOwnProfile = true, resolvedTargetId = "") => {
 // Post grid — state & rendering
 // ---------------------------------------------------------------------------
 
-/** Cursor-based pagination state cho danh sách bài viết */
-let currentLastId = null;
-let isLoadingPosts = false;
-let hasMorePosts = true;
+/** Cursor-based pagination state */
+let currentLastId    = null;
+let isLoadingPosts   = false;
+let hasMorePosts     = true;
 
-/** Controller trả về từ initCommentModal() — dùng để mở modal */
+/** Controller của comment-modal */
 let commentModalController = null;
 
 /**
- * Mảng các bài viết đã tải — duy trì in-memory để tra cứu khi click vào grid item.
- * Tương tự feedState.posts trong feed.js.
+ * Mảng in-memory tất cả bài viết đã tải.
+ * Đây là nguồn dữ liệu duy nhất cho:
+ *  - getPostData callback → initPostInteractions() tìm post để mở Edit/Report/v.v.
+ *  - initGridClickHandler() mở comment-modal khi click vào lưới ảnh.
  */
 const cachedPosts = [];
 
-/** IntersectionObserver theo dõi sentinel element ở cuối lưới ảnh */
+/** IntersectionObserver theo dõi sentinel element cuối lưới */
 let postsObserver = null;
 
 /**
  * Tạo phần tử <a class="grid-item"> từ dữ liệu một bài viết.
- * - Nếu media đầu tiên là IMAGE → dùng mediaUrl.
- * - Nếu media đầu tiên là VIDEO → dùng thumbnailUrl + icon Play.
- * @param {object} post - Dữ liệu bài viết từ API.
+ * Chỉ hiển thị thumbnail/ảnh — click sẽ mở comment-modal.
+ * @param {object} post
  * @returns {HTMLElement}
  */
 const createGridItem = (post) => {
@@ -327,9 +265,7 @@ const createGridItem = (post) => {
 	item.href = "#";
 	item.setAttribute("aria-label", `Bài đăng của ${post.authorName || ""}`);
 	item.dataset.postId = post.id ?? "";
-	if (post.authorId) {
-		item.dataset.authorId = post.authorId;
-	}
+	if (post.authorId) item.dataset.authorId = post.authorId;
 
 	if (firstMedia) {
 		const isVideo = firstMedia.mediaType === "VIDEO";
@@ -352,7 +288,7 @@ const createGridItem = (post) => {
 			item.appendChild(playIcon);
 		}
 	} else {
-		// Bài viết không có media → hiển thị placeholder
+		// Bài không có media → placeholder
 		const placeholder = document.createElement("div");
 		placeholder.className = "grid-item__placeholder";
 		placeholder.innerHTML = `<i class="bx bx-image-alt"></i>`;
@@ -363,53 +299,36 @@ const createGridItem = (post) => {
 };
 
 /**
- * Render thêm các bài viết mới vào lưới ảnh.
- * Đồng thời lưu bài vào cachedPosts[] để dùng khi mở modal.
- * @param {object[]} posts - Mảng bài viết từ API.
+ * Render thêm bài viết vào lưới.
+ * Đồng thời lưu vào cachedPosts[] để mở modal sau này.
+ * @param {object[]} posts
  */
 const renderPostGrid = (posts) => {
 	const grid = document.querySelector(".profile-grid");
-	if (!grid) {
-		return;
-	}
+	if (!grid) return;
 
 	const sentinel = document.getElementById("posts-sentinel");
 
 	posts.forEach((post) => {
 		cachedPosts.push(post);
-
 		const item = createGridItem(post);
-		// Chèn trước sentinel (nếu đã có), để sentinel luôn ở cuối
-		if (sentinel) {
-			grid.insertBefore(item, sentinel);
-		} else {
-			grid.appendChild(item);
-		}
+		if (sentinel) grid.insertBefore(item, sentinel);
+		else grid.appendChild(item);
 	});
 };
 
-/**
- * Render dòng "Đã tải hết bài đăng" và gỡ observer.
- */
+/** Render dòng "Đã tải hết bài đăng" và dừng observer */
 const showEndOfFeedMessage = () => {
 	const grid = document.querySelector(".profile-grid");
-	if (!grid) {
-		return;
-	}
+	if (!grid) return;
 
-	// Xóa sentinel khỏi DOM
-	const sentinel = document.getElementById("posts-sentinel");
-	if (sentinel) {
-		sentinel.remove();
-	}
+	document.getElementById("posts-sentinel")?.remove();
 
-	// Dừng observer
 	if (postsObserver) {
 		postsObserver.disconnect();
 		postsObserver = null;
 	}
 
-	// Chỉ render thông báo nếu chưa có
 	if (!document.getElementById("posts-end-message")) {
 		const msg = document.createElement("p");
 		msg.id = "posts-end-message";
@@ -420,22 +339,14 @@ const showEndOfFeedMessage = () => {
 };
 
 /**
- * GỌi API getMyPosts() và render kết quả vào lưới.
- * An toàn khi gọi nhiều lần — guard bằng isLoadingPosts / hasMorePosts.
- */
-/**
- * Gọi API lấy bài viết phù hợp với ngữ cảnh hiện tại:
- * - Chính mình  → postApi.getMyPosts()
- * - Người khác  → userApi.getPostsByUserId(targetUserId)
- * @param {string} targetUserId - ID người dùng cần xem. Rỗng = chính mình.
+ * Gọi API và render kết quả vào lưới.
+ * Guard bằng isLoadingPosts / hasMorePosts.
+ * @param {string} targetUserId - ID người dùng. Rỗng = chính mình.
  */
 const loadPosts = async (targetUserId = "") => {
-	if (isLoadingPosts || !hasMorePosts) {
-		return;
-	}
+	if (isLoadingPosts || !hasMorePosts) return;
 
 	isLoadingPosts = true;
-
 	try {
 		const response = targetUserId.length > 0
 			? await userApi.getPostsByUserId(targetUserId, currentLastId)
@@ -444,18 +355,13 @@ const loadPosts = async (targetUserId = "") => {
 		const data = response?.data;
 		const posts = Array.isArray(data?.postList) ? data.postList : [];
 
-		if (posts.length > 0) {
-			renderPostGrid(posts);
-		}
+		if (posts.length > 0) renderPostGrid(posts);
 
 		currentLastId = data?.respLastPostId ?? currentLastId;
-		hasMorePosts = data?.hasMore === true;
+		hasMorePosts  = data?.hasMore === true;
 
-		if (!hasMorePosts) {
-			showEndOfFeedMessage();
-		}
+		if (!hasMorePosts) showEndOfFeedMessage();
 	} catch (error) {
-		// Lỗi khi tải bài — không block toàn trang, chỉ log
 		console.error("[profile] Lỗi khi tải danh sách bài viết:", error);
 	} finally {
 		isLoadingPosts = false;
@@ -464,19 +370,14 @@ const loadPosts = async (targetUserId = "") => {
 
 /**
  * Khởi tạo IntersectionObserver theo dõi sentinel element.
- * Khi sentinel xuất hiện trong viewport, gọi loadPosts() với targetUserId phù hợp.
- * @param {string} targetUserId - ID người dùng cần xem. Rỗng = chính mình.
+ * @param {string} targetUserId
  */
 const initPostsInfiniteScroll = (targetUserId = "") => {
 	const grid = document.querySelector(".profile-grid");
-	if (!grid) {
-		return;
-	}
+	if (!grid) return;
 
-	// Xóa các grid-item cứ (mock HTML) trước khi API render
 	grid.innerHTML = "";
 
-	// Tạo sentinel element ở cuối lưới
 	const sentinel = document.createElement("div");
 	sentinel.id = "posts-sentinel";
 	sentinel.style.cssText = "height:1px;width:100%;grid-column:1/-1;";
@@ -488,73 +389,81 @@ const initPostsInfiniteScroll = (targetUserId = "") => {
 				loadPosts(targetUserId);
 			}
 		},
-		{ rootMargin: "200px" }  // Bắt đầu tải trước khi còn cách 200px
+		{ rootMargin: "200px" }
 	);
 
 	postsObserver.observe(sentinel);
 };
 
 // ---------------------------------------------------------------------------
-// Grid click handler — mở Comment Modal khi click vào bài viết
+// Grid click handler — click vào ô lưới → mở comment-modal
 // ---------------------------------------------------------------------------
 
 /**
- * Gắn Event Delegation lên .profile-grid.
- * Khi người dùng click vào một grid-item, tìm bài viết tương ứng
- * trong cachedPosts[] theo data-post-id, rồi mở comment modal.
+ * Event Delegation trên .profile-grid.
+ * Khi click vào grid-item → tìm bài viết từ cachedPosts[] và mở comment-modal.
+ * State like mới nhất được đọc từ DOM data-attribute nếu bài có post-card đang hiện.
  */
 const initGridClickHandler = () => {
 	const grid = document.querySelector(".profile-grid");
-	if (!grid) {
-		return;
-	}
+	if (!grid) return;
 
 	grid.addEventListener("click", (event) => {
 		event.preventDefault();
 
 		const gridItem = event.target.closest(".grid-item");
-		if (!gridItem) {
-			return;
-		}
+		if (!gridItem) return;
 
-		const postId = safeText(gridItem.dataset.postId);
-		if (postId.length === 0) {
-			return;
-		}
+		const postId = normalizeString(gridItem.dataset.postId);
+		if (!postId) return;
 
-		const post = cachedPosts.find((p) => safeText(p?.id) === postId);
-		if (!post || !commentModalController) {
-			return;
-		}
+		const post = cachedPosts.find((p) => normalizeString(p?.id) === postId);
+		if (!post || !commentModalController) return;
 
-		commentModalController.open(post);
+		// Đọc like state mới nhất từ DOM (nếu có post-card tương ứng trên trang)
+		const cssId =
+			typeof CSS !== "undefined" && typeof CSS.escape === "function"
+				? CSS.escape(postId)
+				: postId;
+		const postCard = document.querySelector(`.post-card[data-post-id="${cssId}"]`);
+		const latestPost = postCard
+			? {
+				...post,
+				...(postCard.dataset.isLiked !== undefined
+					? { isLiked: postCard.dataset.isLiked === "true" }
+					: {}),
+				...(postCard.dataset.newLikeCount !== undefined
+					? { newLikeCount: normalizeNumber(postCard.dataset.newLikeCount, post.newLikeCount ?? 0) }
+					: {}),
+			}
+			: post;
+
+		commentModalController.open(latestPost);
 	});
 };
 
 // ---------------------------------------------------------------------------
-// Page initializer — chạy sau khi DOM sẵn sàng
+// Page initializer
 // ---------------------------------------------------------------------------
 
 const initProfilePage = () => {
 	// ── Xác định ngữ cảnh: xem hồ sơ của ai? ──────────────────────────────
-	const targetUserId = getTargetUserIdFromQuery(); // ?id=xxx hoặc ""
+	const targetUserId  = getTargetUserIdFromQuery(); // ?id=xxx hoặc ""
 	const currentUserId = getUserId();               // từ localStorage
 
-	// Nếu ?id trỏ về chính mình → xử lý như "chính mình" để tránh gọi API thừa
-	const isOwnProfile = targetUserId.length === 0 || targetUserId === currentUserId;
+	const isOwnProfile    = targetUserId.length === 0 || targetUserId === currentUserId;
 	const resolvedTargetId = isOwnProfile ? "" : targetUserId;
 
-	// ── Hiển thị / ẩn nút hành động ────────────────────────────────────────
+	// ── Hiển thị / ẩn nút Follow ────────────────────────────────────────────
 	const followButton = document.getElementById("profile-follow-button");
-
 	if (followButton) {
-		// Nút Follow chỉ hiện khi xem hồ sơ người khác; trạng thái thực sẽ
-		// được cập nhật trong renderProfile() sau khi API trả về isFollowing.
 		followButton.classList.toggle("is-hidden", isOwnProfile);
 	}
 
-	// ── Khởi tạo các component ──────────────────────────────────────────────
+	// ── Create-post modal (chỉ khởi tạo khi xem hồ sơ của chính mình) ───────
 	const createPostModalController = isOwnProfile ? initCreatePostModal() : null;
+
+	// ── Comment modal ─────────────────────────────────────────────────────────
 	commentModalController = initCommentModal({
 		onEditRequest: isOwnProfile
 			? (post) => {
@@ -562,27 +471,99 @@ const initProfilePage = () => {
 					createPostModalController.openEdit(post);
 				}
 			}
-			: null
+			: null,
+		onDeleteSuccess: (postId) => {
+			// post-interactions.js đã xóa DOM card; dọn in-memory cachedPosts
+			const safeId = normalizeString(postId);
+			const idx = cachedPosts.findIndex((p) => normalizeString(p?.id) === safeId);
+			if (idx !== -1) cachedPosts.splice(idx, 1);
+		},
 	});
-	initPostInteractions();
+
+	// ── initPostInteractions — bắt buộc truyền getPostData ───────────────────
+	//
+	// Đây là lý do các nút Edit / Delete / Report bên trong comment-modal
+	// trên trang profile không hoạt động trước đây: getPostData không được
+	// cung cấp, khiến post-interactions.js không tìm được dữ liệu bài viết
+	// khi xử lý các hành động đó.
+	//
+	// Bây giờ ta cung cấp callback trỏ vào cachedPosts[] để:
+	//   1. Like     — post-interactions.js cần dữ liệu để đồng bộ
+	//   2. Comment  — mở modal với đúng post object
+	//   3. Edit     — openEdit(post) cần post đầy đủ
+	//   4. Delete   — xóa đúng bài
+	//   5. Report   — báo cáo đúng postId
+	initPostInteractions({
+		commentModalController,
+		createModalController: createPostModalController,
+		getPostData: (postId) => {
+			const safe = normalizeString(postId);
+			if (!safe) return null;
+			const post = cachedPosts.find((p) => normalizeString(p?.id) === safe);
+			if (!post) return null;
+
+			// Merge like state mới nhất từ DOM nếu có
+			const cssId =
+				typeof CSS !== "undefined" && typeof CSS.escape === "function"
+					? CSS.escape(safe)
+					: safe;
+			const card = document.querySelector(`.post-card[data-post-id="${cssId}"]`);
+			if (!card) return post;
+			return {
+				...post,
+				...(card.dataset.isLiked !== undefined
+					? { isLiked: card.dataset.isLiked === "true" }
+					: {}),
+				...(card.dataset.newLikeCount !== undefined
+					? { newLikeCount: normalizeNumber(card.dataset.newLikeCount, post.newLikeCount ?? 0) }
+					: {}),
+			};
+		},
+	});
+
+	// ── Dropdown 3-chấm ──────────────────────────────────────────────────────
+	// (dùng khi comment-modal inject nút với generateDropdownMenuHtml)
+	initPostMenus();
+
+	// ── Đồng bộ cachedPosts sau khi like được toggle ──────────────────────────
+	document.addEventListener("postLikeUpdated", (event) => {
+		const { postId, newLikeCount, isLiked } = event.detail ?? {};
+		const safeId = normalizeString(postId);
+		if (!safeId) return;
+
+		const idx = cachedPosts.findIndex((p) => normalizeString(p?.id) === safeId);
+		if (idx === -1) return;
+		cachedPosts[idx] = {
+			...cachedPosts[idx],
+			isLiked: Boolean(isLiked),
+			...(newLikeCount !== undefined
+				? { newLikeCount: normalizeNumber(newLikeCount, 0) }
+				: {}),
+		};
+	});
+
+	// ── Dọn cachedPosts khi bài viết bị xóa (bởi post-interactions.js) ───────
+	document.addEventListener("postDeleted", (event) => {
+		const postId = normalizeString(event.detail?.postId ?? "");
+		if (!postId) return;
+
+		const idx = cachedPosts.findIndex((p) => normalizeString(p?.id) === postId);
+		if (idx !== -1) cachedPosts.splice(idx, 1);
+
+		// Xóa ô lưới tương ứng khỏi DOM
+		const cssId =
+			typeof CSS !== "undefined" && typeof CSS.escape === "function"
+				? CSS.escape(postId)
+				: postId;
+		document
+			.querySelector(`.grid-item[data-post-id="${cssId}"]`)
+			?.remove();
+	});
+
+	// ── Load dữ liệu ─────────────────────────────────────────────────────────
 	loadProfileData(isOwnProfile, resolvedTargetId);
 	initPostsInfiniteScroll(resolvedTargetId);
 	initGridClickHandler();
-
-	// Chuyển hướng đến trang hồ sơ khi click vào avatar/nickname có class .open-profile-link
-	// (dành cho các element được inject động bởi comment-modal, v.v.)
-	document.addEventListener("click", (event) => {
-		const link = event.target.closest(".open-profile-link");
-		if (!link) return;
-
-		const userId = safeText(link.dataset.userId);
-		if (userId.length === 0) return;
-
-		if (event.defaultPrevented) return;
-
-		event.preventDefault();
-		window.location.href = `profile.html?id=${encodeURIComponent(userId)}`;
-	});
 };
 
 document.addEventListener("DOMContentLoaded", initProfilePage);

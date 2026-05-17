@@ -269,7 +269,9 @@ const showCommentEndMessage = (container) => {
 // ---------------------------------------------------------------------------
 
 export const initCommentModal = (options = {}) => {
-	const { onEditRequest = null } = options;
+	// options giữ lại để tương thích ngược — các callback post-action (onEditRequest,
+	// onDeleteSuccess) không còn cần thiết: post-interactions.js xử lý hoàn toàn
+	// qua Event Delegation trên document (data-action="edit-post", "delete-post", "report-post").
 
 	// Inject HTML vào DOM nếu chưa có (idempotent)
 	injectCommentModal();
@@ -580,10 +582,11 @@ export const initCommentModal = (options = {}) => {
 			}
 		});
 
-		// Click bên trong dropdown không đóng menu
-		commentModalDropdownEl?.addEventListener("click", (event) => {
-			event.stopPropagation();
-		});
+		// KHÔNG dùng stopPropagation ở đây:
+		// Click vào Edit/Delete/Report cần bubble lên document để
+		// post-interactions.js bắt được theo data-action.
+		// Handler backdrop (dưới đây) đã có .contains() guard,
+		// nên dropdown sẽ không bị đóng nhầm.
 	}
 
 	// Click ra ngoài panel (backdrop hoặc media pane) đóng dropdown
@@ -596,75 +599,33 @@ export const initCommentModal = (options = {}) => {
 		}
 	});
 
-	// Event delegation cho Edit / Delete trong comment-modal
-	if (commentModalDropdownEl) {
-		commentModalDropdownEl.addEventListener("click", async (event) => {
-			const editBtn = event.target.closest('[data-action="edit-post"]');
-			if (editBtn) {
-				event.stopPropagation();
-				closeModalMenu();
-				// Đóng comment modal trước, sau đó gọi callback mở edit modal
-				if (typeof onEditRequest === "function" && currentPostData) {
-					const postSnapshot = currentPostData;
-					closeCommentModal();
-					onEditRequest(postSnapshot);
-				}
-				return;
-			}
+	// ---------------------------------------------------------------------------
+	// Dropdown menu của modal: KHÔNG dùng stopPropagation — để event bubble
+	// lên document và được post-interactions.js bắt theo data-action.
+	// Menu sẽ không đóng sai vì commentModal.click chỉ gọi closeModalMenu()
+	// khi click NẰM NGOÀI commentModalMenuWrapEl (có kiểm tra .contains()).
+	// ---------------------------------------------------------------------------
+	// (không cần listener ở đây — mọi action trong dropdown được xử lý toàn cục)
 
-			const deleteBtn = event.target.closest('[data-action="delete-post"]');
-			if (deleteBtn) {
-				event.stopPropagation();
-				const postId = deleteBtn.dataset.postId ?? "";
-				if (!postId) return;
+	// ---------------------------------------------------------------------------
+	// Lắng nghe yêu cầu đóng từ post-interactions.js
+	// (ví dụ: khi user bấm Edit từ bên trong modal, cần đóng modal trước khi mở create-post-modal)
+	// ---------------------------------------------------------------------------
+	document.addEventListener("closeCommentModalRequested", () => {
+		if (commentModal.classList.contains("open")) {
+			closeCommentModal();
+		}
+	});
 
-				// 1. Xác nhận với người dùng
-				const confirmed = window.confirm(
-					"Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác."
-				);
-				if (!confirmed) return;
-
-				// 2. Loading state — disable nút để tránh spam
-				deleteBtn.disabled = true;
-
-				try {
-					// 3. Gọi API
-					await postApi.deletePost(postId);
-
-					// 4. Thành công — đóng modal, thông báo, điều hướng
-					closeCommentModal();
-					alert("Xóa bài thành công.");
-					window.setTimeout(() => {
-						window.location.href = "profile.html";
-					}, 1000);
-				} catch (error) {
-					// 5. Thất bại — hiển thị lỗi, giữ nguyên, khôi phục nút
-					const errMsg =
-						(typeof error?.data?.message === "string" && error.data.message.trim().length > 0)
-							? error.data.message.trim()
-							: (typeof error?.message === "string" && error.message.trim().length > 0)
-								? error.message.trim()
-								: "Xóa bài thất bại. Vui lòng thử lại.";
-					alert(errMsg);
-					deleteBtn.disabled = false;
-				}
-				return;
-			}
-
-			// Nut Bao cao - dispatch custom event de feed.js (hoac trang bat ky) lang nghe.
-			// comment-modal khong can biet ve openReportModal -> tranh coupling.
-			const reportBtn = event.target.closest('[data-action="report-post"]');
-			if (reportBtn) {
-				event.stopPropagation();
-				const postId = normalizeString(reportBtn.dataset.postId ?? '');
-				closeModalMenu();
-				document.dispatchEvent(
-					new CustomEvent('postReportRequested', { detail: { postId } })
-				);
-				return;
-			}
-		});
-	}
+	// ---------------------------------------------------------------------------
+	// Tự đóng modal khi bài viết hiện tại bị xóa (bơi post-interactions.js)
+	// ---------------------------------------------------------------------------
+	document.addEventListener("postDeleted", (event) => {
+		const deletedId = event.detail?.postId ?? "";
+		if (deletedId && deletedId === currentPostId) {
+			closeCommentModal();
+		}
+	});
 
 	document.addEventListener("keydown", (event) => {
 		if (event.key === "Escape" && commentModal.classList.contains("open")) {

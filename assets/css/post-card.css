@@ -1,0 +1,263 @@
+/* =============================================================================
+   post-card.css — Component styles cho thẻ bài viết
+   Ánh xạ với: assets/js/components/post-card.js
+   Dùng chung trên: feed, search, profile (khi mở comment-modal)
+
+   Nguyên tắc:
+     - .post-card width luôn là 100% — container bên ngoài quyết định chiều rộng thực.
+     - KHÔNG fix cứng width bất kỳ đâu bên trong file này.
+     - Mọi trạng thái tương tác (.btn-like.is-liked, v.v.) đều nằm ở đây.
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Card wrapper
+   --------------------------------------------------------------------------- */
+
+.post-card {
+	width: 100%;
+	border: 1px solid var(--border);
+	border-radius: var(--radius-lg);
+	background: var(--surface);
+	overflow: hidden;
+}
+
+/* ---------------------------------------------------------------------------
+   Header: avatar + meta + menu 3 chấm
+   --------------------------------------------------------------------------- */
+
+.post-card__header,
+.post-header {
+	padding: 14px 16px;
+	display: flex;
+	justify-content: space-between;
+	align-items: flex-start;
+	position: relative;
+}
+
+.post-card__author,
+.post-author {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+}
+
+.post-card__avatar,
+.avatar {
+	width: 44px;
+	height: 44px;
+	border-radius: 50%;
+	object-fit: cover;
+	border: 1px solid var(--border);
+	flex-shrink: 0;
+}
+
+.post-card__meta,
+.post-meta {
+	display: flex;
+	flex-direction: column;
+	gap: 2px;
+}
+
+.post-meta-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+}
+
+.post-card__meta h3,
+.post-meta h3 {
+	font-size: 0.98rem;
+	font-weight: 700;
+	line-height: 1.25;
+}
+
+.post-card__author-name,
+.post-card__meta p,
+.post-meta p {
+	margin-top: 2px;
+	font-size: 0.82rem;
+	color: var(--muted);
+}
+
+.post-card__time,
+.post-time {
+	font-size: 0.82rem;
+	color: #6b7280;
+	font-weight: 500;
+}
+
+/* ---------------------------------------------------------------------------
+   Tags inline (province / topic / address)
+   --------------------------------------------------------------------------- */
+
+.post-card__tags,
+.post-tags-inline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin-top: 6px;
+}
+
+.post-tag-chip {
+	border: 1px solid #dbeafe;
+	border-radius: 999px;
+	background: #f8fbff;
+	padding: 4px 8px;
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: #1e3a8a;
+}
+
+.post-tag-chip i {
+	font-size: 0.9rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Media: ảnh đơn
+   --------------------------------------------------------------------------- */
+
+.post-image {
+	width: 100%;
+	aspect-ratio: 5 / 4;
+	object-fit: cover;
+	border-top: 1px solid var(--border);
+	border-bottom: 1px solid var(--border);
+}
+
+/* Container khi media là video đơn */
+.post-image > video {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+
+/* ---------------------------------------------------------------------------
+   Action bar: Like + Comment
+   --------------------------------------------------------------------------- */
+
+.post-card__actions,
+.post-actions {
+	padding: 8px 10px;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+}
+
+.post-card__actions-left,
+.left-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+.right-actions {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+}
+
+/* Nút Like / Comment — kế thừa .post-action-btn từ global.css */
+.post-action-btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: transparent;
+	border: none;
+	padding: 6px 10px;
+	border-radius: 18px;
+	cursor: pointer;
+	color: #4b5563;
+	font-weight: 600;
+	font-size: 0.95rem;
+	transition: background-color 0.2s;
+}
+
+.post-action-btn:hover {
+	background: #f3f4f6;
+}
+
+.post-action-btn i {
+	font-size: 1.4rem;
+	color: #1f2937;
+}
+
+/* Trạng thái Like active */
+.btn-like.is-liked i,
+.btn-like.active i,
+.post-action-btn.is-liked i,
+.post-action-btn.active i {
+	color: #ef4444;
+}
+
+/* Prevent spam double-click */
+.btn-like:disabled {
+	opacity: 0.7;
+	cursor: wait;
+}
+
+/* Count badge bên trong nút */
+.action-count {
+	font-size: 0.88rem;
+	font-weight: 600;
+	color: #374151;
+	line-height: 1;
+}
+
+/* ---------------------------------------------------------------------------
+   Footer: caption
+   --------------------------------------------------------------------------- */
+
+.post-card__footer,
+.post-footer {
+	padding: 0 16px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+}
+
+.post-card__caption,
+.caption {
+	font-size: 0.9rem;
+	line-height: 1.45;
+	color: #1f2937;
+}
+
+.caption strong {
+	margin-right: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+   Misc: likes count (legacy), location
+   --------------------------------------------------------------------------- */
+
+.likes {
+	font-size: 0.92rem;
+	font-weight: 700;
+}
+
+.post-location {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.84rem;
+	color: #2563eb;
+	font-weight: 600;
+}
+
+.post-location i {
+	font-size: 1rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+	.post-card {
+		border-radius: 14px;
+	}
+}

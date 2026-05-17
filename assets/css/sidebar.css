@@ -1,0 +1,175 @@
+/* =============================================================================
+   sidebar.css — Thanh điều hướng cố định bên trái
+   Dùng chung trên: feed.html, search.html, profile.html, notifications.html...
+
+   Responsive:
+     ≥ 901px  → sidebar dọc bên trái (fixed, full height)
+     640–900px → sidebar thu hẹp (chỉ icon)
+     ≤ 640px  → sidebar ngang bên dưới (bottom nav)
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Sidebar container
+   --------------------------------------------------------------------------- */
+
+.sidebar {
+	position: fixed;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	width: var(--sidebar-width);
+	border-right: 1px solid var(--border);
+	background: var(--surface);
+	padding: 32px 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 28px;
+}
+
+/* ---------------------------------------------------------------------------
+   Brand / Logo
+   --------------------------------------------------------------------------- */
+
+.brand {
+	font-size: 2rem;
+	font-weight: 800;
+	letter-spacing: -0.04em;
+}
+
+/* ---------------------------------------------------------------------------
+   Navigation list
+   --------------------------------------------------------------------------- */
+
+.side-nav {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+}
+
+/* Nav item */
+.nav-item {
+	border: none;
+	background: transparent;
+	border-radius: 12px;
+	padding: 12px 14px;
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	font-weight: 500;
+	cursor: pointer;
+	text-align: left;
+	text-decoration: none;
+	color: inherit;
+	transition: background-color 0.2s ease;
+}
+
+.nav-item i {
+	font-size: 1.35rem;
+	color: #4b5563;
+}
+
+.nav-item:hover {
+	background: #f9fafb;
+}
+
+.nav-item.active {
+	background: var(--active-bg);
+	font-weight: 700;
+}
+
+.nav-item.active i {
+	color: var(--text);
+}
+
+/* Nav label — ẩn ở màn hình nhỏ khi sidebar thu hẹp thành icon-only */
+.nav-label {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+/* ---------------------------------------------------------------------------
+   Main content offset
+   --------------------------------------------------------------------------- */
+
+.main-content {
+	margin-left: var(--sidebar-width);
+	min-height: 100vh;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive — tablet (640–900px): icon-only sidebar
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 900px) {
+	.sidebar {
+		padding: 24px 12px;
+	}
+
+	.brand {
+		text-align: center;
+		font-size: 1.3rem;
+		letter-spacing: -0.03em;
+	}
+
+	.nav-item {
+		justify-content: center;
+		padding: 12px;
+	}
+
+	.nav-label {
+		display: none;
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive — mobile (≤ 640px): bottom nav
+   --------------------------------------------------------------------------- */
+
+@media (max-width: 640px) {
+	.sidebar {
+		/* Chuyển thành bottom nav */
+		top: auto;
+		width: 100%;
+		height: 74px;
+		border-right: none;
+		border-top: 1px solid var(--border);
+		padding: 8px 10px;
+		z-index: 30;
+		gap: 0;
+	}
+
+	.brand {
+		display: none;
+	}
+
+	.side-nav {
+		width: 100%;
+		height: 100%;
+		display: grid;
+		grid-template-columns: repeat(5, minmax(0, 1fr));
+		gap: 6px;
+	}
+
+	.nav-item {
+		padding: 6px 4px;
+		border-radius: 10px;
+		flex-direction: column;
+		gap: 1px;
+		font-size: 0.68rem;
+	}
+
+	/* Hiện lại label trên mobile bottom nav */
+	.nav-label {
+		display: block;
+	}
+
+	.nav-item i {
+		font-size: 1.1rem;
+	}
+
+	.main-content {
+		margin-left: 0;
+		padding-bottom: 90px;
+	}
+}
