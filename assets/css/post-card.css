@@ -75,13 +75,12 @@
 .post-card__meta p,
 .post-meta p {
 	margin-top: 2px;
-	font-size: 0.82rem;
-	color: var(--muted);
+	font-size: 0.9rem;
 }
 
 .post-card__time,
 .post-time {
-	font-size: 0.82rem;
+	font-size: 0.9rem;
 	color: #6b7280;
 	font-weight: 500;
 }
@@ -128,7 +127,7 @@
 }
 
 /* Container khi media là video đơn */
-.post-image > video {
+.post-image>video {
 	width: 100%;
 	height: 100%;
 	object-fit: cover;

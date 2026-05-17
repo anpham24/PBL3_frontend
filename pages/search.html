@@ -67,31 +67,33 @@
 					<!-- Tab panel: Bài viết -->
 					<div id="search-panel-posts" class="search-panel is-hidden" role="tabpanel"
 						aria-labelledby="search-tab-posts">
-						<!-- Bộ lọc tỉnh & chủ đề — dùng lại class feed-filters / filter-chip từ feed.css -->
-						<div class="feed-filters" id="search-post-filters">
-							<label class="filter-chip" for="search-province-filter">
-								<i class="bx bx-map"></i>
-								<select id="search-province-filter" class="filter-select" aria-label="Lọc theo tỉnh">
-									<option value="ALL">Tất cả tỉnh</option>
-								</select>
-							</label>
+						<div class="feed-page" style="margin: 0 auto; width: 100%;">
+							<!-- Bộ lọc tỉnh & chủ đề — dùng lại class feed-filters / filter-chip từ feed.css -->
+							<div class="feed-filters" id="search-post-filters">
+								<label class="filter-chip" for="search-province-filter">
+									<i class="bx bx-map"></i>
+									<select id="search-province-filter" class="filter-select" aria-label="Lọc theo tỉnh">
+										<option value="ALL">Tất cả tỉnh</option>
+									</select>
+								</label>
 
-							<label class="filter-chip" for="search-topic-filter">
-								<i class="bx bx-star"></i>
-								<select id="search-topic-filter" class="filter-select" aria-label="Lọc theo chủ đề">
-									<option value="ALL">Tất cả chủ đề</option>
-								</select>
-							</label>
-						</div>
-
-						<!-- Kết quả bài viết sẽ được render vào đây -->
-						<div id="search-posts-container" class="post-list">
-							<div id="search-posts-empty-state" class="search-empty-state">
-								<i class="bx bx-news"></i>
-								<p>Nhập từ khóa để tìm kiếm bài viết</p>
+								<label class="filter-chip" for="search-topic-filter">
+									<i class="bx bx-star"></i>
+									<select id="search-topic-filter" class="filter-select" aria-label="Lọc theo chủ đề">
+										<option value="ALL">Tất cả chủ đề</option>
+									</select>
+								</label>
 							</div>
+
+							<!-- Kết quả bài viết sẽ được render vào đây -->
+							<div id="search-posts-container" class="post-list">
+								<div id="search-posts-empty-state" class="search-empty-state">
+									<i class="bx bx-news"></i>
+									<p>Nhập từ khóa để tìm kiếm bài viết</p>
+								</div>
+							</div>
+							<p id="search-posts-status" class="search-feed-status is-hidden"></p>
 						</div>
-						<p id="search-posts-status" class="search-feed-status is-hidden"></p>
 					</div>
 
 				</div>
@@ -99,9 +101,14 @@
 		</main>
 	</div>
 
-	<!-- create-post-modal injected by assets/js/components/create-post-modal.js -->
+	<!-- Các modals được inject tự động bằng JS thông qua post-interactions.js -->
+	<!-- create-post-modal -->
+	<!-- comment-modal -->
+	<!-- report-post-modal -->
 
+	<!-- Core JS Modules -->
 	<script type="module" src="../assets/js/components/sidebar.js"></script>
+	<!-- Page-specific JS -->
 	<script type="module" src="../assets/js/pages/search.js"></script>
 </body>
 

@@ -59,45 +59,14 @@
 		</main>
 	</div>
 
-	<!-- create-post-modal injected by assets/js/components/create-post-modal.js -->
+	<!-- Các modals được inject tự động bằng JS thông qua post-interactions.js -->
+	<!-- create-post-modal -->
+	<!-- comment-modal -->
+	<!-- report-post-modal -->
 
-	<!-- comment-modal injected by assets/js/components/comment-modal.js -->
-
-	<div id="report-post-modal" class="report-post-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true"
-		aria-labelledby="report-post-title">
-		<div class="report-post-dialog">
-			<header class="report-post-header">
-				<h2 id="report-post-title">Báo cáo bài đăng</h2>
-				<button id="report-post-close" class="report-post-close" type="button" aria-label="Đóng">
-					<i class="bx bx-x"></i>
-				</button>
-			</header>
-
-			<form id="report-post-form" class="report-post-form" novalidate>
-				<p class="report-post-subtitle">Chọn lý do bạn muốn báo cáo bài đăng này.</p>
-
-				<div id="report-reasons-container" class="report-reasons-container" aria-live="polite">
-					<!-- Lý do báo cáo được render động bởi feed.js -->
-					<div id="report-reasons-loading" class="report-reasons-loading">
-						<span class="report-reasons-spinner" aria-label="Đang tải..."></span>
-						<span>Đang tải lý do...</span>
-					</div>
-				</div>
-
-				<p id="report-post-feedback" class="report-post-feedback is-hidden" role="status" aria-live="polite">
-				</p>
-
-				<div class="report-post-actions">
-					<button id="report-post-cancel" class="report-post-btn report-post-cancel"
-						type="button">Hủy</button>
-					<button id="report-post-submit" class="report-post-btn report-post-submit"
-						type="submit">Gửi</button>
-				</div>
-			</form>
-		</div>
-	</div>
-
+	<!-- Core JS Modules -->
 	<script type="module" src="../assets/js/components/sidebar.js"></script>
+	<!-- Page-specific JS -->
 	<script type="module" src="../assets/js/pages/feed.js"></script>
 </body>
 
