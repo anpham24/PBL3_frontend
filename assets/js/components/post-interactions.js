@@ -46,6 +46,7 @@
 import { postApi }        from "../api/post-api.js";
 import { toSafeId }       from "../utils/helpers.js";
 import { ReportPostModal } from "./report-post-modal.js";
+import { ConfirmModal }    from "./confirm-modal.js";
 
 // ─── Idempotency guard ────────────────────────────────────────────────────────
 let _isInstalled = false;
@@ -181,9 +182,11 @@ const _handleDeleteClick = async (btn) => {
 	const postId = toSafeId(btn.dataset.postId, "");
 	if (!postId) return;
 
-	// 1. Xác nhận
-	const confirmed = window.confirm(
-		"Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác."
+	// 1. Xác nhận — dùng ConfirmModal thay cho window.confirm
+	const confirmed = await ConfirmModal.show(
+		"Xóa bài viết",
+		"Bạn có chắc chắn muốn xóa bài viết này? Hành động này không thể hoàn tác.",
+		{ confirmLabel: "Xóa", danger: true }
 	);
 	if (!confirmed) return;
 
@@ -213,7 +216,11 @@ const _handleDeleteClick = async (btn) => {
 			_str(error?.data?.message) ||
 			_str(error?.message) ||
 			"Xóa bài thất bại. Vui lòng thử lại.";
-		alert(errMsg);
+		// Hiển thị lỗi bằng ConfirmModal (thông báo thuần)
+		await ConfirmModal.show("Xóa thất bại", errMsg, {
+			confirmLabel: "Đóng",
+			danger: false,
+		});
 		btn.disabled = false;
 	}
 };
@@ -347,7 +354,31 @@ export const initPostInteractions = (options = {}) => {
 			return;
 		}
 
-		// ── 6. NAVIGATE TO PROFILE ────────────────────────────────────────────
+		// ── 6. SEE MORE / COLLAPSE ────────────────────────────────────────────
+		// Toggle "Xem thêm" / "Thu gọn" trên nội dung bài đăng dài.
+		const seeMoreBtn = event.target.closest('[data-role="see-more"]');
+		if (seeMoreBtn) {
+			event.preventDefault();
+			const wrap    = seeMoreBtn.closest(".post-card__caption-wrap");
+			const caption = wrap?.querySelector('[data-role="post-caption"]');
+			if (!caption) return;
+
+			const isExpanded = seeMoreBtn.getAttribute("aria-expanded") === "true";
+			if (isExpanded) {
+				// Thu gọn lại
+				caption.classList.add("post-card__caption--clamped");
+				seeMoreBtn.textContent = "Xem thêm";
+				seeMoreBtn.setAttribute("aria-expanded", "false");
+			} else {
+				// Mở rộng
+				caption.classList.remove("post-card__caption--clamped");
+				seeMoreBtn.textContent = "Thu gọn";
+				seeMoreBtn.setAttribute("aria-expanded", "true");
+			}
+			return;
+		}
+
+		// ── 7. NAVIGATE TO PROFILE ────────────────────────────────────────────
 		// Bắt click vào bất kỳ phần tử nào có class .open-profile-link + data-user-id.
 		// Giao thức này dùng chung cho: avatar/tên trên post-card, tên tác giả trong
 		// comment-modal, avatar trong danh sách bình luận, v.v.

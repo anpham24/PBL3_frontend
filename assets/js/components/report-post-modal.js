@@ -77,8 +77,8 @@ const MODAL_HTML = /* html */ `
       ></p>
 
       <div class="report-post-actions">
-        <button id="${CANCEL_BTN_ID}" class="btn btn--ghost" type="button">Hủy</button>
-        <button id="${SUBMIT_BTN_ID}" class="btn btn--primary" type="submit">Gửi</button>
+        <button id="${CANCEL_BTN_ID}" class="report-post-btn report-post-cancel" type="button">Hủy</button>
+        <button id="${SUBMIT_BTN_ID}" class="report-post-btn report-post-submit" type="submit">Gửi</button>
       </div>
     </form>
   </div>

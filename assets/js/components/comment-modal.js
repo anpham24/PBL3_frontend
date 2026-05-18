@@ -13,62 +13,82 @@ const COMMENT_MODAL_HTML = `
 	</button>
 
 	<div class="comment-modal-dialog">
+		<!-- ── Cột trái: Media ── -->
 		<div class="comment-media-pane">
 			<div id="comment-modal-media-gallery" class="comment-media-gallery">
 				<!-- Media dynamically injected here -->
 			</div>
 		</div>
 
+		<!-- ── Cột phải: 3 vùng flex ── -->
 		<div class="comment-panel">
-			<header class="comment-panel-header">
-				<div class="comment-header-user">
-					<img id="comment-modal-author-avatar" class="comment-header-avatar" src="" alt="Avatar">
 
-					<div class="comment-header-meta">
-						<strong id="comment-modal-author-name"></strong>
-						<span class="meta-divider">&bull;</span>
-						<span id="comment-modal-post-time" class="post-time"></span>
+			<!-- VÙNG 1 — Ghim cứng ở trên: Header bài đăng -->
+			<div class="comment-panel-top">
+				<header class="comment-panel-header">
+					<div class="comment-header-user">
+						<img id="comment-modal-author-avatar" class="comment-header-avatar" src="" alt="Avatar">
+						<div class="comment-header-meta">
+							<strong id="comment-modal-author-name"></strong>
+							<span class="meta-divider">&bull;</span>
+							<span id="comment-modal-post-time" class="post-time"></span>
+						</div>
 					</div>
-				</div>
 
-				<div class="post-menu-wrap">
-					<button class="comment-header-menu post-menu-btn" type="button" aria-label="Tùy chọn bài đăng">
-						<i class="bx bx-dots-horizontal-rounded"></i>
-					</button>
-					<div class="post-dropdown-menu">
-						<button id="comment-modal-report-btn" class="post-dropdown-item" type="button"
-							data-action="report-post" data-post-id="">
-							<i class="bx bx-flag"></i>
-							<span>Báo cáo</span>
+					<div class="post-menu-wrap">
+						<button class="comment-header-menu post-menu-btn" type="button" aria-label="Tùy chọn bài đăng">
+							<i class="bx bx-dots-horizontal-rounded"></i>
 						</button>
+						<div class="post-dropdown-menu">
+							<button id="comment-modal-report-btn" class="post-dropdown-item" type="button"
+								data-action="report-post" data-post-id="">
+								<i class="bx bx-flag"></i>
+								<span>Báo cáo</span>
+							</button>
+						</div>
 					</div>
-				</div>
-			</header>
+				</header>
 
-			<section class="comment-post-info" aria-label="Thông tin bài viết">
-				<div id="comment-modal-post-tags" class="comment-post-tags">
+				<!-- Tags / Province / Address chips -->
+				<div id="comment-modal-post-tags" class="comment-post-tags comment-top-tags" aria-label="Thông tin bài viết">
 					<!-- Tags injected here -->
 				</div>
-				<p id="comment-modal-post-caption" class="comment-post-caption"></p>
-			</section>
-
-			<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sách bình luận">
-				<!-- Comments dynamically injected here -->
 			</div>
+			<!-- END VÙNG 1 -->
 
-			<div class="comment-action-bar">
-				<button id="btn-like-comment-modal" class="comment-action-btn post-action-btn post-like-btn"
-					type="button" aria-label="Thả tim bài đăng">
-					<i class="bx bx-heart"></i>
-					<span id="comment-modal-like-count" class="action-count" data-role="like-count"></span>
-				</button>
+			<!-- VÙNG 2 — Cuộn giữa: Nội dung bài đăng + Danh sách bình luận -->
+			<div class="comment-panel-middle">
+				<!-- 2a. Nội dung bài đăng (caption) -->
+				<section class="comment-post-body" aria-label="Nội dung bài viết">
+					<p id="comment-modal-post-caption" class="comment-post-caption"></p>
+				</section>
+
+				<!-- 2b. Danh sách bình luận -->
+				<div id="comment-modal-comment-list" class="comment-list" aria-label="Danh sách bình luận">
+					<!-- Comments dynamically injected here -->
+				</div>
 			</div>
+			<!-- END VÙNG 2 -->
 
-			<footer class="comment-input-bar">
-				<textarea id="comment-input" rows="1" placeholder="Thêm bình luận..."></textarea>
-				<button class="comment-post-btn" type="button">Đăng</button>
-			</footer>
+			<!-- VÙNG 3 — Ghim cứng ở dưới: Tương tác + Nhập bình luận -->
+			<div class="comment-panel-bottom">
+				<div class="comment-action-bar">
+					<button id="btn-like-comment-modal" class="comment-action-btn post-action-btn post-like-btn"
+						type="button" aria-label="Thả tim bài đăng">
+						<i class="bx bx-heart"></i>
+						<span id="comment-modal-like-count" class="action-count" data-role="like-count"></span>
+					</button>
+				</div>
+
+				<footer class="comment-input-bar">
+					<textarea id="comment-input" rows="1" placeholder="Thêm bình luận..."></textarea>
+					<button class="comment-post-btn" type="button">Đăng</button>
+				</footer>
+			</div>
+			<!-- END VÙNG 3 -->
+
 		</div>
+		<!-- END .comment-panel -->
 	</div>
 </div>
 `;
@@ -297,6 +317,8 @@ export const initCommentModal = (options = {}) => {
 
 	/** Container có scrollbar chứa danh sách bình luận */
 	const commentListEl = document.getElementById("comment-modal-comment-list");
+	/** Vùng cuộn chung (nội dung bài + bình luận) */
+	const commentPanelMiddleEl = commentModal.querySelector(".comment-panel-middle");
 
 	const commentInputEl = document.getElementById("comment-input");
 	const commentPostBtn = commentModal.querySelector(".comment-post-btn");
@@ -345,14 +367,14 @@ export const initCommentModal = (options = {}) => {
 	};
 
 	// ---------------------------------------------------------------------------
-	// Infinite scroll — lắng nghe scroll trên commentListEl
+	// Infinite scroll — lắng nghe scroll trên commentPanelMiddleEl (vùng cuộn chung)
 	// ---------------------------------------------------------------------------
 
-	if (commentListEl) {
-		commentListEl.addEventListener("scroll", () => {
-			const { scrollTop, clientHeight, scrollHeight } = commentListEl;
-			// Khi cuộn còn cách đáy 50px → tải thêm
-			if (scrollTop + clientHeight >= scrollHeight - 50) {
+	if (commentPanelMiddleEl) {
+		commentPanelMiddleEl.addEventListener("scroll", () => {
+			const { scrollTop, clientHeight, scrollHeight } = commentPanelMiddleEl;
+			// Khi cuộn còn cách đáy 80px → tải thêm
+			if (scrollTop + clientHeight >= scrollHeight - 80) {
 				void loadComments();
 			}
 		}, { passive: true });

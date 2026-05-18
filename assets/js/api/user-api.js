@@ -183,4 +183,36 @@ export const userApi = {
 	async getMyProfile() {
 		return apiClient.get("/api/users/me/profile");
 	},
+
+	/**
+	 * Theo dõi một người dùng.
+	 * POST /api/users/{userId}/followers
+	 * @param {string|number} userId - ID người dùng muốn theo dõi.
+	 * @returns {Promise<{message: string}>}
+	 */
+	async followUser(userId) {
+		const resolvedUserId = normalizeUserId(userId);
+
+		if (resolvedUserId.length === 0) {
+			throw new Error("Missing user id.");
+		}
+
+		return apiClient.post(`/api/users/${encodeURIComponent(resolvedUserId)}/followers`);
+	},
+
+	/**
+	 * Hủy theo dõi một người dùng.
+	 * DELETE /api/users/{userId}/followers
+	 * @param {string|number} userId - ID người dùng muốn hủy theo dõi.
+	 * @returns {Promise<{message: string}>}
+	 */
+	async unfollowUser(userId) {
+		const resolvedUserId = normalizeUserId(userId);
+
+		if (resolvedUserId.length === 0) {
+			throw new Error("Missing user id.");
+		}
+
+		return apiClient.delete(`/api/users/${encodeURIComponent(resolvedUserId)}/followers`);
+	},
 };

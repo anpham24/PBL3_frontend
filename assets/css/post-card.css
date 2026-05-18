@@ -230,6 +230,46 @@
 }
 
 /* ---------------------------------------------------------------------------
+   See-more / Collapse — "Xem thêm" feature
+   --------------------------------------------------------------------------- */
+
+/* Wrapper chứa caption + nút "Xem thêm" */
+.post-card__caption-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+}
+
+/* Trạng thái thu gọn: giới hạn 3 dòng */
+.post-card__caption--clamped {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
+	overflow: hidden;
+}
+
+/* Nút "Xem thêm" / "Thu gọn" */
+.post-card__see-more {
+	display: inline-block;
+	align-self: flex-start;
+	background: none;
+	border: none;
+	padding: 0;
+	font-size: 0.88rem;
+	font-weight: 600;
+	color: #6b7280;
+	cursor: pointer;
+	line-height: 1.4;
+	transition: color 0.15s ease;
+}
+
+.post-card__see-more:hover {
+	color: #374151;
+	text-decoration: underline;
+}
+
+
+/* ---------------------------------------------------------------------------
    Misc: likes count (legacy), location
    --------------------------------------------------------------------------- */
 

@@ -199,7 +199,6 @@ const renderProfile = (response, isOwnProfile = true) => {
 			followButton.classList.remove("is-hidden");
 			followButton.classList.toggle("is-following", isFollowing);
 			followButton.textContent = isFollowing ? "Đang theo dõi" : "Theo dõi";
-			followButton.disabled = true; // Chức năng follow/unfollow sẽ tích hợp sau
 		}
 	}
 };
@@ -226,6 +225,69 @@ const loadProfileData = async (isOwnProfile = true, resolvedTargetId = "") => {
 	} finally {
 		hideSkeleton();
 	}
+};
+
+// ---------------------------------------------------------------------------
+// Follow / Unfollow button
+// ---------------------------------------------------------------------------
+
+/**
+ * Gắn event listener vào nút Follow/Unfollow trên trang hồ sơ người khác.
+ * Đọc trạng thái hiện tại từ class "is-following" trên button,
+ * gọi API tương ứng, rồi cập nhật UI khi thành công.
+ *
+ * @param {string} targetUserId - ID người đang được xem trang cá nhân.
+ */
+const initFollowButton = (targetUserId) => {
+	if (!targetUserId) return;
+
+	const btn = document.getElementById("profile-follow-button");
+	if (!btn) return;
+
+	btn.addEventListener("click", async () => {
+		const isCurrentlyFollowing = btn.classList.contains("is-following");
+
+		// Disable nút trong lúc chờ API để tránh double-click
+		btn.disabled = true;
+		btn.textContent = "Đang xử lý…";
+
+		try {
+			if (isCurrentlyFollowing) {
+				await userApi.unfollowUser(targetUserId);
+				btn.classList.remove("is-following");
+				btn.textContent = "Theo dõi";
+
+				// Cập nhật số lượng followers trên UI
+				const followersEl = document.getElementById("profile-followers-count");
+				if (followersEl) {
+					const current = parseInt(followersEl.textContent, 10);
+					if (Number.isFinite(current) && current > 0) {
+						followersEl.textContent = String(current - 1);
+					}
+				}
+			} else {
+				await userApi.followUser(targetUserId);
+				btn.classList.add("is-following");
+				btn.textContent = "Đang theo dõi";
+
+				// Cập nhật số lượng followers trên UI
+				const followersEl = document.getElementById("profile-followers-count");
+				if (followersEl) {
+					const current = parseInt(followersEl.textContent, 10);
+					if (Number.isFinite(current)) {
+						followersEl.textContent = String(current + 1);
+					}
+				}
+			}
+		} catch (error) {
+			// Rollback text về trạng thái trước khi click
+			btn.textContent = isCurrentlyFollowing ? "Đang theo dõi" : "Theo dõi";
+			console.error("[profile] Lỗi follow/unfollow:", error);
+		} finally {
+			// Luôn mở lại nút sau khi xử lý xong
+			btn.disabled = false;
+		}
+	});
 };
 
 // ---------------------------------------------------------------------------
@@ -559,6 +621,11 @@ const initProfilePage = () => {
 			.querySelector(`.grid-item[data-post-id="${cssId}"]`)
 			?.remove();
 	});
+
+	// ── Follow / Unfollow button (chỉ khi xem hồ sơ người khác) ─────────────
+	if (!isOwnProfile) {
+		initFollowButton(resolvedTargetId);
+	}
 
 	// ── Load dữ liệu ─────────────────────────────────────────────────────────
 	loadProfileData(isOwnProfile, resolvedTargetId);
