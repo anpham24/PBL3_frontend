@@ -1,6 +1,6 @@
 "use strict";
 
-import { getCurrentUser } from "../utils/auth.js";
+import { getCurrentUser, getUserId } from "../utils/auth.js";
 
 const SIDEBAR_BASE_ITEMS = [
 	{
@@ -104,6 +104,22 @@ const isVisibleForRole = (item, userRole) => {
 const isActiveItem = (item, currentPage) => {
 	if (!Array.isArray(item.activePages) || item.activePages.length === 0) {
 		return false;
+	}
+
+	// Xử lý riêng cho mục "Trang cá nhân" (profile)
+	if (item.id === "profile" && item.activePages.includes(currentPage)) {
+		const query = new URLSearchParams(window.location.search);
+		const targetId = query.get("id");
+
+		// Nếu URL có chứa param ?id=... 
+		if (targetId && targetId.trim() !== "") {
+			const currentUserId = getUserId();
+
+			// Nếu id trên URL khác với id của user hiện tại -> Đang xem profile người khác
+			if (targetId.trim() !== currentUserId) {
+				return false; // Không active (không bôi đậm)
+			}
+		}
 	}
 
 	return item.activePages.includes(currentPage);
