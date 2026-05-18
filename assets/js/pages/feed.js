@@ -25,6 +25,7 @@ import { initPostMenus } from "../components/post-menu.js";
 const SCROLL_BOTTOM_THRESHOLD = 220;
 const FEED_MODE_EXPLORE = "EXPLORE";
 const FEED_MODE_FOLLOWING = "FOLLOWING";
+const EMPTY_FEED_MESSAGE = "Không có bài viết phù hợp với bộ lọc hiện tại.";
 
 // ---------------------------------------------------------------------------
 // Module-level state
@@ -48,7 +49,6 @@ const feedState = {
 let provinceSelectElement;
 let topicSelectElement;
 let feedPostListElement;
-let feedEmptyStateElement;
 let feedStatusElement;
 let feedTabExploreElement;
 let feedTabFollowingElement;
@@ -142,12 +142,18 @@ const showToast = (message, variant = "info", duration = 3500) => {
 };
 
 // ---------------------------------------------------------------------------
-// Empty state
+// Empty state (status-only)
 // ---------------------------------------------------------------------------
 
-const syncEmptyState = () => {
-	if (!feedEmptyStateElement) return;
-	feedEmptyStateElement.classList.toggle("is-hidden", feedState.posts.length > 0);
+const syncEmptyStatus = () => {
+	if (!feedStatusElement) return;
+	if (feedState.posts.length === 0) {
+		setStatus(EMPTY_FEED_MESSAGE);
+		return;
+	}
+	if (normalizeString(feedStatusElement.textContent) === EMPTY_FEED_MESSAGE) {
+		clearStatus();
+	}
 };
 
 // ---------------------------------------------------------------------------
@@ -167,12 +173,10 @@ const renderPosts = (posts, shouldReplace = false) => {
 
 	if (shouldReplace) {
 		feedPostListElement.innerHTML = html;
-		syncEmptyState();
 		return;
 	}
 
 	feedPostListElement.insertAdjacentHTML("beforeend", html);
-	syncEmptyState();
 };
 
 // ---------------------------------------------------------------------------
@@ -243,7 +247,7 @@ const prependPost = (post) => {
 
 	// Dùng renderPostCard() thay vì createPostCardHtml() cũ
 	feedPostListElement.insertAdjacentHTML("afterbegin", renderPostCard(post));
-	syncEmptyState();
+	syncEmptyStatus();
 };
 
 // ---------------------------------------------------------------------------
@@ -318,7 +322,7 @@ const loadFeed = async (shouldReset = false) => {
 		feedState.hasMore = hasMore === true;
 
 		if (feedState.posts.length === 0) {
-			setStatus("Không có bài viết phù hợp với bộ lọc hiện tại.");
+			setStatus(EMPTY_FEED_MESSAGE);
 			return;
 		}
 
@@ -415,7 +419,6 @@ const initFeedPage = () => {
 	provinceSelectElement  = document.getElementById("province-filter");
 	topicSelectElement     = document.getElementById("topic-filter");
 	feedPostListElement    = document.getElementById("feed-post-list");
-	feedEmptyStateElement  = document.getElementById("feed-empty-state");
 	feedStatusElement      = document.getElementById("feed-status");
 	feedTabExploreElement  = document.getElementById("feed-tab-explore");
 	feedTabFollowingElement = document.getElementById("feed-tab-following");
@@ -424,7 +427,6 @@ const initFeedPage = () => {
 		!provinceSelectElement ||
 		!topicSelectElement ||
 		!feedPostListElement ||
-		!feedEmptyStateElement ||
 		!feedStatusElement
 	) {
 		return;
@@ -461,7 +463,7 @@ const initFeedPage = () => {
 			feedState.posts = feedState.posts.filter(
 				(p) => normalizeString(p?.id) !== safeId
 			);
-			syncEmptyState();
+			syncEmptyStatus();
 		},
 	});
 
@@ -511,7 +513,7 @@ const initFeedPage = () => {
 		feedState.posts = feedState.posts.filter(
 			(p) => normalizeString(p?.id) !== postId
 		);
-		syncEmptyState();
+		syncEmptyStatus();
 	});
 
 	// ── Cập nhật tab UI và bắt đầu tải dữ liệu ──────────────────────────────

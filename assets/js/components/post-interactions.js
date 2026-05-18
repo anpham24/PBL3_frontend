@@ -210,6 +210,9 @@ const _handleDeleteClick = async (btn) => {
 				detail: { postId },
 			})
 		);
+
+		// 6. Redirect về trang cá nhân
+		window.location.href = "profile.html";
 	} catch (error) {
 		console.error("[post-interactions] deletePost error:", error);
 		const errMsg =

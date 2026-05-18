@@ -792,9 +792,13 @@ export const initCreatePostModal = (options = {}) => {
 				formData.append("visibility", visibility);
 				formData.append("address", cleanedAddress);
 
-				await postApi.updatePost(editPostId, formData);
+				const editResponse = await postApi.updatePost(editPostId, formData);
 
-				setFeedback("Lưu bài thành công!", "success");
+				const editMsg =
+					typeof editResponse?.data?.message === "string" && editResponse.data.message.trim().length > 0
+						? editResponse.data.message.trim()
+						: "Lưu bài thành công!";
+				setFeedback(editMsg, "success");
 
 				if (typeof options.onUpdate === "function") {
 					options.onUpdate(editPostId);
@@ -816,7 +820,11 @@ export const initCreatePostModal = (options = {}) => {
 
 				const response = await postApi.createPost(buildFormData(payload));
 
-				setFeedback("Lưu bài thành công, Đang chờ AI kiểm duyệt.", "success");
+				const createMsg =
+					typeof response?.data?.message === "string" && response.data.message.trim().length > 0
+						? response.data.message.trim()
+						: "Đăng bài thành công! Đang chờ AI kiểm duyệt.";
+				setFeedback(createMsg, "success");
 
 				const createdPost = response?.data?.post || response?.data;
 				if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
@@ -824,13 +832,14 @@ export const initCreatePostModal = (options = {}) => {
 				}
 			}
 
-			// Đợi một chút để người dùng thấy thông báo thành công
+			// Đợi một chút để người dùng thấy thông báo thành công, sau đó redirect về profile
 			setTimeout(() => {
 				if (closeOnPublish) {
 					closeCreateModal();
 				} else {
 					resetCreateModalState();
 				}
+				window.location.href = "profile.html";
 			}, 1500);
 		} catch (error) {
 			if (error?.status === 400) {
