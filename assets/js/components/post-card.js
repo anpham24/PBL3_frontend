@@ -272,7 +272,7 @@ export const renderPostCard = (postData) => {
 	const authorName = _str(postData?.authorName || postData?.author_name || postData?.username) || "Người dùng";
 	const avatarUrl  =
 		_str(postData?.avtUrl) ||
-		"https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
+		"../assets/images/default-avatar.png";
 	const content      = _str(postData?.content || postData?.caption);
 	const isLiked      = _bool(postData?.isLiked);
 	const likeCount    = _num(postData?.likeCount    ?? postData?.like_count,    0);

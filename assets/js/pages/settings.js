@@ -6,7 +6,7 @@ import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initSettingsSubviews } from "./settings-subviews.js";
 import { clearAuthStorage, getToken, saveAuthSession } from "../utils/auth.js";
 
-const DEFAULT_AVATAR_URL = "../assets/images/225-default-avatar.png";
+const DEFAULT_AVATAR_URL = "../assets/images/default-avatar.png";
 
 const toMessage = (error, fallbackMessage) => {
 	if (typeof error?.data?.message === "string" && error.data.message.trim().length > 0) {

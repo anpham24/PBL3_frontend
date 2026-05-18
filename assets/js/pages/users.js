@@ -6,8 +6,7 @@ import { initCreatePostModal } from "../components/create-post-modal.js";
 
 const ADMIN_ROLE = "ADMIN";
 const SEARCH_DEBOUNCE_MS = 320;
-const DEFAULT_AVATAR_URL =
-	"https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=96&q=60";
+const DEFAULT_AVATAR_URL = "../assets/images/default-avatar.png";
 
 const usersState = {
 	users: [],

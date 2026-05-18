@@ -226,7 +226,7 @@ let hasMoreCmts = true;
 
 const COMMENT_LOADING_ID = "cmt-loading-indicator";
 const COMMENT_END_ID = "cmt-end-message";
-const DEFAULT_AVATAR = "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=96&q=60";
+const DEFAULT_AVATAR = "../assets/images/default-avatar.png";
 
 /**
  * Tạo HTML cho một bình luận từ API response.

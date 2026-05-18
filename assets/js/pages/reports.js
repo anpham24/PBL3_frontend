@@ -6,8 +6,7 @@ import { initCreatePostModal } from "../components/create-post-modal.js";
 
 const ALLOWED_ROLES = new Set(["MODERATOR", "ADMIN"]);
 
-const DEFAULT_AVATAR_URL =
-	"https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=60";
+const DEFAULT_AVATAR_URL = "../assets/images/default-avatar.png";
 
 const reportsState = {
 	posts: [],

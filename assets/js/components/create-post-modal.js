@@ -43,7 +43,7 @@ const CREATE_POST_MODAL_HTML = `
 				<div class="create-detail-top">
 					<div class="create-post-author">
 						<img class="detail-avatar" id="create-post-author-avatar"
-							src="../assets/images/225-default-avatar.png"
+							src="../assets/images/default-avatar.png"
 							alt="Avatar người dùng">
 						<span class="create-post-author-nickname">Người dùng</span>
 					</div>
@@ -666,7 +666,7 @@ export const initCreatePostModal = (options = {}) => {
 
 	// ── Điền thông tin tác giả từ localStorage ────────────────────────────────
 
-	const DEFAULT_AVATAR = "../assets/images/225-default-avatar.png";
+	const DEFAULT_AVATAR = "../assets/images/default-avatar.png";
 
 	/**
 	 * Lấy avtUrl và nickname từ localStorage (qua auth helpers)

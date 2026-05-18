@@ -62,8 +62,7 @@ let createPostModalController = null;
 // DOM helpers
 // ---------------------------------------------------------------------------
 
-const DEFAULT_AVATAR_URL =
-	"https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?auto=format&fit=crop&w=520&q=70";
+const DEFAULT_AVATAR_URL = "../assets/images/default-avatar.png";
 
 const getEl = (id) => document.getElementById(id);
 const showEl = (el) => el?.classList.remove("is-hidden");
