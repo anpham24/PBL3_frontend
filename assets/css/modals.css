@@ -538,16 +538,33 @@
 }
 
 .comment-modal-dialog {
-	width: min(1200px, 100%);
+	/* Chiều rộng tự dãn theo 2 cột bên trong, nhưng không tràn màn hình */
+	display: flex;
+	flex-direction: row;
+	width: min(calc(100vw - 48px), 1400px);
+	max-width: min(calc(100vw - 48px), 1400px);
+	/* Quy tắc 1: giới hạn chiều cao modal, không bao giờ dài quá màn hình */
+	height: 90vh;
 	max-height: 90vh;
-	display: grid;
-	grid-template-columns: 58% 42%;
 	border: 1px solid var(--border);
 	border-radius: 18px;
 	overflow: hidden;
 	background: #ffffff;
 	box-shadow: 0 24px 70px rgba(17, 24, 39, 0.28);
 	animation: modal-fade-in 0.22s ease;
+}
+
+.comment-modal--single-media .comment-modal-dialog {
+	width: fit-content;
+}
+
+.comment-modal--multi-media .comment-modal-dialog {
+	width: fit-content;
+}
+
+.comment-modal--single-media .comment-media-pane,
+.comment-modal--multi-media .comment-media-pane {
+	flex: 0 0 auto;
 }
 
 /* Close button — position:absolute vì nằm ngoài grid */
@@ -573,52 +590,106 @@
 	font-size: 1.25rem;
 }
 
-/* Media pane (bên trái) */
+/* Media pane (bên trái) — quy tắc 3: flex:1 1 auto, căn giữa nội dung */
 .comment-media-pane {
+	flex: 1 1 auto; /* chiếm không gian còn lại sau khi cột phải lấy 500px */
 	background: #000000;
-	min-height: 560px;
-	max-height: 90vh;
+	min-width: 300px;
+	max-width: calc(100vw - 548px);
 	overflow: hidden;
+	position: relative;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .comment-media-gallery {
+	width: 100%;
 	height: 100%;
 	display: flex;
 	overflow-x: auto;
 	scroll-snap-type: x mandatory;
 	scrollbar-width: none;
+	align-items: stretch;
+	justify-content: flex-start;
 }
 
 .comment-media-gallery::-webkit-scrollbar {
 	display: none;
 }
 
-.comment-media-gallery img,
-.comment-media-gallery video {
+.comment-media-btn {
+	position: absolute;
+	top: 50%;
+	transform: translateY(-50%);
+	width: 32px;
+	height: 32px;
+	border: none;
+	border-radius: 50%;
+	background: rgba(255, 255, 255, 0.85);
+	box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	z-index: 2;
+	color: #111;
+	transition: background 0.2s, opacity 0.2s;
+	opacity: 0.7;
+}
+
+.comment-media-btn:hover {
+	background: #ffffff;
+	opacity: 1;
+}
+
+.comment-media-btn i {
+	font-size: 1.4rem;
+}
+
+.comment-media-btn--prev {
+	left: 12px;
+}
+
+.comment-media-btn--next {
+	right: 12px;
+}
+
+.comment-media-btn.is-hidden {
+	display: none;
+}
+
+
+.comment-media-item {
 	min-width: 100%;
 	width: 100%;
 	height: 100%;
-	object-fit: cover;
-	flex-shrink: 0;
 	scroll-snap-align: center;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
-.comment-media-pane img,
-.comment-media-pane video {
+/* Quy tắc 3: width/height 100%, object-fit:contain giữ đúng tỷ lệ */
+.comment-media-item img,
+.comment-media-item video {
 	width: 100%;
 	height: 100%;
-	object-fit: cover;
+	object-fit: contain;
+	flex-shrink: 0;
+	display: block;
 }
 
-/* Comment panel (bên phải) — 3 vùng flex */
+/* Comment panel (bên phải) — quy tắc 2: cố định 500px, cuộn nội dung bên trong */
 .comment-panel {
+	flex: 0 0 500px; /* chiều rộng cố định 500px, không co không dãn */
+	width: 500px;
 	display: flex;
 	flex-direction: column;
 	background: #ffffff;
-	height: 100%;
+	height: 100%; /* khớp chiều cao với dialog (đã bị giới hạn bởi 90vh) */
 	min-height: 0;
-	max-height: 90vh;
-	overflow: hidden;
+	overflow: hidden; /* nội dung dài chỉ cuộn bên trong, không phá layout */
 }
 
 /* ── VÙNG 1: Ghim cứng ở trên ── */
@@ -893,17 +964,26 @@
 /* Responsive */
 @media (max-width: 1100px) {
 	.comment-modal-dialog {
-		width: min(960px, 100%);
-	}
-}
-
-@media (max-width: 900px) {
-	.comment-modal-dialog {
-		grid-template-columns: 54% 46%;
+		max-width: min(calc(100vw - 32px), 1000px);
 	}
 
 	.comment-media-pane {
-		min-height: 440px;
+		max-width: calc(100vw - 532px);
+	}
+}
+
+@media (max-width: 760px) {
+	.comment-modal-dialog {
+		max-width: calc(100vw - 24px);
+	}
+
+	.comment-media-pane {
+		max-width: calc(100vw - 444px); /* còn chỗ cho cột 420px */
+	}
+
+	.comment-panel {
+		flex: 0 0 420px;
+		width: 420px;
 	}
 }
 
@@ -912,10 +992,14 @@
 		padding: 10px;
 	}
 
+	/* Chuyển sang stack dọc trên màn hình nhỏ */
 	.comment-modal-dialog {
+		flex-direction: column;
+		max-width: calc(100vw - 20px);
+		height: 92vh;
 		max-height: 92vh;
-		grid-template-columns: 1fr;
 		border-radius: 14px;
+		width: 100%;
 	}
 
 	.comment-modal-close {
@@ -926,8 +1010,28 @@
 	}
 
 	.comment-media-pane {
+		flex: 0 0 auto;
+		min-width: unset;
+		max-width: 100%;
+		width: 100%;
 		min-height: 250px;
 		max-height: 34vh;
+	}
+
+	.comment-media-gallery img,
+	.comment-media-gallery video {
+		width: 100%;
+		height: 100%;
+		object-fit: contain;
+	}
+
+	/* Quy tắc 4: màn hình nhỏ — bỏ height:100% cứng, để panel tự dãn/cuộn */
+	.comment-panel {
+		flex: 1 1 auto;
+		width: 100%;
+		max-width: 100%;
+		height: auto; /* bỏ height:100% cứng — tự dãn theo chiều dọc */
+		overflow-y: auto;
 	}
 
 	.comment-panel-header {

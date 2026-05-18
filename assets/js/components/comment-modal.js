@@ -15,9 +15,15 @@ const COMMENT_MODAL_HTML = `
 	<div class="comment-modal-dialog">
 		<!-- ── Cột trái: Media ── -->
 		<div class="comment-media-pane">
+			<button class="comment-media-btn comment-media-btn--prev is-hidden" type="button" aria-label="Ảnh trước">
+				<i class="bx bx-chevron-left"></i>
+			</button>
 			<div id="comment-modal-media-gallery" class="comment-media-gallery">
 				<!-- Media dynamically injected here -->
 			</div>
+			<button class="comment-media-btn comment-media-btn--next is-hidden" type="button" aria-label="Ảnh tiếp theo">
+				<i class="bx bx-chevron-right"></i>
+			</button>
 		</div>
 
 		<!-- ── Cột phải: 3 vùng flex ── -->
@@ -306,6 +312,10 @@ export const initCommentModal = (options = {}) => {
 	const postTagsEl = document.getElementById("comment-modal-post-tags");
 	const postCaptionEl = document.getElementById("comment-modal-post-caption");
 	const mediaGalleryEl = document.getElementById("comment-modal-media-gallery");
+	const commentMediaPaneEl = commentModal.querySelector(".comment-media-pane");
+	const commentModalDialogEl = commentModal.querySelector(".comment-modal-dialog");
+	const prevMediaBtn = commentModal.querySelector(".comment-media-btn--prev");
+	const nextMediaBtn = commentModal.querySelector(".comment-media-btn--next");
 	const reportBtnEl = document.getElementById("comment-modal-report-btn");
 	const likeCountEl = document.getElementById("comment-modal-like-count");
 	const likeBtnEl = document.getElementById("btn-like-comment-modal");
@@ -322,6 +332,104 @@ export const initCommentModal = (options = {}) => {
 
 	const commentInputEl = document.getElementById("comment-input");
 	const commentPostBtn = commentModal.querySelector(".comment-post-btn");
+	let resizeHandlerBound = false;
+
+	const getMediaNaturalSize = (mediaEl) => {
+		if (!mediaEl) return null;
+		if (mediaEl.tagName === "IMG") {
+			return mediaEl.naturalWidth && mediaEl.naturalHeight
+				? { width: mediaEl.naturalWidth, height: mediaEl.naturalHeight }
+				: null;
+		}
+		if (mediaEl.tagName === "VIDEO") {
+			return mediaEl.videoWidth && mediaEl.videoHeight
+				? { width: mediaEl.videoWidth, height: mediaEl.videoHeight }
+				: null;
+		}
+		return null;
+	};
+
+	const getMaxMediaPaneWidth = () => {
+		const panelWidth = commentModal.querySelector(".comment-panel")?.offsetWidth ?? 500;
+		const maxDialogWidth = Math.min(window.innerWidth - 48, 1400);
+		return Math.max(300, maxDialogWidth - panelWidth);
+	};
+
+	const updateMediaPaneWidth = () => {
+		if (!commentMediaPaneEl || !commentModalDialogEl || !mediaGalleryEl) return;
+		if (window.matchMedia("(max-width: 640px)").matches) {
+			commentMediaPaneEl.style.removeProperty("width");
+			commentMediaPaneEl.style.removeProperty("flex-basis");
+			return;
+		}
+
+		const mediaEls = Array.from(mediaGalleryEl.querySelectorAll("img, video"));
+		if (mediaEls.length === 0) return;
+
+		const maxAllowedWidth = getMaxMediaPaneWidth();
+		const dialogHeight = commentModalDialogEl.clientHeight || Math.round(window.innerHeight * 0.9);
+		let targetWidth = 0;
+
+		for (const mediaEl of mediaEls) {
+			const size = getMediaNaturalSize(mediaEl);
+			if (!size) continue;
+			const scaledWidth = Math.round(size.width * (dialogHeight / size.height));
+			const clampedWidth = Math.min(scaledWidth, maxAllowedWidth);
+			targetWidth = Math.max(targetWidth, clampedWidth);
+		}
+
+		if (targetWidth <= 0) return;
+
+		const currentIndex = mediaGalleryEl.clientWidth
+			? Math.round(mediaGalleryEl.scrollLeft / mediaGalleryEl.clientWidth)
+			: 0;
+
+		commentMediaPaneEl.style.width = `${targetWidth}px`;
+		commentMediaPaneEl.style.flexBasis = `${targetWidth}px`;
+
+		requestAnimationFrame(() => {
+			const slideWidth = mediaGalleryEl.clientWidth || 0;
+			mediaGalleryEl.scrollTo({ left: currentIndex * slideWidth });
+		});
+	};
+
+	const bindMediaSizingHandlers = () => {
+		if (!mediaGalleryEl) return;
+		const mediaEls = Array.from(mediaGalleryEl.querySelectorAll("img, video"));
+		mediaEls.forEach((mediaEl) => {
+			if (mediaEl.tagName === "IMG") {
+				if (mediaEl.complete) {
+					updateMediaPaneWidth();
+				} else {
+					mediaEl.addEventListener("load", updateMediaPaneWidth, { once: true });
+				}
+				return;
+			}
+			if (mediaEl.readyState >= 1) {
+				updateMediaPaneWidth();
+			} else {
+				mediaEl.addEventListener("loadedmetadata", updateMediaPaneWidth, { once: true });
+			}
+		});
+
+		if (!resizeHandlerBound) {
+			resizeHandlerBound = true;
+			window.addEventListener("resize", () => {
+				if (!commentModal.classList.contains("open")) return;
+				updateMediaPaneWidth();
+			});
+		}
+	};
+
+	const scrollMediaGallery = (direction) => {
+		if (!mediaGalleryEl) return;
+		const scrollStep = mediaGalleryEl.clientWidth;
+		if (scrollStep <= 0) return;
+		mediaGalleryEl.scrollBy({ left: direction * scrollStep, behavior: "smooth" });
+	};
+
+	prevMediaBtn?.addEventListener("click", () => scrollMediaGallery(-1));
+	nextMediaBtn?.addEventListener("click", () => scrollMediaGallery(1));
 
 	// ---------------------------------------------------------------------------
 	// loadComments — gọi API & render
@@ -476,17 +584,34 @@ export const initCommentModal = (options = {}) => {
 			postTagsEl.innerHTML = tagsHtml;
 		}
 
+		const mediaItems = resolvePostMediaItems(post);
+		const mediaCount = mediaItems.length;
+		const hasMultipleMedia = mediaCount > 1;
+
+		commentModal.classList.toggle("comment-modal--single-media", mediaCount === 1);
+		commentModal.classList.toggle("comment-modal--multi-media", hasMultipleMedia);
+		prevMediaBtn?.classList.toggle("is-hidden", !hasMultipleMedia);
+		nextMediaBtn?.classList.toggle("is-hidden", !hasMultipleMedia);
+
 		if (mediaGalleryEl) {
-			const mediaItems = resolvePostMediaItems(post);
 			mediaGalleryEl.innerHTML = mediaItems.map(item => {
 				if (item.isVideo) {
 					const posterAttr = item.thumbnailUrl.length > 0
 						? ` poster="${escapeHtml(item.thumbnailUrl)}"`
 						: "";
-					return `<video src="${escapeHtml(item.url)}" controls preload="metadata"${posterAttr}></video>`;
+					return `
+						<div class="comment-media-item">
+							<video src="${escapeHtml(item.url)}" controls preload="metadata"${posterAttr}></video>
+						</div>`;
 				}
-				return `<img src="${escapeHtml(item.url)}" alt="Media của bài đăng">`;
+				return `
+					<div class="comment-media-item">
+						<img src="${escapeHtml(item.url)}" alt="Media của bài đăng">
+					</div>`;
 			}).join("");
+			mediaGalleryEl.scrollTo({ left: 0 });
+			bindMediaSizingHandlers();
+			updateMediaPaneWidth();
 		}
 
 		if (reportBtnEl) {
@@ -558,6 +683,10 @@ export const initCommentModal = (options = {}) => {
 
 		// Xóa media để dừng video đang phát
 		if (mediaGalleryEl) mediaGalleryEl.innerHTML = "";
+		if (commentMediaPaneEl) {
+			commentMediaPaneEl.style.removeProperty("width");
+			commentMediaPaneEl.style.removeProperty("flex-basis");
+		}
 
 		// Reset comment state khi đóng
 		currentPostId = null;
