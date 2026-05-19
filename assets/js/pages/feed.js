@@ -310,11 +310,9 @@ const loadFeed = async (shouldReset = false) => {
 
 		if (requestId !== feedState.requestSequence) return;
 
-		const receivedPosts = Array.isArray(response?.data?.postList)
-			? response.data.postList
-			: (Array.isArray(response?.postList) ? response.postList : []);
-		const receivedLastId = normalizeString(response?.data?.respLastPostId || response?.respLastPostId);
-		const hasMore = response?.data?.hasMore !== undefined ? response.data.hasMore : response?.hasMore;
+		const receivedPosts = Array.isArray(response?.data?.postList) ? response.data.postList : [];
+		const receivedLastId = normalizeString(response?.data?.respLastPostId);
+		const hasMore = response?.data?.hasMore === true;
 
 		appendUniquePosts(receivedPosts, shouldReset);
 

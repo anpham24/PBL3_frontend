@@ -825,8 +825,8 @@ export const initCreatePostModal = (options = {}) => {
 						: "Đăng bài thành công! Đang chờ AI kiểm duyệt.";
 				setFeedback(createMsg, "success");
 
-				const createdPost = response?.post || response;
-				if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
+				const createdPost = response?.data?.post || response?.data;
+				if (typeof onPublish === "function") {
 					onPublish(createdPost);
 				}
 			}
