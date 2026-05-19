@@ -732,9 +732,6 @@ export const initCreatePostModal = (options = {}) => {
 	};
 
 	const toMessage = (error, fallback) => {
-		if (typeof error?.data?.message === "string" && error.data.message.trim().length > 0) {
-			return error.data.message.trim();
-		}
 		if (typeof error?.message === "string" && error.message.trim().length > 0) {
 			return error.message.trim();
 		}
@@ -769,6 +766,7 @@ export const initCreatePostModal = (options = {}) => {
 				// ── Chế độ Edit ─────────────────────────────────────────────
 				if (mediaItems.length === 0) {
 					setFeedback("Vui lòng giữ lại hoặc thêm ít nhất một ảnh/video.");
+					setPublishSubmittingState(false);
 					return;
 				}
 
@@ -795,8 +793,8 @@ export const initCreatePostModal = (options = {}) => {
 				const editResponse = await postApi.updatePost(editPostId, formData);
 
 				const editMsg =
-					typeof editResponse?.data?.message === "string" && editResponse.data.message.trim().length > 0
-						? editResponse.data.message.trim()
+					typeof editResponse?.message === "string" && editResponse.message.trim().length > 0
+						? editResponse.message.trim()
 						: "Lưu bài thành công!";
 				setFeedback(editMsg, "success");
 
@@ -807,6 +805,7 @@ export const initCreatePostModal = (options = {}) => {
 				// ── Chế độ Create ────────────────────────────────────────────
 				if (mediaItems.length === 0) {
 					setFeedback("Vui lòng chọn ít nhất một ảnh hoặc video để đăng bài.");
+					setPublishSubmittingState(false);
 					return;
 				}
 
@@ -821,12 +820,12 @@ export const initCreatePostModal = (options = {}) => {
 				const response = await postApi.createPost(buildFormData(payload));
 
 				const createMsg =
-					typeof response?.data?.message === "string" && response.data.message.trim().length > 0
-						? response.data.message.trim()
+					typeof response?.message === "string" && response.message.trim().length > 0
+						? response.message.trim()
 						: "Đăng bài thành công! Đang chờ AI kiểm duyệt.";
 				setFeedback(createMsg, "success");
 
-				const createdPost = response?.data?.post || response?.data;
+				const createdPost = response?.post || response;
 				if (typeof onPublish === "function" && createdPost && typeof createdPost === "object") {
 					onPublish(createdPost);
 				}
