@@ -485,16 +485,17 @@ const initTabs = () => {
 // Dropdown filters (province & topic)
 // ---------------------------------------------------------------------------
 
-const populateSelect = (selectEl, items, labelKey, valueKey, defaultLabel) => {
-	if (!selectEl) return;
-	selectEl.innerHTML = `<option value="ALL">${escapeHtml(defaultLabel)}</option>`;
-	if (!Array.isArray(items)) return;
-	items.forEach((item) => {
-		const opt = document.createElement("option");
-		opt.value = item[valueKey] ?? "";
-		opt.textContent = item[labelKey] ?? "";
-		selectEl.appendChild(opt);
-	});
+const populateSelect = (selectEl, items) => {
+	if (!selectEl || !Array.isArray(items)) return;
+	const html = items
+		.map((item) => {
+			const code = normalizeString(item?.code);
+			const name = normalizeString(item?.name);
+			if (!code || !name) return "";
+			return `<option value="${code}">${escapeHtml(name)}</option>`;
+		})
+		.join("");
+	if (html) selectEl.innerHTML = html;
 };
 
 const initDropdownFilters = async () => {
@@ -504,8 +505,10 @@ const initDropdownFilters = async () => {
 	try {
 		const response = await feedApi.getDropdownData();
 		const data = response?.data ?? {};
-		populateSelect(provinceSelect, data.provinces ?? [], "provinceName", "provinceCode", "Tất cả tỉnh");
-		populateSelect(topicSelect, data.topics ?? [], "topicName", "topicCode", "Tất cả chủ đề");
+		const provinces = Array.isArray(data.provinces) ? data.provinces : [];
+		const topics = Array.isArray(data.topics) ? data.topics : [];
+		populateSelect(provinceSelect, provinces);
+		populateSelect(topicSelect, topics);
 	} catch (err) {
 		console.warn("[search] Không thể tải danh sách tỉnh/chủ đề:", err);
 	}

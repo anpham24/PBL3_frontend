@@ -841,13 +841,7 @@ export const initCreatePostModal = (options = {}) => {
 				window.location.href = "profile.html";
 			}, 1500);
 		} catch (error) {
-			if (error?.status === 400) {
-				setFeedback(toMessage(error, "Bài đăng thiếu nội dung, media hoặc bị AI từ chối."));
-			} else if (error?.status === 500) {
-				setFeedback("Lỗi hệ thống. Vui lòng thử lại sau.");
-			} else {
-				setFeedback(toMessage(error, editPostId ? "Cập nhật bài thất bại. Vui lòng thử lại." : "Đăng bài thất bại. Vui lòng thử lại."));
-			}
+			setFeedback(toMessage(error, "Đã có lỗi xảy ra. Vui lòng thử lại."));
 		} finally {
 			setPublishSubmittingState(false);
 		}

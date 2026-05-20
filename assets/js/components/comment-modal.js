@@ -2,6 +2,7 @@
 
 import { postApi } from "../api/post-api.js";
 import { isPostOwner } from "../utils/helpers.js";
+import { getAvtUrl, getNickname } from "../utils/auth.js";
 
 // ─── HTML Template ────────────────────────────────────────────────────────────
 
@@ -812,8 +813,16 @@ export const initCommentModal = (options = {}) => {
 			const newComment = response?.data;
 
 			if (newComment) {
+				// Bổ sung thông tin người dùng từ localStorage vào comment mới
+				// vì API tạo comment chỉ trả về {commentId, content, createAt}
+				const enrichedComment = {
+					...newComment,
+					authorName: getNickname() || "Người dùng",
+					avtUrl: getAvtUrl() || DEFAULT_AVATAR
+				};
+
 				// 1. Chèn bình luận vào đầu danh sách
-				const html = createCommentHtml(newComment);
+				const html = createCommentHtml(enrichedComment);
 				commentListEl?.insertAdjacentHTML("afterbegin", html);
 
 				// 2. Xóa ô nhập liệu
