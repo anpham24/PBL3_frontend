@@ -918,6 +918,49 @@
 	color: #9ca3af;
 }
 
+/* ── Nút xóa bình luận ── */
+.comment-delete-btn {
+	flex-shrink: 0;
+	align-self: center;
+	width: 26px;
+	height: 26px;
+	border: none;
+	border-radius: 50%;
+	background: transparent;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	color: #9ca3af;
+	opacity: 0;
+	transform: scale(0.85);
+	transition: opacity 0.18s ease, transform 0.18s ease, background 0.15s ease, color 0.15s ease;
+	pointer-events: none;
+	margin-left: 4px;
+}
+
+/* Hiện nút khi hover vào comment-item */
+.comment-item:hover .comment-delete-btn {
+	opacity: 1;
+	transform: scale(1);
+	pointer-events: auto;
+}
+
+/* Hover trực tiếp vào nút xóa → đỏ */
+.comment-delete-btn:hover {
+	background: #fee2e2;
+	color: #dc2626;
+}
+
+.comment-delete-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+.comment-delete-btn i {
+	font-size: 0.85rem;
+}
+
 .comments-end-message {
 	text-align: center;
 	font-size: 0.8rem;

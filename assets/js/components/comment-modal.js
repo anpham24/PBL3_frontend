@@ -2,7 +2,7 @@
 
 import { postApi } from "../api/post-api.js";
 import { isPostOwner } from "../utils/helpers.js";
-import { getAvtUrl, getNickname } from "../utils/auth.js";
+import { getAvtUrl, getNickname, getUserId } from "../utils/auth.js";
 
 // ─── HTML Template ────────────────────────────────────────────────────────────
 
@@ -231,22 +231,31 @@ const DEFAULT_AVATAR = "../assets/images/default-avatar.png";
 
 /**
  * Tạo HTML cho một bình luận từ API response.
+ * @param {object} comment - Dữ liệu bình luận.
+ * @param {boolean} [isOwnComment=false] - true nếu bình luận thuộc về user hiện tại.
  */
-const createCommentHtml = (comment) => {
+const createCommentHtml = (comment, isOwnComment = false) => {
 	const authorName = escapeHtml(normalizeString(comment.authorName) || "Người dùng");
 	const avatarUrl = escapeHtml(normalizeString(comment.avtUrl) || DEFAULT_AVATAR);
 	const content = escapeHtml(normalizeString(comment.content));
 	const timeText = escapeHtml(timeAgo(normalizeString(comment.createAt)));
 	const authorId = escapeHtml(normalizeString(comment.authorId || comment.author_id));
+	const commentId = escapeHtml(normalizeString(comment.commentId || comment.id || ""));
 	const profileAttr = authorId.length > 0 ? ` data-user-id="${authorId}"` : "";
 
+	// Hiển thị nút xóa nếu là bình luận của chính mình
+	const deleteBtn = isOwnComment && commentId.length > 0
+		? `<button class="comment-delete-btn" type="button" aria-label="Xóa bình luận" data-comment-id="${commentId}"><i class="bx bx-trash"></i></button>`
+		: "";
+
 	return `
-		<div class="comment-item">
+		<div class="comment-item" data-comment-id="${commentId}">
 			<img class="comment-avatar open-profile-link" src="${avatarUrl}" alt="Avatar ${authorName}"${profileAttr} style="cursor:pointer;">
 			<div class="comment-content">
 				<p><strong class="open-profile-link"${profileAttr} style="cursor:pointer;">${authorName}</strong>${content}</p>
 				${timeText ? `<span class="comment-time">${timeText}</span>` : ""}
 			</div>
+			${deleteBtn}
 		</div>
 	`;
 };
@@ -454,7 +463,12 @@ export const initCommentModal = (options = {}) => {
 
 			// Render các bình luận mới vào cuối danh sách
 			if (comments.length > 0) {
-				const html = comments.map(createCommentHtml).join("");
+				const currentUserId = getUserId();
+				const html = comments.map(c => {
+					const authorId = normalizeString(c.authorId || c.author_id);
+					const isOwn = currentUserId.length > 0 && authorId.length > 0 && authorId === currentUserId;
+					return createCommentHtml(c, isOwn);
+				}).join("");
 				commentListEl?.insertAdjacentHTML("beforeend", html);
 			}
 
@@ -822,7 +836,8 @@ export const initCommentModal = (options = {}) => {
 				};
 
 				// 1. Chèn bình luận vào đầu danh sách
-				const html = createCommentHtml(enrichedComment);
+				// isOwnComment = true vì chắc chắn user hiện tại vừa tạo bình luận này
+				const html = createCommentHtml(enrichedComment, true);
 				commentListEl?.insertAdjacentHTML("afterbegin", html);
 
 				// 2. Xóa ô nhập liệu
@@ -863,6 +878,49 @@ export const initCommentModal = (options = {}) => {
 		if (event.key === "Enter" && !event.shiftKey) {
 			event.preventDefault();
 			void handleCreateComment();
+		}
+	});
+
+	// ---------------------------------------------------------------------------
+	// Delete Comment — Event Delegation trên commentListEl
+	// ---------------------------------------------------------------------------
+	commentListEl?.addEventListener("click", async (event) => {
+		const deleteBtn = event.target.closest(".comment-delete-btn");
+		if (!deleteBtn) return;
+
+		const commentId = normalizeString(deleteBtn.dataset.commentId);
+		if (commentId.length === 0) return;
+
+		// Tìm phần tử .comment-item cha để xóa khỏi DOM
+		const commentItemEl = deleteBtn.closest(".comment-item");
+		if (!commentItemEl) return;
+
+		// Vô hiệu hóa nút tạm thời để tránh double-click
+		deleteBtn.disabled = true;
+
+		try {
+			await postApi.deleteComment(commentId);
+
+			// Xóa ngay khỏi DOM — không reload lại danh sách
+			commentItemEl.remove();
+
+			// Cập nhật comment count
+			currentPostCommentCount = Math.max(0, currentPostCommentCount - 1);
+			const escapedId = typeof CSS !== "undefined" && typeof CSS.escape === "function"
+				? CSS.escape(currentPostId)
+				: (currentPostId ?? "").replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+			const postCard = document.querySelector(`.post-card[data-post-id="${escapedId}"]`);
+			if (postCard) {
+				postCard.dataset.newCommentCount = String(currentPostCommentCount);
+				const countSpan = postCard.querySelector(".post-comment-btn .action-count");
+				if (countSpan) {
+					countSpan.textContent = formatCompactNumber(currentPostCommentCount);
+				}
+			}
+		} catch (error) {
+			console.error("[comment-modal] Lỗi khi xóa bình luận:", error);
+			alert("Không thể xóa bình luận. Vui lòng thử lại!");
+			deleteBtn.disabled = false;
 		}
 	});
 

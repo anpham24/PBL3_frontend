@@ -201,5 +201,19 @@ export const postApi = {
 		return apiClient.post(`/api/posts/${encodeURIComponent(resolvedPostId)}/comments`, {
 			content: resolvedContent
 		});
+	},
+
+	/**
+	 * Xóa một bình luận.
+	 * DELETE /api/comments/{commentId}
+	 * @param {string} commentId - ID bình luận cần xóa.
+	 * @returns {Promise<{message: string}>}
+	 */
+	async deleteComment(commentId) {
+		const resolvedCommentId = toSafeId(commentId, "");
+		if (resolvedCommentId.length === 0) {
+			throw new Error("Thiếu commentId hợp lệ.");
+		}
+		return apiClient.delete(`/api/comments/${encodeURIComponent(resolvedCommentId)}`);
 	}
 };
