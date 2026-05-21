@@ -1,7 +1,7 @@
 "use strict";
 
 import { authApi } from "../api/auth-api.js";
-import { getToken, getCurrentUser, saveAuthSession } from "../utils/auth.js";
+import { getToken, getRoleFromToken, saveAuthSession } from "../utils/auth.js";
 
 const REDIRECT_DELAY_MS = 500;
 const ACCOUNT_LOCKED_STATUSES = new Set([403, 423, 429]);
@@ -238,7 +238,7 @@ const initLoginPage = () => {
 	});
 
 	if (getToken().length > 0) {
-		window.location.href = getRedirectPathByRole(getCurrentUser()?.userRole);
+		window.location.href = getRedirectPathByRole(getRoleFromToken());
 		return;
 	}
 
@@ -268,8 +268,8 @@ const initLoginPage = () => {
 			}
 
 			saveAuthSession(token, { userId, avtUrl, nickname });
-			const currentUser = getCurrentUser();
-			const userRole = currentUser?.userRole || "MEMBER";
+			// Decode JWT ngay sau khi lưu để lấy role chính xác
+			const userRole = getRoleFromToken();
 			setFeedback(feedbackElement, "Đăng nhập thành công. Đang chuyển trang...", "success");
 
 			window.setTimeout(() => {

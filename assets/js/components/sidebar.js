@@ -1,6 +1,6 @@
 "use strict";
 
-import { getCurrentUser, getUserId } from "../utils/auth.js";
+import { getRoleFromToken, getUserId } from "../utils/auth.js";
 
 const SIDEBAR_BASE_ITEMS = [
 	{
@@ -79,13 +79,7 @@ const normalizeRole = (value) => {
 };
 
 const getCurrentUserRole = () => {
-	const user = getCurrentUser();
-	const userRole = normalizeRole(user?.userRole || "");
-	if (userRole.length > 0) {
-		return userRole;
-	}
-
-	return "";
+	return normalizeRole(getRoleFromToken());
 };
 
 const getCurrentPage = () => {

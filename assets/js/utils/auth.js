@@ -64,6 +64,37 @@ export const parseJwt = (token) => {
 	}
 };
 
+/**
+ * Trích xuất role từ JWT payload.
+ * Backend dùng: .claim("role", role) → payload.role là string đơn (VD: "ADMIN", "MODERATOR", "MEMBER").
+ * @param {object} payload - Kết quả của parseJwt()
+ * @returns {string} Role uppercase, hoặc chuỗi rỗng nếu không tìm thấy.
+ */
+const extractRoleFromPayload = (payload) => {
+	if (!payload || typeof payload !== "object") {
+		return "";
+	}
+
+	if (typeof payload.role === "string" && payload.role.trim().length > 0) {
+		return payload.role.trim().toUpperCase();
+	}
+
+	return "";
+};
+
+/**
+ * Lấy role của người dùng hiện tại trực tiếp từ JWT token trong localStorage.
+ * @returns {string} Role uppercase (VD: "ADMIN", "MODERATOR", "MEMBER") hoặc chuỗi rỗng nếu chưa đăng nhập.
+ */
+export const getRoleFromToken = () => {
+	const token = getToken();
+	if (token.length === 0) {
+		return "";
+	}
+	const payload = parseJwt(token);
+	return extractRoleFromPayload(payload);
+};
+
 export const getCurrentUser = () => {
 	const token = getToken();
 	if (token.length === 0) {
@@ -82,9 +113,11 @@ export const getCurrentUser = () => {
 	// 	return null;
 	// }
 	
+	const userRole = extractRoleFromPayload(payload);
+
 	return {
 		userId: payload.sub || "",
-		userRole: payload.role || "MEMBER"
+		userRole: userRole.length > 0 ? userRole : "MEMBER"
 	};
 };
 
