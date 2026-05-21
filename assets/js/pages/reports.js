@@ -1,507 +1,560 @@
+/**
+ * @file reports.js
+ * @module pages/reports
+ *
+ * Logic trang Quản lý báo cáo bài đăng (Admin/Moderator).
+ *
+ * ── Luồng khởi tạo ─────────────────────────────────────────────────────────
+ *  1. Kiểm tra quyền truy cập (ADMIN / MODERATOR).
+ *  2. Gọi GET /api/reports/reasons → lưu allReasons (dùng map code → text).
+ *  3. Gọi GET /api/admin/reports/posts → render danh sách.
+ *  4. Xử lý infinite scroll (cursor-based, dừng khi hasMore = false).
+ *
+ * ── Sự kiện nút ─────────────────────────────────────────────────────────────
+ *  - "Bỏ qua"         → POST resolve với action: "REJECTED"
+ *  - "Xử lý vi phạm"  → mở ResolveReportModal
+ */
+
 "use strict";
 
-import { postApi } from "../api/post-api.js";
-import { getCurrentUser } from "../utils/auth.js";
-import { initCreatePostModal } from "../components/create-post-modal.js";
+import { postApi }            from "../api/post-api.js";
+import { getCurrentUser }     from "../utils/auth.js";
+import { ResolveReportModal } from "../components/resolve-report-modal.js";
 
-const ALLOWED_ROLES = new Set(["MODERATOR", "ADMIN"]);
+// ─── Hằng ────────────────────────────────────────────────────────────────────
 
+const ALLOWED_ROLES      = new Set(["MODERATOR", "ADMIN"]);
 const DEFAULT_AVATAR_URL = "../assets/images/default-avatar.png";
 
-const reportsState = {
-	posts: [],
-	keyword: ""
+// ─── State ───────────────────────────────────────────────────────────────────
+
+const state = {
+	/** @type {Array<{code: string, reason: string}>} */
+	allReasons:      [],
+	/** Map reasonCode → reasonText, dùng để dịch code sang tiếng Việt */
+	reasonMap:       new Map(),
+	keyword:         "",
+	lastPostId:      null,
+	hasMore:         true,
+	isLoading:       false,
+	reportCount:     0
 };
 
-let reportedPostListElement;
-let reportsCountBadgeElement;
-let reportsEmptyStateElement;
-let reportsSearchInputElement;
-let reportsStatusElement;
+// ─── DOM refs (lazy-populated trong initReportsPage) ─────────────────────────
 
-const escapeHtml = (value) =>
+let listEl;
+let countBadgeEl;
+let emptyStateEl;
+let searchInputEl;
+let statusEl;
+let endNoticeEl;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const _str = (value) => {
+	if (typeof value !== "string") return "";
+	const t = value.trim();
+	return t.length > 0 ? t : "";
+};
+
+const _num = (value, fallback = 0) => {
+	const n = Number(value);
+	return Number.isFinite(n) ? n : fallback;
+};
+
+const _esc = (value) =>
 	String(value ?? "")
 		.replace(/&/g, "&amp;")
 		.replace(/</g, "&lt;")
 		.replace(/>/g, "&gt;")
-		.replace(/\"/g, "&quot;")
+		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#039;");
 
-const safeText = (value) => {
-	if (typeof value !== "string") {
-		return "";
+const _timeAgo = (dateString) => {
+	if (!dateString) return "";
+	const date = new Date(dateString);
+	if (isNaN(date.getTime())) return "";
+	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
+	if (seconds < 0) return "Vừa xong";
+	const intervals = [
+		{ unit: "năm",   secs: 31_536_000 },
+		{ unit: "tháng", secs: 2_592_000  },
+		{ unit: "ngày",  secs: 86_400     },
+		{ unit: "giờ",   secs: 3_600      },
+		{ unit: "phút",  secs: 60         }
+	];
+	for (const { unit, secs } of intervals) {
+		const n = Math.floor(seconds / secs);
+		if (n >= 1) return `${n} ${unit} trước`;
 	}
-
-	return value.trim();
+	return "Vừa xong";
 };
 
-const safeNumber = (value, fallback = 0) => {
-	const numericValue = Number(value);
-	return Number.isFinite(numericValue) ? numericValue : fallback;
+const _toErrorMessage = (error, fallback) => {
+	if (_str(error?.data?.message).length > 0) return error.data.message.trim();
+	if (_str(error?.message).length > 0)       return error.message.trim();
+	return fallback;
 };
 
-const formatNumber = (value) => new Intl.NumberFormat("vi-VN").format(safeNumber(value, 0));
+// ─── Auth ────────────────────────────────────────────────────────────────────
 
-const normalizeSearchText = (value) =>
-	safeText(value)
-		.normalize("NFD")
-		.replace(/[\u0300-\u036f]/g, "")
-		.toLowerCase();
-
-const toMessage = (error, fallbackMessage) => {
-	if (typeof error?.data?.message === "string" && error.data.message.trim().length > 0) {
-		return error.data.message.trim();
-	}
-
-	if (typeof error?.message === "string" && error.message.trim().length > 0) {
-		return error.message.trim();
-	}
-
-	return fallbackMessage;
-};
-
-const getUserRole = () => {
+const _getUserRole = () => {
 	const user = getCurrentUser();
-	const userRole = user?.userRole || "";
-	if (typeof userRole === "string" && userRole.trim().length > 0) {
-		return userRole.trim().toUpperCase();
-	}
-
-	return "";
+	const role = _str(user?.userRole);
+	return role.toUpperCase();
 };
 
-const ensureModeratorAccess = () => {
-	const userRole = getUserRole();
-
-	if (!ALLOWED_ROLES.has(userRole)) {
+const _ensureAccess = () => {
+	const role = _getUserRole();
+	if (!ALLOWED_ROLES.has(role)) {
 		window.location.href = "feed.html";
 		return "";
 	}
-
-	return userRole;
+	return role;
 };
 
-const setStatus = (message, variant = "info") => {
-	if (!reportsStatusElement) {
-		return;
-	}
+// ─── Status helpers ───────────────────────────────────────────────────────────
 
-	reportsStatusElement.textContent = message;
-	reportsStatusElement.classList.toggle("is-hidden", safeText(message).length === 0);
-
-	if (variant === "error") {
-		reportsStatusElement.style.color = "#b91c1c";
-		return;
-	}
-
-	if (variant === "success") {
-		reportsStatusElement.style.color = "#15803d";
-		return;
-	}
-
-	reportsStatusElement.style.color = "#4b5563";
+const _setStatus = (message, variant = "info") => {
+	if (!statusEl) return;
+	statusEl.textContent = message;
+	statusEl.classList.toggle("is-hidden", _str(message).length === 0);
+	const colorMap = { error: "#b91c1c", success: "#15803d", info: "#4b5563" };
+	statusEl.style.color = colorMap[variant] ?? "#4b5563";
 };
 
-const clearStatus = () => {
-	setStatus("");
-	if (reportsStatusElement) {
-		reportsStatusElement.style.color = "";
-	}
+const _clearStatus = () => {
+	_setStatus("");
+	if (statusEl) statusEl.style.color = "";
 };
 
-const toArray = (value) => (Array.isArray(value) ? value : []);
+// ─── HTML Builders ────────────────────────────────────────────────────────────
 
-const normalizeReasons = (post) => {
-	const rawReasons = Array.isArray(post?.report_reasons)
-		? post.report_reasons
-		: Array.isArray(post?.reasons)
-			? post.reasons
-			: [];
+/**
+ * Sinh HTML cho .report-side-panel (cột phải).
+ * Dùng state.reasonMap để dịch reasonCode → tiếng Việt.
+ *
+ * @param {object} post - Post data đã normalize.
+ * @returns {string}
+ */
+const _buildSidePanelHtml = (post) => {
+	const reasonList = Array.isArray(post.reasonList) ? post.reasonList : [];
 
-	const reasons = rawReasons
-		.map((reason, index) => {
-			if (typeof reason === "string") {
-				const label = safeText(reason);
-				return label.length > 0
-					? {
-						id: `reason-${index + 1}`,
-						label,
-						details: "",
-						reporter: "",
-						time: ""
-					}
-					: null;
-			}
+	// Sắp xếp theo count giảm dần để hiển thị lý do nhiều nhất trước
+	const sortedReasons = [...reasonList].sort(
+		(a, b) => _num(b.count) - _num(a.count)
+	);
 
-			if (!reason || typeof reason !== "object") {
-				return null;
-			}
+	const reasonsHtml = sortedReasons.length > 0
+		? sortedReasons
+			.map((item) => {
+				const code  = _str(item?.reasonCode);
+				const count = _num(item?.count, 0);
+				// Dịch reasonCode sang text tiếng Việt qua reasonMap
+				const label = state.reasonMap.get(code) || code || "Không rõ";
+				return `
+				<div class="report-reason-stat">
+					<span class="report-reason-stat__label">${_esc(label)}</span>
+					<span class="report-reason-stat__count">${_esc(String(count))}</span>
+				</div>`;
+			})
+			.join("")
+		: '<p class="report-side-panel__empty">Chưa có thông tin lý do.</p>';
 
-			const label =
-				safeText(reason.reason) ||
-				safeText(reason.title) ||
-				safeText(reason.name) ||
-				safeText(reason.message) ||
-				"Lý do chưa xác định";
-
-			return {
-				id: safeText(reason.id) || `reason-${index + 1}`,
-				label,
-				details: safeText(reason.details) || safeText(reason.description),
-				reporter:
-					safeText(reason.reporter_name) ||
-					safeText(reason.reported_by) ||
-					safeText(reason.username),
-				time:
-					safeText(reason.created_at) ||
-					safeText(reason.createdAt) ||
-					safeText(reason.time)
-			};
-		})
-		.filter(Boolean);
-
-	if (reasons.length > 0) {
-		return reasons;
-	}
-
-	const fallbackReason = safeText(post?.report_reason) || safeText(post?.reportReason);
-	if (fallbackReason.length === 0) {
-		return [];
-	}
-
-	return [
-		{
-			id: "reason-fallback",
-			label: fallbackReason,
-			details: "",
-			reporter: "",
-			time: ""
-		}
-	];
-};
-
-const normalizePost = (post, index) => {
-	const tags = toArray(post?.tags)
-		.map((tag) => safeText(typeof tag === "string" ? tag : tag?.name || tag?.label))
-		.filter((tag) => tag.length > 0);
-
-	const reasons = normalizeReasons(post);
-	const reportCount = safeNumber(post?.report_count ?? post?.reportCount, reasons.length);
-
-	return {
-		id: safeText(post?.id || post?.post_id || post?.postId) || `reported-post-${index + 1}`,
-		authorName: safeText(post?.author_name || post?.authorName || post?.username) || "Người dùng",
-		authorAvatar: safeText(post?.avatar_url || post?.authorAvatar || post?.avt_url) || DEFAULT_AVATAR_URL,
-		location: safeText(post?.location || post?.address),
-		time: safeText(post?.time || post?.created_at || post?.createdAt),
-		tags,
-		content: safeText(post?.content || post?.caption),
-		imageUrl:
-			safeText(post?.image_url || post?.imageUrl || post?.media_url) ||
-			safeText(toArray(post?.media_urls)[0] || toArray(post?.mediaUrls)[0]),
-		likeCount: safeNumber(post?.like_count ?? post?.likeCount, 0),
-		reportCount,
-		reasons
-	};
-};
-
-const resolvePostsPayload = (response) => {
-	if (Array.isArray(response?.data?.posts)) {
-		return response.data.posts;
-	}
-
-	if (Array.isArray(response?.data?.items)) {
-		return response.data.items;
-	}
-
-	if (Array.isArray(response?.data)) {
-		return response.data;
-	}
-
-	return [];
-};
-
-const buildTagsHtml = (tags) => {
-	if (!Array.isArray(tags) || tags.length === 0) {
-		return "";
-	}
+	const totalReports = reasonList.reduce((sum, item) => sum + _num(item.count, 0), 0);
 
 	return `
-		<div class="post-tags">
-			${tags.map((tag) => `<span class="post-tag">${escapeHtml(tag)}</span>`).join("")}
+	<aside class="report-side-panel" aria-label="Thông tin báo cáo bài ${_esc(post.id)}">
+		<div class="report-side-panel__header">
+			<i class="bx bx-flag" aria-hidden="true"></i>
+			<h4>${_esc(String(totalReports))} lượt báo cáo</h4>
 		</div>
-	`;
+		<div class="report-side-panel__reasons">
+			${reasonsHtml}
+		</div>
+		<div class="report-side-panel__actions">
+			<button
+				class="report-side-btn report-side-btn--ignore"
+				type="button"
+				data-action="ignore"
+				data-post-id="${_esc(post.id)}"
+				aria-label="Bỏ qua báo cáo bài ${_esc(post.id)}"
+			>
+				<i class="bx bx-x-circle" aria-hidden="true"></i>
+				<span>Bỏ qua</span>
+			</button>
+			<button
+				class="report-side-btn report-side-btn--resolve"
+				type="button"
+				data-action="resolve"
+				data-post-id="${_esc(post.id)}"
+				aria-label="Xử lý vi phạm bài ${_esc(post.id)}"
+			>
+				<i class="bx bx-shield-x" aria-hidden="true"></i>
+				<span>Xử lý vi phạm</span>
+			</button>
+		</div>
+	</aside>`;
 };
 
-const toDomSafeId = (value) =>
-	safeText(value)
-		.toLowerCase()
-		.replace(/[^a-z0-9_-]+/g, "-")
-		.replace(/^-+|-+$/g, "") || "post";
+/**
+ * Sinh HTML cho .post-card (cột trái) từ raw post data.
+ * Tái sử dụng cấu trúc HTML của post-card component.
+ *
+ * @param {object} post - Raw post data từ API.
+ * @returns {string}
+ */
+const _buildPostCardHtml = (post) => {
+	const postId     = _str(post?.id);
+	const authorId   = _str(post?.authorId);
+	const authorName = _str(post?.authorName) || "Người dùng";
+	const avatarUrl  = _str(post?.avtUrl) || DEFAULT_AVATAR_URL;
+	const content    = _str(post?.content || post?.caption);
+	const createdAt  = _str(post?.createAt || post?.create_at || post?.created_at);
+	const timeText   = _timeAgo(createdAt);
 
-const buildReasonItemsHtml = (post) => {
-	if (!Array.isArray(post.reasons) || post.reasons.length === 0) {
-		return '<li class="reason-item">Chưa có thông tin lý do chi tiết.</li>';
-	}
-
-	return post.reasons
-		.map((reason) => {
-			const metadata = [reason.reporter, reason.time].filter((item) => safeText(item).length > 0).join(" • ");
-
-			return `
-				<li class="reason-item">
-					<p class="reason-title">${escapeHtml(reason.label)}</p>
-					${safeText(reason.details).length > 0
-					? `<p class="reason-details">${escapeHtml(reason.details)}</p>`
-					: ""
-				}
-					${metadata.length > 0 ? `<p class="reason-meta">${escapeHtml(metadata)}</p>` : ""}
-				</li>
-			`;
-		})
-		.join("");
-};
-
-const createPostCardHtml = (post) => {
-	const tagsHtml = buildTagsHtml(post.tags);
-	const imageHtml = post.imageUrl
-		? `<img class="post-image" src="${escapeHtml(post.imageUrl)}" alt="Ảnh bài đăng bị báo cáo">`
+	// Media: lấy item đầu tiên trong mediaList
+	const mediaList  = Array.isArray(post?.mediaList) ? post.mediaList : [];
+	const firstMedia = mediaList.find((m) => _str(m?.mediaUrl).length > 0);
+	const mediaHtml  = firstMedia
+		? (() => {
+			const url  = _str(firstMedia.mediaUrl);
+			const type = _str(firstMedia.mediaType).toUpperCase();
+			if (type === "VIDEO") {
+				return `<div class="post-image"><video src="${_esc(url)}" controls preload="metadata"></video></div>`;
+			}
+			return `<img class="post-image" src="${_esc(url)}" alt="Ảnh bài đăng" loading="lazy">`;
+		})()
 		: "";
-	const reasonsSectionId = `post-reasons-${toDomSafeId(post.id)}`;
-	const locationMeta = safeText(post.location);
-	const timeMeta = safeText(post.time);
+
+	const userIdAttr   = authorId ? ` data-user-id="${_esc(authorId)}"` : "";
+	const authorIdAttr = authorId ? ` data-author-id="${_esc(authorId)}"` : "";
 
 	return `
-		<article class="post-card" data-post-id="${escapeHtml(post.id)}">
-			<header class="post-header">
-				<div class="post-author">
-					<img class="avatar" src="${escapeHtml(post.authorAvatar)}" alt="Avatar ${escapeHtml(post.authorName)}">
-					<div class="post-meta">
-						<div class="post-meta-row">
-							<h3>${escapeHtml(post.authorName)}</h3>
-							${timeMeta.length > 0
-			? `<span class="meta-divider">&bull;</span><span class="post-time">${escapeHtml(timeMeta)}</span>`
-			: ""
-		}
-						</div>
-						${locationMeta.length > 0 ? `<p>${escapeHtml(locationMeta)}</p>` : ""}
+	<article
+		class="post-card"
+		data-post-id="${_esc(postId)}"${authorIdAttr}
+		role="article"
+	>
+		<header class="post-card__header post-header">
+			<div class="post-card__author post-author">
+				<img
+					class="post-card__avatar avatar"
+					src="${_esc(avatarUrl)}"
+					alt="Avatar ${_esc(authorName)}"
+					${userIdAttr}
+				>
+				<div class="post-card__meta post-meta">
+					<div class="post-meta-row">
+						<h3>
+							<span class="post-card__author-name">${_esc(authorName)}</span>${timeText
+								? `<span class="post-card__time post-time"> &bull; ${_esc(timeText)}</span>`
+								: ""
+							}
+						</h3>
 					</div>
 				</div>
-			</header>
-
-			${tagsHtml}
-			${imageHtml}
-
-			<footer class="post-footer">
-				<p class="likes">${escapeHtml(formatNumber(post.likeCount))} lượt thích</p>
-				<p class="caption"><strong>${escapeHtml(post.authorName)}</strong>${escapeHtml(post.content)}</p>
-			</footer>
-
-			<p class="report-meta">
-				<i class="bx bx-flag"></i>
-				<span>${escapeHtml(formatNumber(post.reportCount))} báo cáo</span>
-			</p>
-
-			<div class="report-actions">
-				<button
-					class="report-action-btn report-reasons-btn"
-					type="button"
-					data-action="toggle-reasons"
-					data-post-id="${escapeHtml(post.id)}"
-					aria-controls="${escapeHtml(reasonsSectionId)}"
-					aria-expanded="false"
-				>
-					<i class="bx bx-list-ul"></i>
-					<span>Xem lý do báo cáo</span>
-				</button>
-				<button
-					class="report-action-btn report-delete-btn"
-					type="button"
-					data-action="delete"
-					data-post-id="${escapeHtml(post.id)}"
-				>
-					<i class="bx bx-trash"></i>
-					<span>Xóa bài đăng</span>
-				</button>
 			</div>
+		</header>
 
-			<section id="${escapeHtml(reasonsSectionId)}" class="report-reasons is-hidden" data-role="report-reasons">
-				<h4>Chi tiết lý do báo cáo</h4>
-				<ul class="reason-list">
-					${buildReasonItemsHtml(post)}
-				</ul>
-			</section>
-		</article>
-	`;
+		${mediaHtml}
+
+		<footer class="post-card__footer post-footer">
+			<div class="post-card__caption-wrap">
+				<p class="post-card__caption caption${content ? " post-card__caption--clamped" : ""}" data-role="post-caption">
+					<strong>${_esc(authorName)}</strong>${_esc(content)}
+				</p>
+			</div>
+		</footer>
+	</article>`;
 };
 
-const getFilteredPosts = () => {
-	const keyword = normalizeSearchText(reportsState.keyword);
-
-	if (keyword.length === 0) {
-		return reportsState.posts;
-	}
-
-	return reportsState.posts.filter((post) => {
-		const authorName = normalizeSearchText(post.authorName);
-		const content = normalizeSearchText(post.content);
-		return authorName.includes(keyword) || content.includes(keyword);
-	});
+/**
+ * Sinh HTML hoàn chỉnh cho một .report-item (2 cột).
+ *
+ * @param {object} post - Raw post data từ API.
+ * @returns {string}
+ */
+const _buildReportItemHtml = (post) => {
+	const postCardHtml   = _buildPostCardHtml(post);
+	const sidePanelHtml  = _buildSidePanelHtml(post);
+	const reasonListJson = _esc(JSON.stringify(Array.isArray(post?.reasonList) ? post.reasonList : []));
+	return `
+	<div
+		class="report-item"
+		data-report-post-id="${_esc(_str(post?.id))}"
+		data-reason-list="${reasonListJson}"
+	>
+		${postCardHtml}
+		${sidePanelHtml}
+	</div>`;
 };
 
-const updateReportCount = () => {
-	if (!reportsCountBadgeElement) {
-		return;
-	}
+// ─── Render ──────────────────────────────────────────────────────────────────
 
-	const visibleCount = getFilteredPosts().length;
-	const totalCount = reportsState.posts.length;
-
-	reportsCountBadgeElement.textContent =
-		reportsState.keyword.length > 0
-			? `${visibleCount}/${totalCount} bài viết bị báo cáo`
-			: `${visibleCount} bài viết bị báo cáo`;
+const _updateCountBadge = (count) => {
+	if (!countBadgeEl) return;
+	countBadgeEl.textContent = `${count} bài viết bị báo cáo`;
 };
 
-const syncEmptyState = () => {
-	if (!reportsEmptyStateElement) {
-		return;
-	}
-
-	const hasItems = getFilteredPosts().length > 0;
-	reportsEmptyStateElement.classList.toggle("is-hidden", hasItems);
+const _syncEmptyState = (isEmpty) => {
+	if (!emptyStateEl) return;
+	emptyStateEl.classList.toggle("is-hidden", !isEmpty);
 };
 
-const toggleReasonsSection = (clickedButton) => {
-	const postCard = clickedButton.closest(".post-card");
-	const reasonsSection = postCard?.querySelector('[data-role="report-reasons"]');
-
-	if (!reasonsSection) {
-		return;
-	}
-
-	const willOpen = reasonsSection.classList.contains("is-hidden");
-	reasonsSection.classList.toggle("is-hidden", !willOpen);
-	clickedButton.setAttribute("aria-expanded", String(willOpen));
-
-	const label = clickedButton.querySelector("span");
-	if (label) {
-		label.textContent = willOpen ? "Ẩn lý do báo cáo" : "Xem lý do báo cáo";
+/**
+ * Xóa card khỏi danh sách DOM theo postId và cập nhật bộ đếm.
+ * @param {string} postId
+ */
+const _removeReportItem = (postId) => {
+	const item = listEl?.querySelector(`[data-report-post-id="${CSS.escape(postId)}"]`);
+	if (item) {
+		item.remove();
+		state.reportCount = Math.max(0, state.reportCount - 1);
+		_updateCountBadge(state.reportCount);
+		if (state.reportCount === 0 && !state.hasMore) {
+			_syncEmptyState(true);
+		}
 	}
 };
 
-const renderReportedPosts = (posts = getFilteredPosts()) => {
-	if (!reportedPostListElement) {
-		return;
-	}
+// ─── API calls ────────────────────────────────────────────────────────────────
 
-	reportedPostListElement.innerHTML = posts.map(createPostCardHtml).join("");
-	updateReportCount();
-	syncEmptyState();
-};
-
-const deletePostById = async (postId, clickedButton) => {
-	const shouldRemove = window.confirm("Bạn có chắc chắn muốn xóa bài đăng này? Hành động không thể hoàn tác.");
-	if (!shouldRemove) {
-		return;
-	}
-
-	clickedButton.disabled = true;
-	setStatus("Đang xóa bài đăng...");
-
+/**
+ * Lấy và lưu danh sách lý do báo cáo.
+ * GET /api/reports/reasons
+ */
+const _loadReasons = async () => {
 	try {
-		await postApi.deletePost(postId);
-		reportsState.posts = reportsState.posts.filter((post) => post.id !== postId);
-		renderReportedPosts();
-		setStatus("Đã xóa bài đăng thành công.", "success");
+		const response = await postApi.getReportReasons();
+		const reasons  = Array.isArray(response?.data?.reportReasons)
+			? response.data.reportReasons
+			: [];
+		state.allReasons = reasons;
+		state.reasonMap  = new Map(
+			reasons.map((item) => [_str(item?.code), _str(item?.reason)])
+		);
 	} catch (error) {
-		setStatus(toMessage(error, "Không thể xóa bài đăng. Vui lòng thử lại."), "error");
-		clickedButton.disabled = false;
+		console.error("[reports.js] _loadReasons error:", error);
+		// Không block trang nếu API lý do thất bại
 	}
 };
 
-const handleReportAction = (event) => {
-	const clickedButton = event.target.closest(".report-action-btn");
-	if (!clickedButton) {
-		return;
-	}
-
-	const action = clickedButton.dataset.action;
-	const postId = safeText(clickedButton.dataset.postId);
-
-	if (action === "toggle-reasons") {
-		toggleReasonsSection(clickedButton);
-		return;
-	}
-
-	if (action === "delete" && postId.length > 0) {
-		void deletePostById(postId, clickedButton);
-	}
-};
-
-const handleSearchChange = () => {
-	reportsState.keyword = safeText(reportsSearchInputElement?.value);
-	renderReportedPosts();
-
-	if (getFilteredPosts().length === 0 && reportsState.keyword.length > 0) {
-		setStatus("Không tìm thấy bài viết nào khớp từ khóa.");
-		return;
-	}
-
-	clearStatus();
-};
-
-const loadReportedPosts = async () => {
-	setStatus("Đang tải danh sách báo cáo...");
+/**
+ * Tải trang tiếp theo của danh sách báo cáo.
+ * GET /api/admin/reports/posts
+ */
+const _loadNextPage = async () => {
+	if (state.isLoading || !state.hasMore) return;
+	state.isLoading = true;
 
 	try {
-		const response = await postApi.getReportedPosts();
-		reportsState.posts = resolvePostsPayload(response).map(normalizePost);
-		renderReportedPosts(reportsState.posts);
+		const response = await postApi.getAdminReportedPosts({
+			lastPostId: state.lastPostId,
+			keyword:    state.keyword
+		});
 
-		if (reportsState.posts.length === 0) {
-			setStatus("Không có bài viết nào đang bị báo cáo.");
+		const data     = response?.data ?? {};
+		const postList = Array.isArray(data.postList) ? data.postList : [];
+		const hasMore  = Boolean(data.hasMore);
+		const lastId   = _str(data.respLastPostId);
+
+		state.hasMore    = hasMore;
+		state.lastPostId = lastId.length > 0 ? lastId : state.lastPostId;
+
+		if (postList.length === 0 && state.reportCount === 0) {
+			_syncEmptyState(true);
 			return;
 		}
 
-		clearStatus();
+		// Render thêm vào cuối danh sách
+		const fragment = postList.map(_buildReportItemHtml).join("");
+		if (listEl && fragment.length > 0) {
+			listEl.insertAdjacentHTML("beforeend", fragment);
+		}
+
+		state.reportCount += postList.length;
+		_updateCountBadge(state.reportCount);
+
+		if (!hasMore) {
+			if (endNoticeEl) {
+				endNoticeEl.classList.remove("is-hidden");
+			}
+		}
 	} catch (error) {
-		reportsState.posts = [];
-		renderReportedPosts([]);
-		setStatus(toMessage(error, "Không thể tải danh sách báo cáo."), "error");
+		_setStatus(_toErrorMessage(error, "Không thể tải danh sách báo cáo."), "error");
+	} finally {
+		state.isLoading = false;
 	}
 };
+
+// ─── Infinite scroll ─────────────────────────────────────────────────────────
+
+const _setupInfiniteScroll = () => {
+	const _onScroll = () => {
+		if (!state.hasMore || state.isLoading) return;
+		const scrolledToBottom =
+			window.innerHeight + window.scrollY >= document.body.offsetHeight - 300;
+		if (scrolledToBottom) {
+			void _loadNextPage();
+		}
+	};
+
+	window.addEventListener("scroll", _onScroll, { passive: true });
+};
+
+// ─── Action handlers ─────────────────────────────────────────────────────────
+
+/**
+ * Xử lý nút "Bỏ qua": gọi API POST với action: "REJECTED".
+ * @param {string} postId
+ * @param {HTMLButtonElement} btn
+ */
+const _handleIgnore = async (postId, btn) => {
+	if (btn.disabled) return;
+
+	btn.disabled = true;
+	const originalHtml = btn.innerHTML;
+	btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>Đang xử lý...</span>';
+
+	try {
+		await postApi.resolveReport(postId, { action: "REJECTED" });
+		_removeReportItem(postId);
+	} catch (error) {
+		console.error("[reports.js] _handleIgnore error:", error);
+		_setStatus(_toErrorMessage(error, "Không thể bỏ qua báo cáo. Vui lòng thử lại."), "error");
+		btn.disabled = false;
+		btn.innerHTML = originalHtml;
+	}
+};
+
+/**
+ * Xử lý nút "Xử lý vi phạm": mở ResolveReportModal.
+ * @param {string} postId
+ * @param {object} post - Raw post data để lấy reasonList
+ */
+const _handleResolve = (postId, post) => {
+	ResolveReportModal.open({
+		postId,
+		postReasonList: Array.isArray(post?.reasonList) ? post.reasonList : [],
+		allReasons:     state.allReasons,
+		onSuccess: (resolvedPostId, message) => {
+			_removeReportItem(resolvedPostId);
+			_setStatus(message || "Đã xử lý vi phạm thành công.", "success");
+			// Tự xóa status sau 4 giây
+			window.setTimeout(_clearStatus, 4000);
+		}
+	});
+};
+
+/**
+ * Event delegation trên #reported-post-list.
+ * @param {MouseEvent} event
+ */
+const _handleListClick = (event) => {
+	const btn = event.target.closest("[data-action]");
+	if (!btn) return;
+
+	const action = _str(btn.dataset.action);
+	const postId = _str(btn.dataset.postId);
+	if (!postId) return;
+
+	if (action === "ignore") {
+		void _handleIgnore(postId, btn);
+		return;
+	}
+
+	if (action === "resolve") {
+		// Đọc reasonList đã được serialize vào data-attribute của .report-item khi render
+		const reportItem      = btn.closest(".report-item");
+		const reasonListJson  = _str(reportItem?.dataset.reasonList);
+		let   postReasonList  = [];
+		try {
+			postReasonList = reasonListJson.length > 0 ? JSON.parse(reasonListJson) : [];
+		} catch {
+			postReasonList = [];
+		}
+
+		_handleResolve(postId, { reasonList: postReasonList });
+	}
+};
+
+
+// ─── Search ──────────────────────────────────────────────────────────────────
+
+let _searchDebounceTimer = null;
+
+const _handleSearchChange = () => {
+	const newKeyword = _str(searchInputEl?.value);
+	if (newKeyword === state.keyword) return;
+
+	state.keyword     = newKeyword;
+	state.lastPostId  = null;
+	state.hasMore     = true;
+	state.isLoading   = false;
+	state.reportCount = 0;
+
+	// Reset list
+	if (listEl)       listEl.innerHTML = "";
+	if (endNoticeEl)  endNoticeEl.classList.add("is-hidden");
+	_syncEmptyState(false);
+	_updateCountBadge(0);
+	_clearStatus();
+
+	void _loadNextPage();
+};
+
+const _handleSearchInput = () => {
+	clearTimeout(_searchDebounceTimer);
+	_searchDebounceTimer = window.setTimeout(_handleSearchChange, 400);
+};
+
+// ─── Init ────────────────────────────────────────────────────────────────────
 
 const initReportsPage = async () => {
-	const userRole = ensureModeratorAccess();
-	if (userRole.length === 0) {
-		return;
-	}
+	// Kiểm tra quyền
+	const role = _ensureAccess();
+	if (!role) return;
 
-	reportedPostListElement = document.getElementById("reported-post-list");
-	reportsCountBadgeElement = document.getElementById("reports-count-badge");
-	reportsEmptyStateElement = document.getElementById("reports-empty-state");
-	reportsSearchInputElement = document.getElementById("reports-search-input");
-	reportsStatusElement = document.getElementById("reports-status");
+	// Cache DOM refs
+	listEl      = document.getElementById("reported-post-list");
+	countBadgeEl = document.getElementById("reports-count-badge");
+	emptyStateEl = document.getElementById("reports-empty-state");
+	searchInputEl = document.getElementById("reports-search-input");
+	statusEl     = document.getElementById("reports-status");
+	endNoticeEl  = document.getElementById("reports-end-notice");
 
-	if (!reportedPostListElement) {
-		return;
-	}
+	if (!listEl) return;
 
-	initCreatePostModal();
-	reportedPostListElement.addEventListener("click", handleReportAction);
+	// Gắn event delegation
+	listEl.addEventListener("click", _handleListClick);
 
-	reportsSearchInputElement?.addEventListener("input", handleSearchChange);
-	reportsSearchInputElement?.addEventListener("keydown", (event) => {
-		if (event.key !== "Enter") {
-			return;
-		}
-
-		event.preventDefault();
-		handleSearchChange();
+	// Search listeners
+	searchInputEl?.addEventListener("input", _handleSearchInput);
+	searchInputEl?.addEventListener("keydown", (e) => {
+		if (e.key !== "Enter") return;
+		e.preventDefault();
+		clearTimeout(_searchDebounceTimer);
+		_handleSearchChange();
 	});
 
-	await loadReportedPosts();
+	// Infinite scroll
+	_setupInfiniteScroll();
+
+	// Hiển thị trạng thái loading
+	_setStatus("Đang tải danh sách báo cáo...");
+
+	// 1. Lấy danh sách lý do trước (cần để render side panel và open modal)
+	await _loadReasons();
+
+	// 2. Tải trang đầu tiên
+	_clearStatus();
+	await _loadNextPage();
+
+	// Nếu sau khi tải mà không có bài → hiện empty state
+	if (state.reportCount === 0 && !state.hasMore) {
+		_syncEmptyState(true);
+	}
 };
 
 document.addEventListener("DOMContentLoaded", initReportsPage);

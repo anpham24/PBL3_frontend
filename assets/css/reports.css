@@ -1,10 +1,18 @@
+/* =============================================================================
+   reports.css — Trang Quản lý báo cáo bài đăng (Admin/Moderator)
+   ============================================================================= */
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Header
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .reports-header {
 	border-bottom: 1px solid var(--border);
 	background: var(--surface);
 }
 
 .reports-header-inner {
-	width: min(600px, calc(100% - 48px));
+	width: min(1200px, calc(100% - 48px));
 	margin: 0 auto;
 	padding: 24px 0 20px;
 }
@@ -22,9 +30,13 @@
 	font-size: 0.95rem;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+   Page container & toolbar
+   ───────────────────────────────────────────────────────────────────────────── */
+
 .reports-page {
 	width: 100%;
-	max-width: 600px;
+	max-width: 1200px;
 }
 
 .reports-toolbar {
@@ -86,130 +98,203 @@
 	line-height: 1.4;
 }
 
-.report-meta {
-	padding: 0 16px 12px;
+/* ─────────────────────────────────────────────────────────────────────────────
+   Report Item — layout 2 cột: bài đăng (trái) + panel lý do (phải)
+   ───────────────────────────────────────────────────────────────────────────── */
+
+.report-item {
+	display: flex;
+	align-items: stretch;
+	border: 1px solid var(--border);
+	border-radius: 18px;
+	background: var(--surface);
+	overflow: hidden;
+	box-shadow: 0 2px 8px rgba(17, 24, 39, 0.05);
+	transition: box-shadow 0.2s ease;
+}
+
+.report-item:hover {
+	box-shadow: 0 4px 18px rgba(17, 24, 39, 0.1);
+}
+
+/* Cột trái: tái sử dụng .post-card */
+.report-item > .post-card {
+	flex: 1 1 0;
+	min-width: 0;
+	border-radius: 0;
+	border: none;
+	box-shadow: none;
+	border-right: 1px solid var(--border);
+}
+
+/* Cột phải: panel lý do báo cáo + nút hành động */
+.report-side-panel {
+	flex: 0 0 280px;
+	width: 280px;
+	display: flex;
+	flex-direction: column;
+	background: #fafbfc;
+}
+
+/* ── Tiêu đề panel ── */
+.report-side-panel__header {
+	padding: 14px 16px 10px;
+	border-bottom: 1px solid #f0f0f0;
 	display: flex;
 	align-items: center;
-	gap: 8px;
-	font-size: 0.84rem;
-	font-weight: 600;
+	gap: 7px;
+}
+
+.report-side-panel__header i {
+	font-size: 1rem;
 	color: #991b1b;
 }
 
-.report-meta i {
-	font-size: 1rem;
-}
-
-.report-actions {
-	padding: 0 16px 16px;
-	display: flex;
-	gap: 10px;
-	flex-wrap: wrap;
-}
-
-.report-action-btn {
-	flex: 1 1 180px;
-	border: 1px solid var(--border);
-	border-radius: 10px;
-	padding: 10px 12px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	gap: 8px;
-	font-size: 0.9rem;
-	font-weight: 600;
-	cursor: pointer;
-	transition: transform 0.16s ease, opacity 0.2s ease, background-color 0.2s ease;
-}
-
-.report-action-btn i {
-	font-size: 1.05rem;
-}
-
-.report-action-btn:hover {
-	transform: translateY(-1px);
-}
-
-.report-action-btn:active {
-	transform: translateY(0);
-}
-
-.report-reasons-btn {
-	background: #f8fafc;
-	color: #0f172a;
-	border-color: #cbd5e1;
-}
-
-.report-reasons-btn:hover {
-	background: #f1f5f9;
-}
-
-.report-delete-btn {
-	border-color: #dc2626;
-	background: #dc2626;
-	color: #ffffff;
-}
-
-.report-delete-btn:hover {
-	background: #b91c1c;
-}
-
-.report-ignore-btn {
-	background: #f3f4f6;
-	color: #374151;
-}
-
-.report-ignore-btn:hover {
-	background: #e5e7eb;
-}
-
-.report-reasons {
-	margin: 0 16px 16px;
-	padding: 12px;
-	border: 1px solid #dbeafe;
-	border-radius: 12px;
-	background: #f8fbff;
-}
-
-.report-reasons h4 {
-	font-size: 0.9rem;
+.report-side-panel__header h4 {
+	font-size: 0.82rem;
 	font-weight: 700;
-	color: #1e3a8a;
-	margin-bottom: 8px;
+	color: #991b1b;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
 }
 
-.reason-list {
-	list-style: none;
+/* ── Danh sách thống kê lý do ── */
+.report-side-panel__reasons {
+	flex: 1;
+	overflow-y: auto;
+	padding: 10px 14px;
+	display: flex;
+	flex-direction: column;
+	gap: 7px;
+	scrollbar-width: thin;
+	scrollbar-color: #e2e8f0 transparent;
+}
+
+.report-side-panel__reasons::-webkit-scrollbar {
+	width: 4px;
+}
+
+.report-side-panel__reasons::-webkit-scrollbar-thumb {
+	background: #e2e8f0;
+	border-radius: 4px;
+}
+
+.report-reason-stat {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	padding: 8px 10px;
+	border: 1px solid #e0e9f5;
+	border-radius: 10px;
+	background: #ffffff;
+}
+
+.report-reason-stat__label {
+	font-size: 0.84rem;
+	font-weight: 600;
+	color: #1f2937;
+	min-width: 0;
+	flex: 1;
+}
+
+.report-reason-stat__count {
+	font-size: 0.78rem;
+	font-weight: 700;
+	color: #ffffff;
+	background: #dc2626;
+	border-radius: 999px;
+	padding: 2px 8px;
+	white-space: nowrap;
+	flex-shrink: 0;
+}
+
+.report-side-panel__empty {
+	font-size: 0.84rem;
+	color: #9ca3af;
+	padding: 8px 2px;
+	text-align: center;
+}
+
+/* ── Nút hành động ở dưới cùng panel ── */
+.report-side-panel__actions {
+	padding: 12px 14px;
+	border-top: 1px solid #f0f0f0;
 	display: flex;
 	flex-direction: column;
 	gap: 8px;
 }
 
-.reason-item {
-	padding: 8px 10px;
-	border: 1px solid #dbeafe;
+.report-side-btn {
+	width: 100%;
 	border-radius: 10px;
-	background: #ffffff;
+	padding: 9px 12px;
+	font-size: 0.88rem;
+	font-weight: 600;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	gap: 7px;
+	border: 1px solid transparent;
+	transition: background-color 0.18s ease, transform 0.12s ease, opacity 0.2s ease;
 }
 
-.reason-title {
-	font-size: 0.86rem;
-	font-weight: 700;
-	color: #1f2937;
+.report-side-btn:active {
+	transform: scale(0.97);
 }
 
-.reason-details {
-	margin-top: 4px;
-	font-size: 0.84rem;
-	line-height: 1.4;
-	color: #334155;
+.report-side-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
 }
 
-.reason-meta {
-	margin-top: 4px;
-	font-size: 0.78rem;
-	color: #64748b;
+.report-side-btn--ignore {
+	background: #f3f4f6;
+	border-color: #e5e7eb;
+	color: #374151;
 }
+
+.report-side-btn--ignore:hover:not(:disabled) {
+	background: #e5e7eb;
+}
+
+.report-side-btn--resolve {
+	background: #dc2626;
+	border-color: #dc2626;
+	color: #ffffff;
+}
+
+.report-side-btn--resolve:hover:not(:disabled) {
+	background: #b91c1c;
+}
+
+/* Loading spinner nhỏ cho nút */
+.btn-spinner {
+	display: inline-block;
+	width: 14px;
+	height: 14px;
+	border: 2px solid rgba(0, 0, 0, 0.18);
+	border-top-color: currentColor;
+	border-radius: 50%;
+	animation: report-spin 0.7s linear infinite;
+	flex-shrink: 0;
+}
+
+.report-side-btn--resolve .btn-spinner {
+	border-color: rgba(255, 255, 255, 0.4);
+	border-top-color: #ffffff;
+}
+
+@keyframes report-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Empty / end-of-list states
+   ───────────────────────────────────────────────────────────────────────────── */
 
 .reports-empty-state {
 	border: 1px dashed var(--border);
@@ -222,9 +307,46 @@
 	color: #6b7280;
 }
 
+.reports-end-notice {
+	text-align: center;
+	font-size: 0.88rem;
+	color: #9ca3af;
+	padding: 16px 0 4px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Responsive
+   ───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 1024px) {
+	.report-side-panel {
+		flex: 0 0 240px;
+		width: 240px;
+	}
+}
+
 @media (max-width: 900px) {
 	.reports-header-inner h1 {
 		font-size: 1.65rem;
+	}
+
+	/* Stack 2 cột thành 1 cột trên màn hình nhỏ */
+	.report-item {
+		flex-direction: column;
+	}
+
+	.report-item > .post-card {
+		border-right: none;
+		border-bottom: 1px solid var(--border);
+	}
+
+	.report-side-panel {
+		flex: none;
+		width: 100%;
+	}
+
+	.report-side-panel__reasons {
+		max-height: 180px;
 	}
 }
 
@@ -256,16 +378,12 @@
 		padding: 7px 10px;
 	}
 
-	.report-actions {
-		padding: 0 12px 14px;
+	/* Nút hành động chuyển sang hàng ngang trên mobile */
+	.report-side-panel__actions {
+		flex-direction: row;
 	}
 
-	.report-meta {
-		padding: 0 12px 10px;
-	}
-
-	.report-reasons {
-		margin: 0 12px 12px;
-		padding: 10px;
+	.report-side-btn {
+		flex: 1;
 	}
 }

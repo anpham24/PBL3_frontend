@@ -215,5 +215,81 @@ export const postApi = {
 			throw new Error("Thiếu commentId hợp lệ.");
 		}
 		return apiClient.delete(`/api/comments/${encodeURIComponent(resolvedCommentId)}`);
+	},
+
+	/**
+	 * Lấy danh sách báo cáo bài đăng cho Admin/Moderator (cursor-based pagination).
+	 * GET /api/admin/reports/posts?lastPostId={lastPostId}&keyword={keyword}
+	 *
+	 * @param {object} [params]
+	 * @param {string|null} [params.lastPostId] - ID bài cuối để phân trang. Null = trang đầu.
+	 * @param {string}      [params.keyword]    - Từ khóa tìm kiếm theo tên hoặc nội dung.
+	 * @returns {Promise<{
+	 *   data: {
+	 *     postList: Array<{
+	 *       id: string,
+	 *       authorId: string,
+	 *       authorName: string,
+	 *       avtUrl: string,
+	 *       createAt: string,
+	 *       visibility: string,
+	 *       content: string,
+	 *       mediaList: Array<{mediaType: string, mediaUrl: string, thumbnailUrl: string|null}>,
+	 *       reasonList: Array<{reasonCode: string, count: number}>
+	 *     }>,
+	 *     respLastPostId: string,
+	 *     hasMore: boolean
+	 *   }
+	 * }>}
+	 */
+	async getAdminReportedPosts({ lastPostId = null, keyword = "" } = {}) {
+		const params = new URLSearchParams();
+
+		const resolvedLastId = toSafeId(lastPostId, "");
+		if (resolvedLastId.length > 0) {
+			params.set("lastPostId", resolvedLastId);
+		}
+
+		const resolvedKeyword = normalizeKeyword(keyword);
+		if (resolvedKeyword.length > 0) {
+			params.set("keyword", resolvedKeyword);
+		}
+
+		const queryString = params.toString();
+		const endpoint = queryString.length > 0
+			? `/api/admin/reports/posts?${queryString}`
+			: "/api/admin/reports/posts";
+
+		return apiClient.get(endpoint);
+	},
+
+	/**
+	 * Xử lý báo cáo bài đăng (Admin/Moderator).
+	 * POST /api/admin/reports/posts/{postId}/resolve
+	 *
+	 * @param {string} postId     - ID bài đăng cần xử lý.
+	 * @param {object} payload
+	 * @param {'APPROVED'|'REJECTED'} payload.action - Hành động xử lý.
+	 * @param {string} [payload.reasonCode]           - Mã lý do vi phạm (bắt buộc khi APPROVED).
+	 * @param {string} [payload.note]                 - Ghi chú của moderator.
+	 * @returns {Promise<{message: string}>}
+	 */
+	async resolveReport(postId, { action, reasonCode = "", note = "" } = {}) {
+		const resolvedPostId = normalizePostId(postId);
+
+		const body = { action };
+		const resolvedReasonCode = normalizeKeyword(reasonCode);
+		if (resolvedReasonCode.length > 0) {
+			body.reasonCode = resolvedReasonCode;
+		}
+		const resolvedNote = normalizeKeyword(note);
+		if (resolvedNote.length > 0) {
+			body.note = resolvedNote;
+		}
+
+		return apiClient.post(
+			`/api/admin/reports/posts/${encodeURIComponent(resolvedPostId)}/resolve`,
+			body
+		);
 	}
 };
