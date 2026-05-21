@@ -218,36 +218,42 @@ export const postApi = {
 	},
 
 	/**
-	 * Lấy danh sách báo cáo bài đăng cho Admin/Moderator (cursor-based pagination).
-	 * GET /api/admin/reports/posts?lastPostId={lastPostId}&keyword={keyword}
+	 * Lấy danh sách phiếu báo cáo bài đăng cho Admin/Moderator (cursor-based pagination).
+	 * GET /api/admin/reports?lastReportId={lastReportId}&keyword={keyword}
 	 *
 	 * @param {object} [params]
-	 * @param {string|null} [params.lastPostId] - ID bài cuối để phân trang. Null = trang đầu.
-	 * @param {string}      [params.keyword]    - Từ khóa tìm kiếm theo tên hoặc nội dung.
+	 * @param {string|null} [params.lastReportId] - ID phiếu báo cáo cuối để phân trang. Null = trang đầu.
+	 * @param {string}      [params.keyword]      - Từ khóa tìm kiếm theo tên hoặc nội dung.
 	 * @returns {Promise<{
 	 *   data: {
-	 *     postList: Array<{
-	 *       id: string,
-	 *       authorId: string,
-	 *       authorName: string,
-	 *       avtUrl: string,
-	 *       createAt: string,
-	 *       visibility: string,
-	 *       content: string,
-	 *       mediaList: Array<{mediaType: string, mediaUrl: string, thumbnailUrl: string|null}>,
+	 *     reportList: Array<{
+	 *       reportId: string,
+	 *       post: {
+	 *         id: string,
+	 *         authorId: string,
+	 *         authorName: string,
+	 *         avtUrl: string,
+	 *         createAt: string,
+	 *         visibility: string,
+	 *         province: string,
+	 *         topic: string,
+	 *         content: string,
+	 *         address: string,
+	 *         mediaList: Array<{mediaType: string, mediaUrl: string, thumbnailUrl: string|null}>
+	 *       },
 	 *       reasonList: Array<{reasonCode: string, count: number}>
 	 *     }>,
-	 *     respLastPostId: string,
+	 *     respLastReportId: string,
 	 *     hasMore: boolean
 	 *   }
 	 * }>}
 	 */
-	async getAdminReportedPosts({ lastPostId = null, keyword = "" } = {}) {
+	async getAdminReports({ lastReportId = null, keyword = "" } = {}) {
 		const params = new URLSearchParams();
 
-		const resolvedLastId = toSafeId(lastPostId, "");
+		const resolvedLastId = toSafeId(lastReportId, "");
 		if (resolvedLastId.length > 0) {
-			params.set("lastPostId", resolvedLastId);
+			params.set("lastReportId", resolvedLastId);
 		}
 
 		const resolvedKeyword = normalizeKeyword(keyword);
@@ -257,25 +263,28 @@ export const postApi = {
 
 		const queryString = params.toString();
 		const endpoint = queryString.length > 0
-			? `/api/admin/reports/posts?${queryString}`
-			: "/api/admin/reports/posts";
+			? `/api/admin/reports?${queryString}`
+			: "/api/admin/reports";
 
 		return apiClient.get(endpoint);
 	},
 
 	/**
-	 * Xử lý báo cáo bài đăng (Admin/Moderator).
-	 * POST /api/admin/reports/posts/{postId}/resolve
+	 * Xử lý phiếu báo cáo (Admin/Moderator).
+	 * POST /api/admin/reports/{reportId}/resolve
 	 *
-	 * @param {string} postId     - ID bài đăng cần xử lý.
+	 * @param {string} reportId   - ID phiếu báo cáo cần xử lý.
 	 * @param {object} payload
 	 * @param {'APPROVED'|'REJECTED'} payload.action - Hành động xử lý.
 	 * @param {string} [payload.reasonCode]           - Mã lý do vi phạm (bắt buộc khi APPROVED).
 	 * @param {string} [payload.note]                 - Ghi chú của moderator.
 	 * @returns {Promise<{message: string}>}
 	 */
-	async resolveReport(postId, { action, reasonCode = "", note = "" } = {}) {
-		const resolvedPostId = normalizePostId(postId);
+	async resolveReport(reportId, { action, reasonCode = "", note = "" } = {}) {
+		const resolvedReportId = toSafeId(reportId, "");
+		if (resolvedReportId.length === 0) {
+			throw new Error("Thiếu reportId hợp lệ.");
+		}
 
 		const body = { action };
 		const resolvedReasonCode = normalizeKeyword(reasonCode);
@@ -288,7 +297,7 @@ export const postApi = {
 		}
 
 		return apiClient.post(
-			`/api/admin/reports/posts/${encodeURIComponent(resolvedPostId)}/resolve`,
+			`/api/admin/reports/${encodeURIComponent(resolvedReportId)}/resolve`,
 			body
 		);
 	}

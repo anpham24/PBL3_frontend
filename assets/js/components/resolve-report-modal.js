@@ -8,18 +8,18 @@
  *   import { ResolveReportModal } from './resolve-report-modal.js';
  *
  *   ResolveReportModal.open({
- *     postId: '018e9...',
+ *     reportId: '018e9...',
  *     postReasonList: [{ reasonCode: 'SCAM', count: 5 }],
  *     allReasons: [{ code: 'SCAM', reason: 'Lừa đảo' }, ...],
- *     onSuccess: (postId) => { /* xóa card khỏi list *\/ }
+ *     onSuccess: (reportId) => { /* xóa card khỏi list *\/ }
  *   });
  *
  * ── Thiết kế ───────────────────────────────────────────────────────────────────
  *  - Singleton, inject HTML vào <body> đúng một lần (idempotent).
- *  - open() nhận postId, postReasonList, allReasons và tự:
+ *  - open() nhận reportId, postReasonList, allReasons và tự:
  *      • Render radio buttons từ allReasons.
  *      • Tự động checked lý do có count cao nhất trong postReasonList.
- *  - Khi submit, gọi API POST /api/admin/reports/posts/{postId}/resolve
+ *  - Khi submit, gọi API POST /api/admin/reports/{reportId}/resolve
  *    với action: "APPROVED", reasonCode, note.
  *  - onSuccess callback được gọi sau khi API thành công.
  */
@@ -38,7 +38,7 @@ const SUBMIT_BTN_ID   = "resolve-report-submit";
 const FEEDBACK_ID     = "resolve-report-feedback";
 const REASONS_ID      = "resolve-report-reasons-container";
 const NOTE_ID         = "resolve-report-note";
-const ACTIVE_POST_KEY = "data-active-post-id";
+const ACTIVE_REPORT_KEY = "data-active-report-id";
 
 // ─── HTML Template ────────────────────────────────────────────────────────────
 
@@ -238,14 +238,14 @@ export const ResolveReportModal = (() => {
 		const submitBtn  = _el(SUBMIT_BTN_ID);
 		const noteInput  = _el(NOTE_ID);
 
-		const postId     = _str(modal?.getAttribute(ACTIVE_POST_KEY));
+		const reportId   = _str(modal?.getAttribute(ACTIVE_REPORT_KEY));
 		const radioInput = form?.querySelector('input[name="resolve-reason"]:checked');
 		const reasonCode = _str(radioInput?.value);
 		const note       = _str(noteInput?.value);
 
 		// Validate
-		if (!postId) {
-			_showFeedback("Không xác định được bài đăng cần xử lý.");
+		if (!reportId) {
+			_showFeedback("Không xác định được phiếu báo cáo cần xử lý.");
 			return;
 		}
 		if (!reasonCode) {
@@ -269,7 +269,7 @@ export const ResolveReportModal = (() => {
 		}
 
 		try {
-			const response = await postApi.resolveReport(postId, {
+			const response = await postApi.resolveReport(reportId, {
 				action: "APPROVED",
 				reasonCode,
 				note
@@ -280,7 +280,7 @@ export const ResolveReportModal = (() => {
 			// Đóng modal trước, rồi gọi callback
 			close();
 			if (typeof _onSuccess === "function") {
-				_onSuccess(postId, successMsg);
+				_onSuccess(reportId, successMsg);
 			}
 		} catch (error) {
 			console.error("[ResolveReportModal] resolveReport error:", error);
@@ -333,15 +333,15 @@ export const ResolveReportModal = (() => {
 	 * Mở modal xử lý vi phạm.
 	 *
 	 * @param {object} options
-	 * @param {string}   options.postId          - ID bài đăng cần xử lý.
-	 * @param {Array}    options.postReasonList   - Lý do bài này bị báo cáo [{reasonCode, count}].
+	 * @param {string}   options.reportId        - ID phiếu báo cáo cần xử lý.
+	 * @param {Array}    options.postReasonList   - Lý do phiếu này bị báo cáo [{reasonCode, count}].
 	 * @param {Array}    options.allReasons       - Toàn bộ lý do từ API [{code, reason}].
-	 * @param {Function} [options.onSuccess]      - Callback(postId, message) sau khi API thành công.
+	 * @param {Function} [options.onSuccess]      - Callback(reportId, message) sau khi API thành công.
 	 */
-	const open = ({ postId, postReasonList = [], allReasons = [], onSuccess } = {}) => {
-		const safePostId = _str(postId);
-		if (!safePostId) {
-			console.warn("[ResolveReportModal] open() bị gọi thiếu postId hợp lệ.");
+	const open = ({ reportId, postReasonList = [], allReasons = [], onSuccess } = {}) => {
+		const safeReportId = _str(reportId);
+		if (!safeReportId) {
+			console.warn("[ResolveReportModal] open() bị gọi thiếu reportId hợp lệ.");
 			return;
 		}
 
@@ -355,8 +355,8 @@ export const ResolveReportModal = (() => {
 		const form  = _el(FORM_ID);
 		if (!modal || !form) return;
 
-		// 3. Lưu postId và callback
-		modal.setAttribute(ACTIVE_POST_KEY, safePostId);
+		// 3. Lưu reportId và callback
+		modal.setAttribute(ACTIVE_REPORT_KEY, safeReportId);
 		_onSuccess = typeof onSuccess === "function" ? onSuccess : null;
 
 		// 4. Reset form & feedback
@@ -395,7 +395,7 @@ export const ResolveReportModal = (() => {
 
 		modal.classList.add("is-hidden");
 		modal.setAttribute("aria-hidden", "true");
-		modal.removeAttribute(ACTIVE_POST_KEY);
+		modal.removeAttribute(ACTIVE_REPORT_KEY);
 		document.body.style.overflow = "";
 
 		_clearFeedback();

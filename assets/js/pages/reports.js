@@ -4,10 +4,10 @@
  *
  * Logic trang Quản lý báo cáo bài đăng (Admin/Moderator).
  *
- * ── Luồng khởi tạo ─────────────────────────────────────────────────────────
+ * ── Luồng khởi tạo ──────────────────────────────────────────────────
  *  1. Kiểm tra quyền truy cập (ADMIN / MODERATOR).
  *  2. Gọi GET /api/reports/reasons → lưu allReasons (dùng map code → text).
- *  3. Gọi GET /api/admin/reports/posts → render danh sách.
+ *  3. Gọi GET /api/admin/reports → render danh sách phiếu báo cáo.
  *  4. Xử lý infinite scroll (cursor-based, dừng khi hasMore = false).
  *
  * ── Sự kiện nút ─────────────────────────────────────────────────────────────
@@ -34,7 +34,7 @@ const state = {
 	/** Map reasonCode → reasonText, dùng để dịch code sang tiếng Việt */
 	reasonMap:       new Map(),
 	keyword:         "",
-	lastPostId:      null,
+	lastReportId:    null,   // cursor phân trang theo phiếu báo cáo
 	hasMore:         true,
 	isLoading:       false,
 	reportCount:     0
@@ -134,11 +134,12 @@ const _clearStatus = () => {
  * Sinh HTML cho .report-side-panel (cột phải).
  * Dùng state.reasonMap để dịch reasonCode → tiếng Việt.
  *
- * @param {object} post - Post data đã normalize.
+ * @param {object} reportItem - Phếu báo cáo: { reportId, post, reasonList }.
  * @returns {string}
  */
-const _buildSidePanelHtml = (post) => {
-	const reasonList = Array.isArray(post.reasonList) ? post.reasonList : [];
+const _buildSidePanelHtml = (reportItem) => {
+	const reportId   = _str(reportItem?.reportId);
+	const reasonList = Array.isArray(reportItem?.reasonList) ? reportItem.reasonList : [];
 
 	// Sắp xếp theo count giảm dần để hiển thị lý do nhiều nhất trước
 	const sortedReasons = [...reasonList].sort(
@@ -164,7 +165,7 @@ const _buildSidePanelHtml = (post) => {
 	const totalReports = reasonList.reduce((sum, item) => sum + _num(item.count, 0), 0);
 
 	return `
-	<aside class="report-side-panel" aria-label="Thông tin báo cáo bài ${_esc(post.id)}">
+	<aside class="report-side-panel" aria-label="Thông tin phiếu báo cáo ${_esc(reportId)}">
 		<div class="report-side-panel__header">
 			<i class="bx bx-flag" aria-hidden="true"></i>
 			<h4>${_esc(String(totalReports))} lượt báo cáo</h4>
@@ -177,8 +178,8 @@ const _buildSidePanelHtml = (post) => {
 				class="report-side-btn report-side-btn--ignore"
 				type="button"
 				data-action="ignore"
-				data-post-id="${_esc(post.id)}"
-				aria-label="Bỏ qua báo cáo bài ${_esc(post.id)}"
+				data-report-id="${_esc(reportId)}"
+				aria-label="Bỏ qua phiếu báo cáo ${_esc(reportId)}"
 			>
 				<i class="bx bx-x-circle" aria-hidden="true"></i>
 				<span>Bỏ qua</span>
@@ -187,8 +188,8 @@ const _buildSidePanelHtml = (post) => {
 				class="report-side-btn report-side-btn--resolve"
 				type="button"
 				data-action="resolve"
-				data-post-id="${_esc(post.id)}"
-				aria-label="Xử lý vi phạm bài ${_esc(post.id)}"
+				data-report-id="${_esc(reportId)}"
+				aria-label="Xử lý vi phạm phiếu ${_esc(reportId)}"
 			>
 				<i class="bx bx-shield-x" aria-hidden="true"></i>
 				<span>Xử lý vi phạm</span>
@@ -198,10 +199,10 @@ const _buildSidePanelHtml = (post) => {
 };
 
 /**
- * Sinh HTML cho .post-card (cột trái) từ raw post data.
+ * Sinh HTML cho .post-card (cột trái) từ object post lồng bên trong phiếu báo cáo.
  * Tái sử dụng cấu trúc HTML của post-card component.
  *
- * @param {object} post - Raw post data từ API.
+ * @param {object} post - item.post từ API (có các field: id, authorId, authorName, ...).
  * @returns {string}
  */
 const _buildPostCardHtml = (post) => {
@@ -212,6 +213,19 @@ const _buildPostCardHtml = (post) => {
 	const content    = _str(post?.content || post?.caption);
 	const createdAt  = _str(post?.createAt || post?.create_at || post?.created_at);
 	const timeText   = _timeAgo(createdAt);
+
+	// Tags: province và topic từ API mới
+	const province = _str(post?.province);
+	const topic    = _str(post?.topic);
+	const address  = _str(post?.address);
+	const tagsHtml = (province || topic || address)
+		? `
+			<div class="post-card__tags post-tags-inline">
+				${province ? `<span class="post-tag-chip"><i class="bx bx-map"></i><span>${_esc(province)}</span></span>` : ""}
+				${topic    ? `<span class="post-tag-chip"><i class="bx bx-category"></i><span>${_esc(topic)}</span></span>` : ""}
+				${address  ? `<span class="post-tag-chip"><i class="bx bx-current-location"></i><span>${_esc(address)}</span></span>` : ""}
+			</div>`
+		: "";
 
 	// Media: lấy item đầu tiên trong mediaList
 	const mediaList  = Array.isArray(post?.mediaList) ? post.mediaList : [];
@@ -253,6 +267,7 @@ const _buildPostCardHtml = (post) => {
 							}
 						</h3>
 					</div>
+					${tagsHtml}
 				</div>
 			</div>
 		</header>
@@ -271,18 +286,24 @@ const _buildPostCardHtml = (post) => {
 
 /**
  * Sinh HTML hoàn chỉnh cho một .report-item (2 cột).
+ * Dữ liệu bài đăng nằm trong reportItem.post, khóa chính là reportItem.reportId.
  *
- * @param {object} post - Raw post data từ API.
+ * @param {object} reportItem - Phếu báo cáo: { reportId, post, reasonList }.
  * @returns {string}
  */
-const _buildReportItemHtml = (post) => {
-	const postCardHtml   = _buildPostCardHtml(post);
-	const sidePanelHtml  = _buildSidePanelHtml(post);
-	const reasonListJson = _esc(JSON.stringify(Array.isArray(post?.reasonList) ? post.reasonList : []));
+const _buildReportItemHtml = (reportItem) => {
+	const reportId     = _str(reportItem?.reportId);
+	const post         = reportItem?.post ?? {};
+	const reasonList   = Array.isArray(reportItem?.reasonList) ? reportItem.reasonList : [];
+	const reasonListJson = _esc(JSON.stringify(reasonList));
+
+	const postCardHtml  = _buildPostCardHtml(post);
+	const sidePanelHtml = _buildSidePanelHtml(reportItem);
+
 	return `
 	<div
 		class="report-item"
-		data-report-post-id="${_esc(_str(post?.id))}"
+		data-report-id="${_esc(reportId)}"
 		data-reason-list="${reasonListJson}"
 	>
 		${postCardHtml}
@@ -303,11 +324,11 @@ const _syncEmptyState = (isEmpty) => {
 };
 
 /**
- * Xóa card khỏi danh sách DOM theo postId và cập nhật bộ đếm.
- * @param {string} postId
+ * Xóa card khỏi danh sách DOM theo reportId và cập nhật bộ đếm.
+ * @param {string} reportId
  */
-const _removeReportItem = (postId) => {
-	const item = listEl?.querySelector(`[data-report-post-id="${CSS.escape(postId)}"]`);
+const _removeReportItem = (reportId) => {
+	const item = listEl?.querySelector(`[data-report-id="${CSS.escape(reportId)}"]`);
 	if (item) {
 		item.remove();
 		state.reportCount = Math.max(0, state.reportCount - 1);
@@ -341,39 +362,39 @@ const _loadReasons = async () => {
 };
 
 /**
- * Tải trang tiếp theo của danh sách báo cáo.
- * GET /api/admin/reports/posts
+ * Tải trang tiếp theo của danh sách phiếu báo cáo.
+ * GET /api/admin/reports
  */
 const _loadNextPage = async () => {
 	if (state.isLoading || !state.hasMore) return;
 	state.isLoading = true;
 
 	try {
-		const response = await postApi.getAdminReportedPosts({
-			lastPostId: state.lastPostId,
-			keyword:    state.keyword
+		const response = await postApi.getAdminReports({
+			lastReportId: state.lastReportId,
+			keyword:      state.keyword
 		});
 
-		const data     = response?.data ?? {};
-		const postList = Array.isArray(data.postList) ? data.postList : [];
-		const hasMore  = Boolean(data.hasMore);
-		const lastId   = _str(data.respLastPostId);
+		const data       = response?.data ?? {};
+		const reportList = Array.isArray(data.reportList) ? data.reportList : [];
+		const hasMore    = Boolean(data.hasMore);
+		const lastId     = _str(data.respLastReportId);
 
-		state.hasMore    = hasMore;
-		state.lastPostId = lastId.length > 0 ? lastId : state.lastPostId;
+		state.hasMore      = hasMore;
+		state.lastReportId = lastId.length > 0 ? lastId : state.lastReportId;
 
-		if (postList.length === 0 && state.reportCount === 0) {
+		if (reportList.length === 0 && state.reportCount === 0) {
 			_syncEmptyState(true);
 			return;
 		}
 
 		// Render thêm vào cuối danh sách
-		const fragment = postList.map(_buildReportItemHtml).join("");
+		const fragment = reportList.map(_buildReportItemHtml).join("");
 		if (listEl && fragment.length > 0) {
 			listEl.insertAdjacentHTML("beforeend", fragment);
 		}
 
-		state.reportCount += postList.length;
+		state.reportCount += reportList.length;
 		_updateCountBadge(state.reportCount);
 
 		if (!hasMore) {
@@ -407,10 +428,10 @@ const _setupInfiniteScroll = () => {
 
 /**
  * Xử lý nút "Bỏ qua": gọi API POST với action: "REJECTED".
- * @param {string} postId
+ * @param {string} reportId - ID phiếu báo cáo.
  * @param {HTMLButtonElement} btn
  */
-const _handleIgnore = async (postId, btn) => {
+const _handleIgnore = async (reportId, btn) => {
 	if (btn.disabled) return;
 
 	btn.disabled = true;
@@ -418,8 +439,8 @@ const _handleIgnore = async (postId, btn) => {
 	btn.innerHTML = '<span class="btn-spinner" aria-hidden="true"></span><span>Đang xử lý...</span>';
 
 	try {
-		await postApi.resolveReport(postId, { action: "REJECTED" });
-		_removeReportItem(postId);
+		await postApi.resolveReport(reportId, { action: "REJECTED" });
+		_removeReportItem(reportId);
 	} catch (error) {
 		console.error("[reports.js] _handleIgnore error:", error);
 		_setStatus(_toErrorMessage(error, "Không thể bỏ qua báo cáo. Vui lòng thử lại."), "error");
@@ -430,16 +451,16 @@ const _handleIgnore = async (postId, btn) => {
 
 /**
  * Xử lý nút "Xử lý vi phạm": mở ResolveReportModal.
- * @param {string} postId
- * @param {object} post - Raw post data để lấy reasonList
+ * @param {string} reportId - ID phiếu báo cáo.
+ * @param {Array}  postReasonList - reasonList của phiếu đó.
  */
-const _handleResolve = (postId, post) => {
+const _handleResolve = (reportId, postReasonList) => {
 	ResolveReportModal.open({
-		postId,
-		postReasonList: Array.isArray(post?.reasonList) ? post.reasonList : [],
-		allReasons:     state.allReasons,
-		onSuccess: (resolvedPostId, message) => {
-			_removeReportItem(resolvedPostId);
+		reportId,
+		postReasonList,
+		allReasons: state.allReasons,
+		onSuccess: (resolvedReportId, message) => {
+			_removeReportItem(resolvedReportId);
 			_setStatus(message || "Đã xử lý vi phạm thành công.", "success");
 			// Tự xóa status sau 4 giây
 			window.setTimeout(_clearStatus, 4000);
@@ -455,27 +476,27 @@ const _handleListClick = (event) => {
 	const btn = event.target.closest("[data-action]");
 	if (!btn) return;
 
-	const action = _str(btn.dataset.action);
-	const postId = _str(btn.dataset.postId);
-	if (!postId) return;
+	const action   = _str(btn.dataset.action);
+	const reportId = _str(btn.dataset.reportId);
+	if (!reportId) return;
 
 	if (action === "ignore") {
-		void _handleIgnore(postId, btn);
+		void _handleIgnore(reportId, btn);
 		return;
 	}
 
 	if (action === "resolve") {
 		// Đọc reasonList đã được serialize vào data-attribute của .report-item khi render
-		const reportItem      = btn.closest(".report-item");
-		const reasonListJson  = _str(reportItem?.dataset.reasonList);
-		let   postReasonList  = [];
+		const reportItem     = btn.closest(".report-item");
+		const reasonListJson = _str(reportItem?.dataset.reasonList);
+		let   postReasonList = [];
 		try {
 			postReasonList = reasonListJson.length > 0 ? JSON.parse(reasonListJson) : [];
 		} catch {
 			postReasonList = [];
 		}
 
-		_handleResolve(postId, { reasonList: postReasonList });
+		_handleResolve(reportId, postReasonList);
 	}
 };
 
@@ -488,11 +509,11 @@ const _handleSearchChange = () => {
 	const newKeyword = _str(searchInputEl?.value);
 	if (newKeyword === state.keyword) return;
 
-	state.keyword     = newKeyword;
-	state.lastPostId  = null;
-	state.hasMore     = true;
-	state.isLoading   = false;
-	state.reportCount = 0;
+	state.keyword      = newKeyword;
+	state.lastReportId = null;
+	state.hasMore      = true;
+	state.isLoading    = false;
+	state.reportCount  = 0;
 
 	// Reset list
 	if (listEl)       listEl.innerHTML = "";
