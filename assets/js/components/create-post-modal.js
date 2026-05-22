@@ -709,16 +709,137 @@ export const initCreatePostModal = (options = {}) => {
 
 	// ── Submit / Publish ──────────────────────────────────────────────────────
 
+	// ── Fake Progress Circle (SVG) state ─────────────────────────────────────
+	let _progressRafId = null;
+	let _progressStartTime = null;
+	const PROGRESS_DURATION_MS = 8500; // 0% → 90% trong ~8.5 giây
+	const CIRCLE_RADIUS = 8;
+	const CIRCLE_CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS; // ≈ 50.27
+
+	/**
+	 * Tạo SVG vòng tròn progress và trả về { svgEl, circleEl }.
+	 * Đường kính 20px, stroke 2px, màu trắng trên nền tối của nút.
+	 */
+	const createProgressSVG = () => {
+		const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+		svg.setAttribute("class", "btn-progress-svg");
+		svg.setAttribute("viewBox", "0 0 20 20");
+		svg.setAttribute("width", "18");
+		svg.setAttribute("height", "18");
+		svg.setAttribute("aria-hidden", "true");
+
+		// Track (vòng nền mờ)
+		const track = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+		track.setAttribute("cx", "10");
+		track.setAttribute("cy", "10");
+		track.setAttribute("r", String(CIRCLE_RADIUS));
+		track.setAttribute("class", "btn-progress-track");
+		svg.appendChild(track);
+
+		// Indicator (vòng tiến trình)
+		const indicator = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+		indicator.setAttribute("cx", "10");
+		indicator.setAttribute("cy", "10");
+		indicator.setAttribute("r", String(CIRCLE_RADIUS));
+		indicator.setAttribute("class", "btn-progress-indicator");
+		indicator.style.strokeDasharray = String(CIRCLE_CIRCUMFERENCE);
+		indicator.style.strokeDashoffset = String(CIRCLE_CIRCUMFERENCE); // bắt đầu = 0%
+		svg.appendChild(indicator);
+
+		return { svgEl: svg, circleEl: indicator };
+	};
+
+	/**
+	 * Cập nhật strokeDashoffset tương ứng với % (0–100).
+	 * @param {SVGCircleElement} circleEl
+	 * @param {number} percent - 0 đến 100
+	 */
+	const setCircleProgress = (circleEl, percent) => {
+		const clampedPercent = Math.max(0, Math.min(100, percent));
+		const offset = CIRCLE_CIRCUMFERENCE * (1 - clampedPercent / 100);
+		circleEl.style.strokeDashoffset = String(offset);
+	};
+
+	/**
+	 * Dừng vòng lặp RAF fake progress đang chạy (nếu có).
+	 */
+	const stopFakeProgress = () => {
+		if (_progressRafId !== null) {
+			cancelAnimationFrame(_progressRafId);
+			_progressRafId = null;
+		}
+		_progressStartTime = null;
+	};
+
+	/**
+	 * Bắt đầu fake progress: dùng requestAnimationFrame để tăng từ 0% → 90%
+	 * trong PROGRESS_DURATION_MS ms với easing ease-out.
+	 * @param {SVGCircleElement} circleEl
+	 */
+	const startFakeProgress = (circleEl) => {
+		stopFakeProgress();
+		setCircleProgress(circleEl, 0);
+
+		const tick = (timestamp) => {
+			if (_progressStartTime === null) _progressStartTime = timestamp;
+			const elapsed = timestamp - _progressStartTime;
+			const rawT = Math.min(elapsed / PROGRESS_DURATION_MS, 1); // 0 → 1
+			// ease-out cubic: tiến nhanh lúc đầu, chậm dần về cuối
+			const eased = 1 - Math.pow(1 - rawT, 3);
+			const percent = eased * 90; // chỉ chạy đến 90%
+			setCircleProgress(circleEl, percent);
+
+			if (rawT < 1) {
+				_progressRafId = requestAnimationFrame(tick);
+			} else {
+				_progressRafId = null;
+			}
+		};
+
+		_progressRafId = requestAnimationFrame(tick);
+	};
+
+	/**
+	 * Nhảy tiến trình lên 100% với CSS transition (0.4s), sau đó gọi callback.
+	 * @param {SVGCircleElement} circleEl
+	 * @param {Function} onComplete
+	 */
+	const completeProgress = (circleEl, onComplete) => {
+		stopFakeProgress();
+		circleEl.style.transition = `stroke-dashoffset 0.4s ease-out`;
+		setCircleProgress(circleEl, 100);
+		setTimeout(() => {
+			circleEl.style.transition = "";
+			if (typeof onComplete === "function") onComplete();
+		}, 420);
+	};
+
+	// Giữ tham chiếu đến circleEl đang hoạt động để các hàm khác có thể dừng/hoàn thành nó
+	let _activeCircleEl = null;
+
 	const setPublishSubmittingState = (isSubmitting) => {
 		if (!publishPostBtn) return;
 		publishPostBtn.disabled = isSubmitting;
 
 		if (isSubmitting) {
 			const loadingLabel = editPostId ? "Đang lưu..." : "Đang đăng...";
-			publishPostBtn.innerHTML = `<span class="btn-spinner" aria-hidden="true"></span><span>${loadingLabel}</span>`;
+			const { svgEl, circleEl } = createProgressSVG();
+			_activeCircleEl = circleEl;
+
+			// Xóa nội dung cũ và inject SVG + text
+			publishPostBtn.innerHTML = "";
+			publishPostBtn.appendChild(svgEl);
+			const textSpan = document.createElement("span");
+			textSpan.textContent = loadingLabel;
+			publishPostBtn.appendChild(textSpan);
+
+			startFakeProgress(circleEl);
 			return;
 		}
 
+		// Dừng animation và khôi phục nút
+		stopFakeProgress();
+		_activeCircleEl = null;
 		publishPostBtn.textContent = editPostId ? DEFAULT_EDIT_LABEL : DEFAULT_PUBLISH_LABEL;
 	};
 
@@ -760,6 +881,7 @@ export const initCreatePostModal = (options = {}) => {
 		const visibility = normalizeString(createPostVisibilityInput?.value) || "PUBLIC";
 
 		setPublishSubmittingState(true);
+		let _submitSucceeded = false;
 
 		try {
 			if (editPostId) {
@@ -796,11 +918,33 @@ export const initCreatePostModal = (options = {}) => {
 					typeof editResponse?.message === "string" && editResponse.message.trim().length > 0
 						? editResponse.message.trim()
 						: "Lưu bài thành công!";
-				setFeedback(editMsg, "success");
 
 				if (typeof options.onUpdate === "function") {
 					options.onUpdate(editPostId);
 				}
+
+				// Hoàn thành vòng tròn → 100% rồi mới redirect
+				_submitSucceeded = true;
+				const editCircle = _activeCircleEl;
+				if (editCircle) {
+					completeProgress(editCircle, () => {
+						setFeedback(editMsg, "success");
+						setTimeout(() => {
+							if (closeOnPublish) closeCreateModal();
+							else resetCreateModalState();
+							window.location.href = "profile.html";
+						}, 800);
+					});
+				} else {
+					setFeedback(editMsg, "success");
+					setTimeout(() => {
+						if (closeOnPublish) closeCreateModal();
+						else resetCreateModalState();
+						window.location.href = "profile.html";
+					}, 1500);
+				}
+				// Trả về sớm để finally không reset nút
+				return;
 			} else {
 				// ── Chế độ Create ────────────────────────────────────────────
 				if (mediaItems.length === 0) {
@@ -823,27 +967,44 @@ export const initCreatePostModal = (options = {}) => {
 					typeof response?.message === "string" && response.message.trim().length > 0
 						? response.message.trim()
 						: "Đăng bài thành công! Đang chờ AI kiểm duyệt.";
-				setFeedback(createMsg, "success");
 
 				const createdPost = response?.data?.post || response?.data;
 				if (typeof onPublish === "function") {
 					onPublish(createdPost);
 				}
+
+				// Hoàn thành vòng tròn → 100% rồi mới redirect
+				_submitSucceeded = true;
+				const circleToComplete = _activeCircleEl;
+				if (circleToComplete) {
+					completeProgress(circleToComplete, () => {
+						setFeedback(createMsg, "success");
+						setTimeout(() => {
+							if (closeOnPublish) closeCreateModal();
+							else resetCreateModalState();
+							window.location.href = "profile.html";
+						}, 800);
+					});
+				} else {
+					setFeedback(createMsg, "success");
+					setTimeout(() => {
+						if (closeOnPublish) closeCreateModal();
+						else resetCreateModalState();
+						window.location.href = "profile.html";
+					}, 1500);
+				}
+				// Trả về sớm để finally không reset nút
+				return;
 			}
 
-			// Đợi một chút để người dùng thấy thông báo thành công, sau đó redirect về profile
-			setTimeout(() => {
-				if (closeOnPublish) {
-					closeCreateModal();
-				} else {
-					resetCreateModalState();
-				}
-				window.location.href = "profile.html";
-			}, 1500);
+			// Chế độ Edit đã xử lý toàn bộ qua completeProgress phán trên, không còn đoạn dự phòng này
 		} catch (error) {
 			setFeedback(toMessage(error, "Đã có lỗi xảy ra. Vui lòng thử lại."));
 		} finally {
-			setPublishSubmittingState(false);
+			// Không reset nút nếu đã thành công (completeProgress + redirect đang xử lý)
+			if (!_submitSucceeded) {
+				setPublishSubmittingState(false);
+			}
 		}
 	};
 

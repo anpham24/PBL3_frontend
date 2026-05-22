@@ -325,11 +325,39 @@
 	font-weight: 600;
 	cursor: pointer;
 	transition: opacity 0.2s;
+	display: inline-flex;
+	align-items: center;
+	gap: 7px;
 }
 
 .publish-btn:disabled {
-	opacity: 0.38;
+	opacity: 0.65;
 	cursor: not-allowed;
+}
+
+/* ── SVG Fake Progress Circle ── */
+.btn-progress-svg {
+	flex-shrink: 0;
+	display: block;
+	/* Xoay để vòng bắt đầu từ đỉnh (12 giờ) thay vì 3 giờ */
+	transform: rotate(-90deg);
+	overflow: visible;
+}
+
+/* Track: vòng nền mờ */
+.btn-progress-track {
+	fill: none;
+	stroke: rgba(255, 255, 255, 0.28);
+	stroke-width: 2;
+}
+
+/* Indicator: phần tiến trình sáng */
+.btn-progress-indicator {
+	fill: none;
+	stroke: #ffffff;
+	stroke-width: 2;
+	stroke-linecap: round;
+	/* stroke-dasharray & stroke-dashoffset được set bởi JS */
 }
 
 .create-modal-body {
