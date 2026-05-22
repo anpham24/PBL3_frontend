@@ -10,10 +10,19 @@
  *   const confirmed = await ConfirmModal.show('Xóa bài viết', 'Bạn có chắc không?');
  *   if (confirmed) { // gọi API xóa... }
  *
+ *   // Dùng icon tuỳ chỉnh (không nguy hiểm):
+ *   await ConfirmModal.show('Đổi vai trò', 'Chuyển sang MODERATOR?', {
+ *     confirmLabel: 'Đổi vai trò',
+ *     danger: false,
+ *     icon: 'bx-user-check',
+ *   });
+ *
  * ── Giao thức ──────────────────────────────────────────────────────────────────
  *  - ConfirmModal.show(title, message, options?) → Promise<boolean>
  *    • resolve(true)  khi người dùng bấm nút Xác nhận
  *    • resolve(false) khi người dùng bấm Hủy hoặc click ra ngoài overlay
+ *  - options.icon    - class Boxicons (không có prefix `bx `), mặc định "bx-trash".
+ *  - options.danger  - Nếu false, icon background là xanh/xám thay vì đỏ.
  *  - Tự inject HTML vào <body> lần đầu tiên được gọi (lazy init).
  *  - Idempotent: gọi lại nhiều lần, chỉ có MỘT modal element tồn tại.
  *  - Nếu người dùng gọi .show() khi modal đang mở, resolve(false) lần gọi cũ
@@ -42,7 +51,7 @@ const _buildHTML = () => /* html */`
     <!-- Icon vùng trên -->
     <div class="confirm-modal-icon-wrap" aria-hidden="true">
       <div class="confirm-modal-icon">
-        <i class="bx bx-trash"></i>
+        <i class="bx bx-trash" data-role="confirm-icon"></i>
       </div>
     </div>
 
@@ -82,6 +91,7 @@ let _titleEl     = null;
 let _messageEl   = null;
 let _cancelBtn   = null;
 let _confirmBtn  = null;
+let _iconEl      = null;   // <i> tag bên trong .confirm-modal-icon
 let _resolveFunc = null;   // Promise resolver của lần gọi hiện tại
 
 // ─── Lifecycle helpers ────────────────────────────────────────────────────────
@@ -103,6 +113,7 @@ const _ensureInjected = () => {
 	_messageEl  = document.getElementById("confirm-modal-message");
 	_cancelBtn  = document.getElementById("confirm-modal-cancel");
 	_confirmBtn = document.getElementById("confirm-modal-confirm");
+	_iconEl     = el.querySelector("[data-role='confirm-icon']");
 
 	// ── Gắn event listeners (một lần duy nhất) ──────────────────────────
 	_cancelBtn.addEventListener("click", () => _resolve(false));
@@ -124,11 +135,25 @@ const _ensureInjected = () => {
 /**
  * Mở modal với nội dung mới.
  */
-const _open = (title, message, confirmLabel = "Xác nhận", isDanger = true) => {
+const _open = (title, message, confirmLabel = "Xác nhận", isDanger = true, iconClass = "bx-trash") => {
 	_ensureInjected();
 
 	_titleEl.textContent   = title;
 	_messageEl.textContent = message;
+
+	// Cập nhật icon — cho phép caller truyền bất kỳ class Boxicons nào
+	if (_iconEl) {
+		_iconEl.className = `bx ${iconClass}`;
+	}
+
+	// Cập nhật màu nền icon wrap theo ngữ cảnh
+	const iconWrap = _iconEl?.closest(".confirm-modal-icon");
+	if (iconWrap) {
+		iconWrap.style.background   = isDanger ? "" : "#eff6ff";
+		iconWrap.style.borderColor  = isDanger ? "" : "#bfdbfe";
+		const iEl = iconWrap.querySelector("i");
+		if (iEl) iEl.style.color = isDanger ? "" : "#1d4ed8";
+	}
 
 	// Cập nhật label nút confirm (tuỳ context)
 	const labelSpan = _confirmBtn.querySelector("span");
@@ -167,12 +192,14 @@ export const ConfirmModal = {
 	 * @param {string} title          - Tiêu đề hộp thoại.
 	 * @param {string} message        - Nội dung thông báo.
 	 * @param {object} [options]
-	 * @param {string} [options.confirmLabel="Xác nhận"] - Text nút confirm.
-	 * @param {boolean} [options.danger=true]            - Nếu true, nút confirm màu đỏ.
+	 * @param {string}  [options.confirmLabel="Xác nhận"] - Text nút confirm.
+	 * @param {boolean} [options.danger=true]             - Nếu true, nút confirm màu đỏ.
+	 * @param {string}  [options.icon="bx-trash"]         - Class Boxicons cho icon (không kèm prefix "bx ").
+	 *   Ví dụ: "bx-user-check", "bx-lock-alt", "bx-info-circle"
 	 * @returns {Promise<boolean>}    - true nếu xác nhận, false nếu hủy.
 	 */
 	show(title, message, options = {}) {
-		const { confirmLabel = "Xác nhận", danger = true } = options;
+		const { confirmLabel = "Xác nhận", danger = true, icon = "bx-trash" } = options;
 
 		// Nếu đang có Promise chờ → resolve(false) để tránh memory leak
 		if (typeof _resolveFunc === "function") {
@@ -182,7 +209,7 @@ export const ConfirmModal = {
 
 		return new Promise((resolve) => {
 			_resolveFunc = resolve;
-			_open(title, message, confirmLabel, danger);
+			_open(title, message, confirmLabel, danger, icon);
 		});
 	},
 };

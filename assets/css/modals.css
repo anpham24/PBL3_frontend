@@ -1792,3 +1792,552 @@
 		justify-content: center;
 	}
 }
+
+/* =============================================================================
+   [SPECIFIC] .user-status-modal — Admin: Khóa / Ban tài khoản người dùng
+   ============================================================================= */
+
+.user-status-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(17, 24, 39, 0.58);
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
+}
+
+.user-status-modal.is-hidden {
+	display: none;
+}
+
+.user-status-dialog {
+	width: min(500px, 100%);
+	max-height: min(90vh, 640px);
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--border);
+	border-radius: 18px;
+	background: #ffffff;
+	box-shadow: 0 24px 70px rgba(17, 24, 39, 0.26);
+	overflow: hidden;
+	animation: modal-fade-in 0.22s ease;
+}
+
+/* Header */
+.user-status-header {
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--border);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-shrink: 0;
+	background: #fafafa;
+}
+
+.user-status-header-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+
+.user-status-icon-wrap {
+	width: 42px;
+	height: 42px;
+	border-radius: 12px;
+	background: #fef2f2;
+	border: 1px solid #fecaca;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.user-status-icon-wrap i {
+	font-size: 1.4rem;
+	color: #dc2626;
+}
+
+.user-status-title {
+	font-size: 1rem;
+	font-weight: 700;
+	color: #111827;
+	margin: 0;
+	line-height: 1.3;
+}
+
+.user-status-subtitle {
+	font-size: 0.82rem;
+	color: #6b7280;
+	margin: 2px 0 0;
+	line-height: 1.4;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: 300px;
+}
+
+.user-status-close {
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--border);
+	border-radius: 50%;
+	background: #fff;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background-color 0.15s ease;
+}
+
+.user-status-close:hover {
+	background: #f3f4f6;
+}
+
+.user-status-close i {
+	font-size: 1.1rem;
+	color: #374151;
+}
+
+/* Form body */
+.user-status-form {
+	flex: 1;
+	overflow-y: auto;
+	padding: 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 transparent;
+}
+
+.user-status-form::-webkit-scrollbar {
+	width: 4px;
+}
+
+.user-status-form::-webkit-scrollbar-thumb {
+	background: #d1d5db;
+	border-radius: 4px;
+}
+
+/* Field wrap */
+.user-status-field-wrap {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.user-status-field-wrap.is-hidden {
+	display: none;
+}
+
+/* Label */
+.user-status-label {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.84rem;
+	font-weight: 700;
+	color: #374151;
+	text-transform: uppercase;
+	letter-spacing: 0.03em;
+}
+
+.user-status-label i {
+	font-size: 1rem;
+	color: #6b7280;
+}
+
+.user-status-optional {
+	font-weight: 400;
+	text-transform: none;
+	letter-spacing: 0;
+	color: #9ca3af;
+	font-size: 0.8rem;
+}
+
+/* Select wrapper */
+.user-status-select-wrap {
+	position: relative;
+}
+
+.user-status-select {
+	width: 100%;
+	appearance: none;
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 10px 38px 10px 12px;
+	font-size: 0.9rem;
+	color: #111827;
+	background: #fff;
+	cursor: pointer;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+	outline: none;
+}
+
+.user-status-select:focus {
+	border-color: #6b7280;
+	box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+}
+
+.user-status-select-arrow {
+	position: absolute;
+	right: 10px;
+	top: 50%;
+	transform: translateY(-50%);
+	font-size: 1.1rem;
+	color: #6b7280;
+	pointer-events: none;
+}
+
+/* Note textarea */
+.user-status-note-wrap {
+	border: 1px solid var(--border);
+	border-radius: 10px;
+	padding: 10px 12px;
+	background: #fff;
+	transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.user-status-note-wrap:focus-within {
+	border-color: #6b7280;
+	box-shadow: 0 0 0 3px rgba(107, 114, 128, 0.1);
+}
+
+.user-status-note {
+	width: 100%;
+	min-height: 80px;
+	max-height: 160px;
+	border: none;
+	outline: none;
+	resize: vertical;
+	font-size: 0.9rem;
+	line-height: 1.5;
+	color: var(--text);
+	background: transparent;
+}
+
+.user-status-note::placeholder {
+	color: #9ca3af;
+}
+
+/* Feedback */
+.user-status-feedback {
+	font-size: 0.88rem;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
+/* Footer */
+.user-status-footer {
+	padding: 12px 16px;
+	border-top: 1px solid var(--border);
+	display: flex;
+	justify-content: flex-end;
+	gap: 10px;
+	flex-shrink: 0;
+	background: #fff;
+}
+
+/* Buttons */
+.user-status-btn {
+	border: 1px solid transparent;
+	border-radius: 10px;
+	padding: 9px 16px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	cursor: pointer;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	transition: background-color 0.18s ease, transform 0.12s ease, opacity 0.2s ease;
+}
+
+.user-status-btn:active {
+	transform: scale(0.97);
+}
+
+.user-status-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.user-status-btn--cancel {
+	background: #f3f4f6;
+	border-color: #e5e7eb;
+	color: #374151;
+}
+
+.user-status-btn--cancel:hover:not(:disabled) {
+	background: #e5e7eb;
+}
+
+.user-status-btn--submit {
+	background: #dc2626;
+	border-color: #dc2626;
+	color: #ffffff;
+}
+
+.user-status-btn--submit:hover:not(:disabled) {
+	background: #b91c1c;
+}
+
+/* Spinner (inline loading indicator) */
+.user-status-spinner {
+	display: inline-block;
+	width: 15px;
+	height: 15px;
+	border: 2px solid rgba(255, 255, 255, 0.4);
+	border-top-color: #ffffff;
+	border-radius: 50%;
+	animation: report-spin 0.7s linear infinite;
+	flex-shrink: 0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+	.user-status-dialog {
+		max-height: 92vh;
+		border-radius: 14px;
+	}
+
+	.user-status-footer {
+		flex-direction: column;
+	}
+
+	.user-status-btn {
+		width: 100%;
+		justify-content: center;
+	}
+
+	.user-status-subtitle {
+		max-width: 200px;
+	}
+}
+
+/* =============================================================================
+   [SPECIFIC] .violation-modal — Admin: Xem lịch sử vi phạm người dùng
+   ============================================================================= */
+
+.violation-modal {
+	position: fixed;
+	inset: 0;
+	z-index: 90;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	background: rgba(17, 24, 39, 0.58);
+	backdrop-filter: blur(2px);
+	-webkit-backdrop-filter: blur(2px);
+}
+
+.violation-modal.is-hidden {
+	display: none;
+}
+
+.violation-dialog {
+	width: min(480px, 100%);
+	max-height: min(88vh, 600px);
+	display: flex;
+	flex-direction: column;
+	border: 1px solid var(--border);
+	border-radius: 18px;
+	background: #ffffff;
+	box-shadow: 0 24px 70px rgba(17, 24, 39, 0.26);
+	overflow: hidden;
+	animation: modal-fade-in 0.22s ease;
+}
+
+/* Header */
+.violation-header {
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--border);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-shrink: 0;
+	background: #fafafa;
+}
+
+.violation-header-left {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+}
+
+.violation-icon-wrap {
+	width: 42px;
+	height: 42px;
+	border-radius: 12px;
+	background: #f0f9ff;
+	border: 1px solid #bae6fd;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-shrink: 0;
+}
+
+.violation-icon-wrap i {
+	font-size: 1.4rem;
+	color: #0284c7;
+}
+
+.violation-title {
+	font-size: 1rem;
+	font-weight: 700;
+	color: #111827;
+	margin: 0;
+	line-height: 1.3;
+}
+
+.violation-subtitle {
+	font-size: 0.82rem;
+	color: #6b7280;
+	margin: 2px 0 0;
+	line-height: 1.4;
+}
+
+.violation-close {
+	width: 32px;
+	height: 32px;
+	border: 1px solid var(--border);
+	border-radius: 50%;
+	background: #fff;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	flex-shrink: 0;
+	transition: background-color 0.15s ease;
+}
+
+.violation-close:hover {
+	background: #f3f4f6;
+}
+
+.violation-close i {
+	font-size: 1.1rem;
+	color: #374151;
+}
+
+/* Status text */
+.violation-status {
+	padding: 10px 16px 0;
+	font-size: 0.88rem;
+	font-weight: 500;
+	line-height: 1.4;
+}
+
+/* List container */
+.violation-list {
+	flex: 1;
+	overflow-y: auto;
+	padding: 14px 16px;
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	scrollbar-width: thin;
+	scrollbar-color: #cbd5e1 transparent;
+}
+
+.violation-list::-webkit-scrollbar {
+	width: 4px;
+}
+
+.violation-list::-webkit-scrollbar-thumb {
+	background: #d1d5db;
+	border-radius: 4px;
+}
+
+/* Empty state */
+.violation-empty {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 12px;
+	padding: 32px 16px;
+	color: #9ca3af;
+	text-align: center;
+}
+
+.violation-empty i {
+	font-size: 2.8rem;
+	color: #d1d5db;
+}
+
+.violation-empty p {
+	font-size: 0.9rem;
+	line-height: 1.5;
+}
+
+/* Each violation item */
+.violation-item {
+	border: 1px solid var(--border);
+	border-radius: 12px;
+	padding: 12px 14px;
+	background: #fcfcfd;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+	transition: border-color 0.15s ease;
+}
+
+.violation-item:hover {
+	border-color: #d1d5db;
+}
+
+.violation-item-header {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.violation-index {
+	font-size: 0.78rem;
+	font-weight: 700;
+	color: #9ca3af;
+	flex-shrink: 0;
+}
+
+.violation-reason-badge {
+	display: inline-flex;
+	align-items: center;
+	padding: 3px 10px;
+	border-radius: 999px;
+	font-size: 0.76rem;
+	font-weight: 700;
+	letter-spacing: 0.04em;
+	background: #fef2f2;
+	color: #b91c1b;
+	border: 1px solid #fecaca;
+}
+
+.violation-note {
+	font-size: 0.88rem;
+	line-height: 1.5;
+	color: #374151;
+	word-break: break-word;
+}
+
+.violation-note--empty {
+	color: #9ca3af;
+	font-style: italic;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+	.violation-dialog {
+		max-height: 90vh;
+		border-radius: 14px;
+	}
+}

@@ -215,4 +215,77 @@ export const userApi = {
 
 		return apiClient.delete(`/api/users/${encodeURIComponent(resolvedUserId)}/followers`);
 	},
+
+	/**
+	 * Lấy danh sách người dùng (Admin) với cursor-based pagination.
+	 * GET /api/admin/users?lastUserId={id}&keyword={keyword}
+	 * @param {object} [params]
+	 * @param {string} [params.lastUserId] - ID người dùng cuối để phân trang.
+	 * @param {string} [params.keyword]    - Từ khóa tìm kiếm.
+	 * @returns {Promise<{data: {userList: object[], total: number, respLastUserId: string, hasMore: boolean}}>}
+	 */
+	async getAdminUsers({ lastUserId = "", keyword = "" } = {}) {
+		const params = new URLSearchParams();
+
+		const resolvedLastId = normalizeUserId(lastUserId);
+		if (resolvedLastId.length > 0) {
+			params.set("lastUserId", resolvedLastId);
+		}
+
+		const resolvedKeyword = normalizeKeyword(keyword);
+		if (resolvedKeyword.length > 0) {
+			params.set("keyword", resolvedKeyword);
+		}
+
+		const queryString = params.toString();
+		const endpoint = queryString.length > 0
+			? `/api/admin/users?${queryString}`
+			: "/api/admin/users";
+
+		return apiClient.get(endpoint);
+	},
+
+	/**
+	 * Cập nhật trạng thái người dùng (Khóa / Ban).
+	 * PATCH /api/admin/users/{userId}/status
+	 * @param {string} userId
+	 * @param {object} payload
+	 * @param {'LOCKED'|'BANNED'} payload.status
+	 * @param {string} [payload.lockDuration] - Bắt buộc nếu status === 'LOCKED'.
+	 * @param {string} [payload.reasonCode]
+	 * @param {string} [payload.note]
+	 * @returns {Promise<{message: string}>}
+	 */
+	async updateUserStatus(userId, payload) {
+		const resolvedUserId = normalizeUserId(userId);
+		if (resolvedUserId.length === 0) {
+			throw new Error("Missing user id.");
+		}
+		return apiClient.patch(
+			`/api/admin/users/${encodeURIComponent(resolvedUserId)}/status`,
+			payload
+		);
+	},
+
+	/**
+	 * Thay đổi vai trò của người dùng.
+	 * PATCH /api/admin/users/{userId}/role
+	 * @param {string} userId
+	 * @param {'MEMBER'|'MODERATOR'} newRole
+	 * @returns {Promise<{message: string}>}
+	 */
+	async updateUserRole(userId, newRole) {
+		const resolvedUserId = normalizeUserId(userId);
+		if (resolvedUserId.length === 0) {
+			throw new Error("Missing user id.");
+		}
+		const resolvedRole = normalizeKeyword(newRole).toUpperCase();
+		if (!["MEMBER", "MODERATOR"].includes(resolvedRole)) {
+			throw new Error(`Invalid role: ${newRole}`);
+		}
+		return apiClient.patch(
+			`/api/admin/users/${encodeURIComponent(resolvedUserId)}/role`,
+			{ newRole: resolvedRole }
+		);
+	},
 };

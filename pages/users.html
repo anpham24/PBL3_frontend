@@ -4,6 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Quản lý người dùng</title>
+	<meta name="description" content="Trang quản lý tài khoản người dùng, đổi vai trò, khóa hoặc ban tài khoản vi phạm.">
 
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -11,6 +12,7 @@
 	<link href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css" rel="stylesheet">
 	<link rel="stylesheet" href="../assets/css/global.css">
 	<link rel="stylesheet" href="../assets/css/users.css">
+	<link rel="stylesheet" href="../assets/css/modals.css">
 </head>
 <body>
 	<div class="app-shell">
@@ -26,50 +28,52 @@
 				<section class="users-table-card" aria-label="Danh sách người dùng">
 					<div class="users-table-toolbar">
 						<label class="users-search" for="users-search-input">
-							<i class="bx bx-search"></i>
-							<input id="users-search-input" type="search" placeholder="Tìm kiếm người dùng..." autocomplete="off">
+							<i class="bx bx-search" aria-hidden="true"></i>
+							<input
+								id="users-search-input"
+								type="search"
+								placeholder="Tìm kiếm người dùng..."
+								autocomplete="off"
+								aria-label="Tìm kiếm người dùng theo từ khóa"
+							>
 						</label>
-						<span id="users-count-badge" class="users-count-badge">0 người dùng</span>
+						<span id="users-count-badge" class="users-count-badge" aria-live="polite">0 người dùng</span>
 					</div>
 
-					<p id="users-status" class="users-status is-hidden" role="status" aria-live="polite"></p>
+					<p
+						id="users-status"
+						class="users-status is-hidden"
+						role="status"
+						aria-live="polite"
+					></p>
 
 					<div class="users-table-scroll">
-						<table class="users-table">
+						<table class="users-table" aria-label="Danh sách tài khoản người dùng">
 							<thead>
 								<tr>
 									<th scope="col">STT</th>
-									<th scope="col">Avatar</th>
-									<th scope="col">Username</th>
-									<th scope="col">Nickname</th>
-									<th scope="col">Email</th>
-									<th scope="col">Role</th>
-									<th scope="col">Hành động</th>
+									<th scope="col">Tài khoản</th>
+									<th scope="col">Tên đăng nhập</th>
+									<th scope="col">Vai trò</th>
+									<th scope="col">Trạng thái</th>
+									<th scope="col">Lịch sử vi phạm</th>
 								</tr>
 							</thead>
 							<tbody id="users-tbody"></tbody>
 						</table>
 					</div>
 
-					<p id="users-empty-state" class="users-empty-state is-hidden">Không có người dùng nào để hiển thị.</p>
+					<p id="users-empty-state" class="users-empty-state is-hidden" role="status">
+						Không có người dùng nào để hiển thị.
+					</p>
+
+
 				</section>
 			</section>
 		</main>
 	</div>
 
-	<div id="users-confirm-modal" class="users-confirm-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="users-confirm-title">
-		<div class="users-confirm-dialog">
-			<h3 id="users-confirm-title">Xác nhận hành động</h3>
-			<p id="users-confirm-message">Bạn có chắc chắn muốn thực hiện hành động này?</p>
-			<div class="users-confirm-actions">
-				<button id="users-confirm-cancel" class="users-confirm-btn users-confirm-cancel" type="button">Hủy</button>
-				<button id="users-confirm-accept" class="users-confirm-btn users-confirm-accept" type="button">Xác nhận</button>
-			</div>
-		</div>
-	</div>
-
-	<!-- create-post-modal injected by assets/js/components/create-post-modal.js -->
-	<!-- comment-modal injected by assets/js/components/comment-modal.js -->
+	<!-- Modals injected dynamically by JS components -->
 
 	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/users.js"></script>
