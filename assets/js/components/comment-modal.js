@@ -132,24 +132,8 @@ const escapeHtml = (value) =>
 		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#039;");
 
-const timeAgo = (dateString) => {
-	if (!dateString) return "";
-	const date = new Date(dateString);
-	if (isNaN(date.getTime())) return "";
-	const seconds = Math.floor((new Date() - date) / 1000);
-	if (seconds < 0) return "Vừa xong";
-	let interval = seconds / 31536000;
-	if (interval >= 1) return Math.floor(interval) + " năm trước";
-	interval = seconds / 2592000;
-	if (interval >= 1) return Math.floor(interval) + " tháng trước";
-	interval = seconds / 86400;
-	if (interval >= 1) return Math.floor(interval) + " ngày trước";
-	interval = seconds / 3600;
-	if (interval >= 1) return Math.floor(interval) + " giờ trước";
-	interval = seconds / 60;
-	if (interval >= 1) return Math.floor(interval) + " phút trước";
-	return "Vừa xong";
-};
+// timeAgo đã bị xóa: Backend trả về `createAt` là chuỗi thời gian tương đối
+// bằng tiếng Việt (ví dụ "5 phút trước") — Frontend không cần tự parse nữa.
 
 const formatCompactNumber = (num) => {
 	const n = normalizeNumber(num, 0);
@@ -238,7 +222,8 @@ const createCommentHtml = (comment, isOwnComment = false) => {
 	const authorName = escapeHtml(normalizeString(comment.authorName) || "Người dùng");
 	const avatarUrl = escapeHtml(normalizeString(comment.avtUrl) || DEFAULT_AVATAR);
 	const content = escapeHtml(normalizeString(comment.content));
-	const timeText = escapeHtml(timeAgo(normalizeString(comment.createAt)));
+	// Backend trả về chuỗi thời gian tương đối — bind thẳng, không cần chuyển đổi.
+	const timeText = escapeHtml(normalizeString(comment.createAt));
 	const authorId = escapeHtml(normalizeString(comment.authorId || comment.author_id));
 	const commentId = escapeHtml(normalizeString(comment.commentId || comment.id || ""));
 	const profileAttr = authorId.length > 0 ? ` data-user-id="${authorId}"` : "";
@@ -550,7 +535,8 @@ export const initCommentModal = (options = {}) => {
 				authorAvatarEl.style.cursor = "";
 			}
 		}
-		if (postTimeEl) postTimeEl.textContent = timeAgo(createdAt);
+		// Backend trả về chuỗi thời gian tương đối — bind thẳng, không cần chuyển đổi.
+		if (postTimeEl) postTimeEl.textContent = createdAt;
 		if (postCaptionEl) postCaptionEl.textContent = content;
 
 		// Render Edit/Delete buttons dựa trên quyền sở hữu

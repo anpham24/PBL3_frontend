@@ -70,25 +70,8 @@ const _esc = (value) =>
 		.replace(/"/g, "&quot;")
 		.replace(/'/g, "&#039;");
 
-const _timeAgo = (dateString) => {
-	if (!dateString) return "";
-	const date = new Date(dateString);
-	if (isNaN(date.getTime())) return "";
-	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-	if (seconds < 0) return "Vừa xong";
-	const intervals = [
-		{ unit: "năm",   secs: 31_536_000 },
-		{ unit: "tháng", secs: 2_592_000  },
-		{ unit: "ngày",  secs: 86_400     },
-		{ unit: "giờ",   secs: 3_600      },
-		{ unit: "phút",  secs: 60         }
-	];
-	for (const { unit, secs } of intervals) {
-		const n = Math.floor(seconds / secs);
-		if (n >= 1) return `${n} ${unit} trước`;
-	}
-	return "Vừa xong";
-};
+// _timeAgo đã bị xóa: Backend trả về `createAt` là chuỗi thời gian tương đối
+// bằng tiếng Việt (ví dụ "1 ngày trước") — Frontend không cần tự parse nữa.
 
 const _toErrorMessage = (error, fallback) => {
 	if (_str(error?.data?.message).length > 0) return error.data.message.trim();
@@ -211,8 +194,8 @@ const _buildPostCardHtml = (post) => {
 	const authorName = _str(post?.authorName) || "Người dùng";
 	const avatarUrl  = _str(post?.avtUrl) || DEFAULT_AVATAR_URL;
 	const content    = _str(post?.content || post?.caption);
-	const createdAt  = _str(post?.createAt || post?.create_at || post?.created_at);
-	const timeText   = _timeAgo(createdAt);
+	// Backend trả về chuỗi thời gian tương đối — bind thẳng, không cần chuyển đổi.
+	const timeText   = _str(post?.createAt || post?.create_at || post?.created_at);
 
 	// Tags: province và topic từ API mới
 	const province = _str(post?.province);

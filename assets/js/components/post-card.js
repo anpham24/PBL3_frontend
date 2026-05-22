@@ -93,34 +93,8 @@ const _isVideo = (url) => /\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i.test(url);
 const _bool = (value) =>
 	value === true || value === "true" || value === 1 || value === "1";
 
-/**
- * Tính thời gian tương đối từ ISO string sang dạng "x phút trước".
- * @param {string} dateString
- * @returns {string}
- */
-const _timeAgo = (dateString) => {
-	if (!dateString) return "";
-	const date = new Date(dateString);
-	if (isNaN(date.getTime())) return "";
-
-	const seconds = Math.floor((Date.now() - date.getTime()) / 1000);
-	if (seconds < 0) return "Vừa xong";
-
-	const intervals = [
-		{ unit: "năm",   secs: 31_536_000 },
-		{ unit: "tháng", secs: 2_592_000  },
-		{ unit: "ngày",  secs: 86_400     },
-		{ unit: "giờ",   secs: 3_600      },
-		{ unit: "phút",  secs: 60         },
-	];
-
-	for (const { unit, secs } of intervals) {
-		const n = Math.floor(seconds / secs);
-		if (n >= 1) return `${n} ${unit} trước`;
-	}
-
-	return "Vừa xong";
-};
+// _timeAgo đã bị xóa: Backend trả về `createAt` là chuỗi thời gian tương đối
+// bằng tiếng Việt (ví dụ "2 giờ trước") — Frontend không cần tự parse nữa.
 
 // ---------------------------------------------------------------------------
 // Media helpers
@@ -260,7 +234,7 @@ const _buildMediaHtml = (post, authorName) => {
  * @param {string}  [postData.address]    - Địa chỉ / vị trí (alias: location).
  * @param {string}  [postData.province]   - Tên tỉnh/thành.
  * @param {string}  [postData.topic]      - Chủ đề bài đăng.
- * @param {string}  [postData.createAt]   - ISO timestamp tạo bài (alias: create_at, created_at).
+ * @param {string}  [postData.createAt]   - Chuỗi thời gian tương đối do Backend trả về (ví dụ: "2 giờ trước").
  * @param {Array}   [postData.mediaList]  - Danh sách media (format chuẩn API mới).
  *
  * @returns {string} Chuỗi HTML hoàn chỉnh của thẻ bài đăng.
@@ -280,8 +254,8 @@ export const renderPostCard = (postData) => {
 	const address  = _str(postData?.address  || postData?.location);
 	const province = _str(postData?.province);
 	const topic    = _str(postData?.topic);
-	const createdAt = _str(postData?.createAt || postData?.create_at || postData?.created_at);
-	const timeText  = _timeAgo(createdAt);
+	// Backend trả về chuỗi thời gian tương đối — bind thẳng, không cần chuyển đổi.
+	const timeText  = _str(postData?.createAt || postData?.create_at || postData?.created_at);
 
 	// ── Sub-blocks HTML ───────────────────────────────────────────────────────
 	const authorIdAttr = authorId ? ` data-author-id="${_esc(authorId)}"` : "";
