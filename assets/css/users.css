@@ -137,7 +137,7 @@
 }
 
 .avatar-cell {
-	width: 86px;
+	width: 200px;
 }
 
 .user-avatar-thumb {
@@ -149,7 +149,7 @@
 }
 
 .email-cell {
-	max-width: 250px;
+	max-width: 200px;
 	word-break: break-word;
 }
 
@@ -184,7 +184,7 @@
 }
 
 .actions-cell {
-	width: 260px;
+	width: 110px;
 }
 
 .user-actions {
@@ -258,10 +258,17 @@
 	background: #fcfcfc;
 }
 
+/* ── STT cell ── */
+.number-cell {
+	width: 60px;
+	min-width: 60px;
+	text-align: center;
+}
+
 /* ── Account cell: avatar + nickname link ── */
 .account-cell {
 	min-width: 220px;
-	width: 220px;
+	width: 250px;
 }
 
 .user-account-link {
@@ -386,6 +393,12 @@
 	background: #dbeafe;
 }
 
+/* ── Violation cell (Actions) ── */
+.violation-cell {
+	width: 150px;
+	min-width: 150px;
+}
+
 @media (max-width: 900px) {
 	.users-main {
 		padding: 22px 18px 34px;
@@ -434,7 +447,7 @@
 		padding: 7px 10px;
 	}
 
-	.actions-cell {
+	.violation-cell {
 		width: 120px;
 	}
 
@@ -451,4 +464,3 @@
 		max-width: 100px;
 	}
 }
-

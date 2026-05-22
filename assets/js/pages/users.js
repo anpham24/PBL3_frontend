@@ -158,7 +158,7 @@ const _buildRowHtml = (user, stt) => {
 
 	return `
 	<tr data-user-id="${uid}" data-role="${_esc(user.role)}" data-status="${_esc(user.status)}">
-		<td class="stt-cell">${stt}</td>
+		<td class="number-cell">${stt}</td>
 		<td class="account-cell">
 			<a class="user-account-link" href="profile.html?id=${uid}" title="Xem trang cá nhân ${_esc(user.nickname)}">
 				<img
@@ -200,7 +200,7 @@ const _buildRowHtml = (user, stt) => {
 				</select>
 			</div>
 		</td>
-		<td class="actions-cell">
+		<td class="violation-cell">
 			<button
 				class="user-action-btn violation-btn"
 				type="button"
