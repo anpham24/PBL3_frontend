@@ -592,7 +592,8 @@
 
 .comment-modal--single-media .comment-media-pane,
 .comment-modal--multi-media .comment-media-pane {
-	flex: 0 0 auto;
+	flex: 0 1 auto;
+	min-width: 0;
 }
 
 /* Close button — position:absolute vì nằm ngoài grid */
@@ -620,7 +621,8 @@
 
 /* Media pane (bên trái) — quy tắc 3: flex:1 1 auto, căn giữa nội dung */
 .comment-media-pane {
-	flex: 1 1 auto; /* chiếm không gian còn lại sau khi cột phải lấy 500px */
+	flex: 1 1 auto;
+	/* chiếm không gian còn lại sau khi cột phải lấy 500px */
 	background: #000000;
 	min-width: 300px;
 	max-width: calc(100vw - 548px);
@@ -710,14 +712,17 @@
 
 /* Comment panel (bên phải) — quy tắc 2: cố định 500px, cuộn nội dung bên trong */
 .comment-panel {
-	flex: 0 0 500px; /* chiều rộng cố định 500px, không co không dãn */
+	flex: 0 0 500px;
+	/* chiều rộng cố định 500px, không co không dãn */
 	width: 500px;
 	display: flex;
 	flex-direction: column;
 	background: #ffffff;
-	height: 100%; /* khớp chiều cao với dialog (đã bị giới hạn bởi 90vh) */
+	height: 100%;
+	/* khớp chiều cao với dialog (đã bị giới hạn bởi 90vh) */
 	min-height: 0;
-	overflow: hidden; /* nội dung dài chỉ cuộn bên trong, không phá layout */
+	overflow: hidden;
+	/* nội dung dài chỉ cuộn bên trong, không phá layout */
 }
 
 /* ── VÙNG 1: Ghim cứng ở trên ── */
@@ -1049,7 +1054,8 @@
 	}
 
 	.comment-media-pane {
-		max-width: calc(100vw - 444px); /* còn chỗ cho cột 420px */
+		max-width: calc(100vw - 444px);
+		/* còn chỗ cho cột 420px */
 	}
 
 	.comment-panel {
@@ -1101,7 +1107,8 @@
 		flex: 1 1 auto;
 		width: 100%;
 		max-width: 100%;
-		height: auto; /* bỏ height:100% cứng — tự dãn theo chiều dọc */
+		height: auto;
+		/* bỏ height:100% cứng — tự dãn theo chiều dọc */
 		overflow-y: auto;
 	}
 
@@ -1668,7 +1675,7 @@
 	flex-shrink: 0;
 }
 
-.resolve-reason-option input[type="radio"]:checked + span {
+.resolve-reason-option input[type="radio"]:checked+span {
 	font-weight: 600;
 	color: #111827;
 }

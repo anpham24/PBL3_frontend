@@ -218,13 +218,15 @@ export const userApi = {
 
 	/**
 	 * Lấy danh sách người dùng (Admin) với cursor-based pagination.
-	 * GET /api/admin/users?lastUserId={id}&keyword={keyword}
+	 * GET /api/admin/users?lastUserId={id}&keyword={keyword}&role={role}&status={status}
 	 * @param {object} [params]
 	 * @param {string} [params.lastUserId] - ID người dùng cuối để phân trang.
 	 * @param {string} [params.keyword]    - Từ khóa tìm kiếm.
+	 * @param {string} [params.role]       - Lọc theo vai trò: MODERATOR | MEMBER (để trống = tất cả).
+	 * @param {string} [params.status]     - Lọc theo trạng thái: ACTIVE | LOCKED | BANNED (để trống = tất cả).
 	 * @returns {Promise<{data: {userList: object[], total: number, respLastUserId: string, hasMore: boolean}}>}
 	 */
-	async getAdminUsers({ lastUserId = "", keyword = "" } = {}) {
+	async getAdminUsers({ lastUserId = "", keyword = "", role = "", status = "" } = {}) {
 		const params = new URLSearchParams();
 
 		const resolvedLastId = normalizeUserId(lastUserId);
@@ -235,6 +237,16 @@ export const userApi = {
 		const resolvedKeyword = normalizeKeyword(keyword);
 		if (resolvedKeyword.length > 0) {
 			params.set("keyword", resolvedKeyword);
+		}
+
+		const resolvedRole = normalizeKeyword(role).toUpperCase();
+		if (resolvedRole.length > 0) {
+			params.set("role", resolvedRole);
+		}
+
+		const resolvedStatus = normalizeKeyword(status).toUpperCase();
+		if (resolvedStatus.length > 0) {
+			params.set("status", resolvedStatus);
 		}
 
 		const queryString = params.toString();

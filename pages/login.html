@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="vi">
 <head>
 	<meta charset="UTF-8">
@@ -32,7 +32,7 @@
 			<input id="login-password" name="password" type="password" placeholder="Mật khẩu" autocomplete="current-password" required>
 		</div>
 
-		<p id="login-feedback" class="is-hidden" role="status" aria-live="polite"></p>
+		<div id="login-error-msg" class="login-error-msg is-hidden" role="alert" aria-live="assertive"></div>
 
 		<button id="login-submit" class="login-button" type="submit">Đăng nhập</button>
 
@@ -41,37 +41,6 @@
 			<a href="register.html">Đăng ký ngay</a>
 		</p>
 	</form>
-
-	<div id="account-locked-modal" class="account-locked-modal is-hidden" aria-hidden="true" role="dialog" aria-modal="true">
-		<div class="account-locked-dialog">
-			<div class="lock-icon-wrap">
-				<svg viewBox="0 0 24 24" fill="none">
-					<path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2"/>
-					<path d="M12 8V12L15 15" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-				</svg>
-			</div>
-
-			<h2 class="account-lock-title">Tài khoản bị khóa</h2>
-			<p id="account-lock-message" class="account-lock-message">Tài khoản của bạn đang bị khóa tạm thời.</p>
-
-			<ul class="account-lock-list" aria-label="Thông tin khóa tài khoản">
-				<li>
-					<span>Thời gian mở khóa</span>
-					<strong id="account-lock-until">Chưa có thông tin</strong>
-				</li>
-				<li>
-					<span>Lý do bị khóa</span>
-					<strong id="account-lock-reason">Chưa có thông tin</strong>
-				</li>
-				<li>
-					<span>Số lần vi phạm còn lại</span>
-					<strong id="account-lock-remaining">Chưa có thông tin</strong>
-				</li>
-			</ul>
-
-			<button id="account-lock-close" class="account-lock-close" type="button">Đã hiểu</button>
-		</div>
-	</div>
 
 	<script type="module" src="../assets/js/pages/login.js"></script>
 </body>

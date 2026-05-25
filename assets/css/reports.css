@@ -118,9 +118,10 @@
 }
 
 /* Cột trái: tái sử dụng .post-card */
-.report-item > .post-card {
+.report-item>.post-card {
 	flex: 1 1 0;
 	min-width: 0;
+	max-width: 600px;
 	border-radius: 0;
 	border: none;
 	box-shadow: none;
@@ -335,7 +336,7 @@
 		flex-direction: column;
 	}
 
-	.report-item > .post-card {
+	.report-item>.post-card {
 		border-right: none;
 		border-bottom: 1px solid var(--border);
 	}

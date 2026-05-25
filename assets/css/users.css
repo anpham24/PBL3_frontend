@@ -38,6 +38,53 @@
 	margin-bottom: 12px;
 }
 
+/* ── Filter group (role + status dropdowns) ── */
+.users-filter-group {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	flex-wrap: wrap;
+}
+
+.users-filter-select-wrap {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 8px 10px;
+	border: 1px solid var(--border);
+	border-radius: 999px;
+	background: #f9fafb;
+	cursor: pointer;
+	transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.users-filter-select-wrap:focus-within {
+	border-color: #93c5fd;
+	background: #eff6ff;
+}
+
+.users-filter-select-wrap i {
+	font-size: 1rem;
+	color: #6b7280;
+	flex-shrink: 0;
+}
+
+.users-filter-select {
+	border: none;
+	background: transparent;
+	outline: none;
+	font-size: 0.875rem;
+	font-weight: 500;
+	color: #374151;
+	cursor: pointer;
+	padding-right: 2px;
+}
+
+.users-filter-select:focus {
+	outline: none;
+}
+
+
 .users-search {
 	flex: 1;
 	max-width: 420px;

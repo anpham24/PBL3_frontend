@@ -27,18 +27,40 @@
 
 				<section class="users-table-card" aria-label="Danh sách người dùng">
 					<div class="users-table-toolbar">
-						<label class="users-search" for="users-search-input">
-							<i class="bx bx-search" aria-hidden="true"></i>
-							<input
-								id="users-search-input"
-								type="search"
-								placeholder="Tìm kiếm người dùng..."
-								autocomplete="off"
-								aria-label="Tìm kiếm người dùng theo từ khóa"
-							>
-						</label>
-						<span id="users-count-badge" class="users-count-badge" aria-live="polite">0 người dùng</span>
+					<label class="users-search" for="users-search-input">
+						<i class="bx bx-search" aria-hidden="true"></i>
+						<input
+							id="users-search-input"
+							type="search"
+							placeholder="Tìm kiếm người dùng..."
+							autocomplete="off"
+							aria-label="Tìm kiếm người dùng theo từ khóa"
+						>
+					</label>
+
+					<div class="users-filter-group">
+						<div class="users-filter-select-wrap">
+							<i class="bx bx-shield-quarter" aria-hidden="true"></i>
+							<select id="users-filter-role" class="users-filter-select" aria-label="Lọc theo vai trò">
+								<option value="">Tất cả vai trò</option>
+								<option value="MODERATOR">Moderator</option>
+								<option value="MEMBER">Member</option>
+							</select>
+						</div>
+
+						<div class="users-filter-select-wrap">
+							<i class="bx bx-toggle-left" aria-hidden="true"></i>
+							<select id="users-filter-status" class="users-filter-select" aria-label="Lọc theo trạng thái">
+								<option value="">Tất cả trạng thái</option>
+								<option value="ACTIVE">Active</option>
+								<option value="LOCKED">Locked</option>
+								<option value="BANNED">Banned</option>
+							</select>
+						</div>
 					</div>
+
+					<span id="users-count-badge" class="users-count-badge" aria-live="polite">0 người dùng</span>
+				</div>
 
 					<p
 						id="users-status"

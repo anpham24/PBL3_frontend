@@ -277,10 +277,11 @@ export const ResolveReportModal = (() => {
 
 			const successMsg = _str(response?.message) || "Xử lý vi phạm thành công!";
 
-			// Đóng modal trước, rồi gọi callback
+			// Lưu callback trước khi close() vì close() sẽ set _onSuccess = null
+			const onSuccessRef = _onSuccess;
 			close();
-			if (typeof _onSuccess === "function") {
-				_onSuccess(reportId, successMsg);
+			if (typeof onSuccessRef === "function") {
+				onSuccessRef(reportId, successMsg);
 			}
 		} catch (error) {
 			console.error("[ResolveReportModal] resolveReport error:", error);

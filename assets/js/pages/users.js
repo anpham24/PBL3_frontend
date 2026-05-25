@@ -55,6 +55,8 @@ const _state = {
 	isLoading:    false,
 	totalCount:   0,
 	requestSeq:   0,
+	filterRole:   "",
+	filterStatus: "",
 };
 
 // ─── DOM refs ─────────────────────────────────────────────────────────────────
@@ -64,6 +66,8 @@ let _countBadgeEl;
 let _emptyStateEl;
 let _searchInputEl;
 let _statusEl;
+let _filterRoleEl;
+let _filterStatusEl;
 // _sentinelEl / _loadingIndicatorEl: không cần — dùng window scroll
 
 let _searchDebounceTimer = 0;
@@ -302,6 +306,8 @@ const _loadNextPage = async () => {
 		const response = await userApi.getAdminUsers({
 			lastUserId: _state.lastUserId,
 			keyword:    _state.keyword,
+			role:       _state.filterRole,
+			status:     _state.filterStatus,
 		});
 
 		const data     = response?.data ?? {};
@@ -338,13 +344,15 @@ const _loadNextPage = async () => {
 	}
 };
 
-const _resetAndLoad = async (keyword = "") => {
-	_state.keyword    = keyword;
-	_state.lastUserId = "";
-	_state.hasMore    = true;
-	_state.isLoading  = false;
-	_state.users      = [];
-	_state.totalCount = 0;
+const _resetAndLoad = async (keyword = "", role = _state.filterRole, status = _state.filterStatus) => {
+	_state.keyword      = keyword;
+	_state.filterRole   = role;
+	_state.filterStatus = status;
+	_state.lastUserId   = "";
+	_state.hasMore      = true;
+	_state.isLoading    = false;
+	_state.users        = [];
+	_state.totalCount   = 0;
 
 	_clearTable();
 	_clearStatus();
@@ -522,6 +530,20 @@ const _handleSearchEnter = (event) => {
 	void _resetAndLoad(_str(_searchInputEl?.value));
 };
 
+// ─── Filter dropdowns ─────────────────────────────────────────────────────────
+
+/**
+ * Xử lý khi dropdown Role hoặc Status thay đổi:
+ * reset cursor, xóa bảng, tải lại từ đầu với filter mới.
+ */
+const _handleFilterChange = () => {
+	window.clearTimeout(_searchDebounceTimer);
+	const keyword = _str(_searchInputEl?.value);
+	const role    = _filterRoleEl?.value   ?? "";
+	const status  = _filterStatusEl?.value ?? "";
+	void _resetAndLoad(keyword, role, status);
+};
+
 // ─── Infinite Scroll — window scroll (giống feed.js / reports.js) ────────────────
 
 /**
@@ -547,11 +569,13 @@ const _initUsersPage = async () => {
 	}
 
 	// Cache DOM refs
-	_tbodyEl       = document.getElementById("users-tbody");
-	_countBadgeEl  = document.getElementById("users-count-badge");
-	_emptyStateEl  = document.getElementById("users-empty-state");
-	_searchInputEl = document.getElementById("users-search-input");
-	_statusEl      = document.getElementById("users-status");
+	_tbodyEl        = document.getElementById("users-tbody");
+	_countBadgeEl   = document.getElementById("users-count-badge");
+	_emptyStateEl   = document.getElementById("users-empty-state");
+	_searchInputEl  = document.getElementById("users-search-input");
+	_statusEl       = document.getElementById("users-status");
+	_filterRoleEl   = document.getElementById("users-filter-role");
+	_filterStatusEl = document.getElementById("users-filter-status");
 
 	if (!_tbodyEl) return;
 
@@ -560,6 +584,8 @@ const _initUsersPage = async () => {
 	_tbodyEl.addEventListener("click",  _handleTableClick);
 	_searchInputEl?.addEventListener("input",   _handleSearchInput);
 	_searchInputEl?.addEventListener("keydown", _handleSearchEnter);
+	_filterRoleEl?.addEventListener("change",   _handleFilterChange);
+	_filterStatusEl?.addEventListener("change", _handleFilterChange);
 
 	// Infinite scroll — giống feed.js / reports.js
 	window.addEventListener("scroll", _handleScrollToBottom, { passive: true });

@@ -47,9 +47,9 @@ const setSubmittingState = (button, isSubmitting) => {
 
 const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
-const validateRegisterPayload = ({ username, email, password, nickname }) => {
-	if (username.length < 3) {
-		return "Tên đăng nhập phải có ít nhất 3 ký tự.";
+const validateRegisterPayload = ({ username, email, nickname }) => {
+	if (username.length === 0) {
+		return "Vui lòng nhập tên đăng nhập.";
 	}
 
 	if (nickname.length === 0) {
@@ -64,12 +64,10 @@ const validateRegisterPayload = ({ username, email, password, nickname }) => {
 		return "Địa chỉ email không hợp lệ.";
 	}
 
-	if (password.length < 6) {
-		return "Mật khẩu phải có ít nhất 6 ký tự.";
-	}
-
+	// Kiểm tra mật khẩu được nhường toàn bộ cho Backend.
 	return "";
 };
+
 
 const initRegisterPage = () => {
 	const form = document.getElementById("register-form");
