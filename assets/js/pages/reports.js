@@ -188,6 +188,69 @@ const _buildSidePanelHtml = (reportItem) => {
  * @param {object} post - item.post từ API (có các field: id, authorId, authorName, ...).
  * @returns {string}
  */
+/**
+ * Sinh HTML cho khối media của bài đăng trong context reports.
+ * - 0 media  → chuỗi rỗng
+ * - 1 media  → ảnh/video đơn (.post-image)
+ * - N media  → carousel (.post-media-carousel) với 2 nút prev/next
+ *
+ * @param {object} post
+ * @param {string} authorName
+ * @returns {string}
+ */
+const _buildReportMediaHtml = (post, authorName) => {
+	const mediaList = Array.isArray(post?.mediaList) ? post.mediaList : [];
+	const items = mediaList.reduce((acc, m) => {
+		const url = _str(m?.mediaUrl);
+		if (!url) return acc;
+		acc.push({
+			url,
+			isVideo: _str(m?.mediaType).toUpperCase() === "VIDEO",
+			thumbnailUrl: _str(m?.thumbnailUrl),
+		});
+		return acc;
+	}, []);
+
+	if (items.length === 0) return "";
+
+	// Media đơn — giống hệt post-card.js
+	if (items.length === 1) {
+		const item = items[0];
+		if (item.isVideo) {
+			const posterAttr = item.thumbnailUrl ? ` poster="${_esc(item.thumbnailUrl)}"` : "";
+			return `
+		<div class="post-image">
+			<video src="${_esc(item.url)}" controls preload="metadata"${posterAttr}></video>
+		</div>`;
+		}
+		return `<img class="post-image" src="${_esc(item.url)}" alt="Bài viết của ${_esc(authorName)}" loading="lazy">`;
+	}
+
+	// Carousel cho nhiều media
+	const slides = items
+		.map((item, i) => {
+			const mediaEl = item.isVideo
+				? `<video src="${_esc(item.url)}" controls preload="metadata"${item.thumbnailUrl ? ` poster="${_esc(item.thumbnailUrl)}"` : ""}></video>`
+				: `<img src="${_esc(item.url)}" alt="Bài viết của ${_esc(authorName)} - phần ${i + 1}" loading="lazy">`;
+			return `
+		<div class="post-card__carousel-item carousel-item">${mediaEl}</div>`;
+		})
+		.join("");
+
+	return `
+		<div class="post-media-carousel">
+			<div class="carousel-inner">
+				${slides}
+			</div>
+			<button class="carousel-btn prev-btn" type="button" aria-label="Ảnh trước">
+				<i class="bx bx-chevron-left"></i>
+			</button>
+			<button class="carousel-btn next-btn" type="button" aria-label="Ảnh tiếp theo">
+				<i class="bx bx-chevron-right"></i>
+			</button>
+		</div>`;
+};
+
 const _buildPostCardHtml = (post) => {
 	const postId     = _str(post?.id);
 	const authorId   = _str(post?.authorId);
@@ -210,19 +273,8 @@ const _buildPostCardHtml = (post) => {
 			</div>`
 		: "";
 
-	// Media: lấy item đầu tiên trong mediaList
-	const mediaList  = Array.isArray(post?.mediaList) ? post.mediaList : [];
-	const firstMedia = mediaList.find((m) => _str(m?.mediaUrl).length > 0);
-	const mediaHtml  = firstMedia
-		? (() => {
-			const url  = _str(firstMedia.mediaUrl);
-			const type = _str(firstMedia.mediaType).toUpperCase();
-			if (type === "VIDEO") {
-				return `<div class="post-image"><video src="${_esc(url)}" controls preload="metadata"></video></div>`;
-			}
-			return `<img class="post-image" src="${_esc(url)}" alt="Ảnh bài đăng" loading="lazy">`;
-		})()
-		: "";
+	// Media: hỗ trợ carousel đầy đủ (nhiều media) giống Feed
+	const mediaHtml = _buildReportMediaHtml(post, authorName);
 
 	const userIdAttr   = authorId ? ` data-user-id="${_esc(authorId)}"` : "";
 	const authorIdAttr = authorId ? ` data-author-id="${_esc(authorId)}"` : "";
@@ -292,6 +344,58 @@ const _buildReportItemHtml = (reportItem) => {
 		${postCardHtml}
 		${sidePanelHtml}
 	</div>`;
+};
+
+// ─── Carousel navigation ───────────────────────────────────────────────────────────────────────────
+
+/**
+ * Khởi tạo carousel navigation (prev/next) cho tất cả .post-media-carousel
+ * bên trong một tập container (thường là listEl hoặc một fragment vừa được insert).
+ *
+ * Logic: dùng scrollLeft của .carousel-inner + scroll snap để di chuyển, giống Feed.
+ * Nếu carousel chỉ có 1 item (không có nút) thì không có gì xảy ra.
+ *
+ * @param {HTMLElement} scope - Phần tử DOM chứa các carousel cần khởi tạo.
+ */
+const _initCarousels = (scope) => {
+	if (!scope) return;
+
+	const carousels = scope.querySelectorAll(".post-media-carousel");
+	carousels.forEach((carousel) => {
+		const inner   = carousel.querySelector(".carousel-inner");
+		const prevBtn = carousel.querySelector(".prev-btn");
+		const nextBtn = carousel.querySelector(".next-btn");
+		if (!inner || !prevBtn || !nextBtn) return;
+
+		/**
+		 * Cập nhật trạng thái nút (hiện/ẩn) dựa vào vị trí scroll hiện tại.
+		 */
+		const _syncBtns = () => {
+			const { scrollLeft, scrollWidth, clientWidth } = inner;
+			// Ẩn nút trái khi ở slide đầu
+			prevBtn.classList.toggle("is-hidden", scrollLeft <= 4);
+			// Ẩn nút phải khi ở slide cuối
+			nextBtn.classList.toggle("is-hidden", scrollLeft >= scrollWidth - clientWidth - 4);
+		};
+
+		// Cập nhật ngay lần đầu
+		_syncBtns();
+
+		// Lắng nghe scroll để đồng bộ nút
+		inner.addEventListener("scroll", _syncBtns, { passive: true });
+
+		// Nút prev: cuộn sang trái một slide
+		prevBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			inner.scrollBy({ left: -inner.clientWidth, behavior: "smooth" });
+		});
+
+		// Nút next: cuộn sang phải một slide
+		nextBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			inner.scrollBy({ left: inner.clientWidth, behavior: "smooth" });
+		});
+	});
 };
 
 // ─── Render ──────────────────────────────────────────────────────────────────
@@ -374,7 +478,14 @@ const _loadNextPage = async () => {
 		// Render thêm vào cuối danh sách
 		const fragment = reportList.map(_buildReportItemHtml).join("");
 		if (listEl && fragment.length > 0) {
+			// Ghi nhớ số lượng .report-item trước khi insert để biết phần tử nào mới
+			const prevCount = listEl.querySelectorAll(".report-item").length;
 			listEl.insertAdjacentHTML("beforeend", fragment);
+			// Khởi tạo carousel cho các .report-item vừa được thêm vào
+			const allItems = listEl.querySelectorAll(".report-item");
+			for (let i = prevCount; i < allItems.length; i++) {
+				_initCarousels(allItems[i]);
+			}
 		}
 
 		state.reportCount += reportList.length;

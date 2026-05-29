@@ -48,8 +48,76 @@ import { toSafeId }       from "../utils/helpers.js";
 import { ReportPostModal } from "./report-post-modal.js";
 import { ConfirmModal }    from "./confirm-modal.js";
 
-// ─── Idempotency guard ────────────────────────────────────────────────────────
+// ─── Idempotency guard ────────────────────────────────────────────────────────────────────────────
 let _isInstalled = false;
+
+// ─── Carousel helpers (Feed) ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Cập nhật trạng thái hiện/ẩn của 2 nút prev/next dựa vào scrollLeft hiện tại.
+ * → Gọi mỗi khi carousel-inner scroll hoặc khi khởi tạo lần đầu.
+ *
+ * @param {HTMLElement} inner - .carousel-inner
+ * @param {HTMLElement} prevBtn
+ * @param {HTMLElement} nextBtn
+ */
+const _syncCarouselBtns = (inner, prevBtn, nextBtn) => {
+	if (!inner || !prevBtn || !nextBtn) return;
+	const { scrollLeft, scrollWidth, clientWidth } = inner;
+	// Ẩn nút trái khi ở slide đầu (dùng ngưỡng 4px để bữf lỗi làm tròn số)
+	prevBtn.classList.toggle("is-hidden", scrollLeft <= 4);
+	// Ẩn nút phải khi ở slide cuối
+	nextBtn.classList.toggle("is-hidden", scrollLeft >= scrollWidth - clientWidth - 4);
+};
+
+/**
+ * Gắn scroll listener và sync lần đầu cho một `.post-media-carousel` cụ thể.
+ * Đánh dấu bằng data-carousel-init="1 2 để tránh gắn lại nhiều lần.
+ *
+ * @param {HTMLElement} carousel
+ */
+const _attachCarouselScrollListener = (carousel) => {
+	if (!carousel || carousel.dataset.carouselInit === "1") return;
+	const inner   = carousel.querySelector(".carousel-inner");
+	const prevBtn = carousel.querySelector(".prev-btn");
+	const nextBtn = carousel.querySelector(".next-btn");
+	if (!inner || !prevBtn || !nextBtn) return;
+
+	// Sync ngay khi gắn (slide đầu: ẩn nút trái, hiện nút phải nếu có nhiều slide)
+	_syncCarouselBtns(inner, prevBtn, nextBtn);
+
+	// Cập nhật khi người dùng scroll (scroll snap)
+	inner.addEventListener("scroll", () => _syncCarouselBtns(inner, prevBtn, nextBtn), { passive: true });
+
+	// Đánh dấu đã khởi tạo
+	carousel.dataset.carouselInit = "1";
+};
+
+/**
+ * Khởi tạo tất cả carousel hiện có trong DOM và theo dõi carousel mới thêm vào
+ * bằng MutationObserver.
+ * Chỉ gọi một lần khi module được install.
+ */
+const _initFeedCarousels = () => {
+	// Khởi tạo các carousel đã có trong DOM ngay lúc này
+	document.querySelectorAll(".post-media-carousel").forEach(_attachCarouselScrollListener);
+
+	// Theo dõi các carousel được thêm sau (infinite scroll, create-post, v.v.)
+	const observer = new MutationObserver((mutations) => {
+		for (const mutation of mutations) {
+			for (const node of mutation.addedNodes) {
+				if (!(node instanceof HTMLElement)) continue;
+				// Nếu chính node là carousel
+				if (node.classList.contains("post-media-carousel")) {
+					_attachCarouselScrollListener(node);
+				}
+				// Hoặc carousel nằm bên trong node vừa được thêm
+				node.querySelectorAll?.(".post-media-carousel").forEach(_attachCarouselScrollListener);
+			}
+		}
+	});
+	observer.observe(document.body, { childList: true, subtree: true });
+};
 
 // ─── Helpers nội bộ ──────────────────────────────────────────────────────────
 
@@ -251,6 +319,8 @@ export const initPostInteractions = (options = {}) => {
 	if (_isInstalled) return;
 	_isInstalled = true;
 
+	// Khởi tạo carousel navigation cho tất cả .post-media-carousel trên trang Feed
+	_initFeedCarousels();
 	const {
 		commentModalController = null,
 		createModalController  = null,
@@ -275,6 +345,23 @@ export const initPostInteractions = (options = {}) => {
 
 	// ── Event Delegation duy nhất trên document ──────────────────────────────
 	document.addEventListener("click", async (event) => {
+
+		// ── 0. CAROUSEL PREV/NEXT ────────────────────────────────────────────
+		// Bắt click vào .carousel-btn bên trong .post-media-carousel (feed cards).
+		// Phải kiểm tra trước LIKE để tránh bubble nhầm (nút nằm overlay lên card).
+		const carouselBtn = event.target.closest(".carousel-btn");
+		if (carouselBtn && !carouselBtn.closest("#comment-modal")) {
+			// comment-modal có handler riêng — chỉ xử lý carousel của feed/reports
+			event.preventDefault();
+			event.stopPropagation();
+			const carousel = carouselBtn.closest(".post-media-carousel");
+			const inner    = carousel?.querySelector(".carousel-inner");
+			if (inner) {
+				const direction = carouselBtn.classList.contains("prev-btn") ? -1 : 1;
+				inner.scrollBy({ left: direction * inner.clientWidth, behavior: "smooth" });
+			}
+			return;
+		}
 
 		// ── 1. LIKE ──────────────────────────────────────────────────────────
 		const likeBtn = event.target.closest(".btn-like");

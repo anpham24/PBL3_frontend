@@ -424,8 +424,24 @@ export const initCommentModal = (options = {}) => {
 		mediaGalleryEl.scrollBy({ left: direction * scrollStep, behavior: "smooth" });
 	};
 
+	/**
+	 * Cập nhật trạng thái ẩn/hiện của prev/next theo vị trí scroll hiện tại.
+	 * Ẩn nút trái khi ở slide đầu, ẩn nút phải khi ở slide cuối.
+	 */
+	const _syncCommentMediaBtns = () => {
+		if (!mediaGalleryEl || !prevMediaBtn || !nextMediaBtn) return;
+		const { scrollLeft, scrollWidth, clientWidth } = mediaGalleryEl;
+		const atStart = scrollLeft <= 4;
+		const atEnd   = scrollLeft >= scrollWidth - clientWidth - 4;
+		prevMediaBtn.classList.toggle("is-hidden", atStart);
+		nextMediaBtn.classList.toggle("is-hidden", atEnd);
+	};
+
 	prevMediaBtn?.addEventListener("click", () => scrollMediaGallery(-1));
 	nextMediaBtn?.addEventListener("click", () => scrollMediaGallery(1));
+
+	// Đồng bộ nút khi người dùng scroll (scroll snap)
+	mediaGalleryEl?.addEventListener("scroll", _syncCommentMediaBtns, { passive: true });
 
 	// ---------------------------------------------------------------------------
 	// loadComments — gọi API & render
@@ -612,6 +628,8 @@ export const initCommentModal = (options = {}) => {
 					</div>`;
 			}).join("");
 			mediaGalleryEl.scrollTo({ left: 0 });
+			// Sync nút sau khi reset scroll về slide đầu (rAF để chờ layout)
+			requestAnimationFrame(() => _syncCommentMediaBtns());
 			bindMediaSizingHandlers();
 			updateMediaPaneWidth();
 		}
