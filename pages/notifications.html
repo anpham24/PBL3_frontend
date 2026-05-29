@@ -4,6 +4,7 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>DUTraveler - Thông báo</title>
+	<meta name="description" content="Xem tất cả thông báo của bạn trên DUTraveler — lượt thích, bình luận, người theo dõi mới và bài đăng mới.">
 
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -21,87 +22,13 @@
 				<section class="notifications-page" aria-label="Danh sách thông báo">
 					<h2 class="notifications-title">Thông báo</h2>
 
-					<div class="notifications-list">
-						<div class="notification-item">
-							<div class="notification-user">
-								<img class="notification-avatar" src="https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=60" alt="Avatar son.wander">
-								<span class="notification-badge like-badge" aria-hidden="true">
-									<i class="bx bxs-heart"></i>
-								</span>
-							</div>
-
-							<div class="notification-content">
-								<p><strong>son.wander</strong> đã thích bài viết của bạn.</p>
-								<span class="notification-time">2 giờ trước</span>
-							</div>
-
-							<img class="notification-thumb" src="https://images.unsplash.com/photo-1528127269322-539801943592?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được thích">
-						</div>
-
-						<div class="notification-item">
-							<div class="notification-user">
-								<img class="notification-avatar" src="https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?auto=format&fit=crop&w=120&q=60" alt="Avatar annie.go">
-								<span class="notification-badge comment-badge" aria-hidden="true">
-									<i class="bx bxs-message-rounded-dots"></i>
-								</span>
-							</div>
-
-							<div class="notification-content">
-								<p><strong>annie.go</strong> đã bình luận: "Cảnh đẹp quá!"</p>
-								<span class="notification-time">5 giờ trước</span>
-							</div>
-
-							<img class="notification-thumb" src="https://images.unsplash.com/photo-1555400038-63f5ba517a47?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được bình luận">
-						</div>
-
-						<div class="notification-item">
-							<div class="notification-user">
-								<img class="notification-avatar" src="https://images.unsplash.com/photo-1463453091185-61582044d556?auto=format&fit=crop&w=120&q=60" alt="Avatar minh.explore">
-								<span class="notification-badge follow-badge" aria-hidden="true">
-									<i class="bx bxs-user"></i>
-								</span>
-							</div>
-
-							<div class="notification-content">
-								<p><strong>minh.explore</strong> đã bắt đầu theo dõi bạn.</p>
-								<span class="notification-time">1 ngày trước</span>
-							</div>
-
-							<button class="following-btn" type="button">Đang theo dõi</button>
-						</div>
-
-						<div class="notification-item">
-							<div class="notification-user">
-								<img class="notification-avatar" src="https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=60" alt="Avatar duyen.travels">
-								<span class="notification-badge like-badge" aria-hidden="true">
-									<i class="bx bxs-heart"></i>
-								</span>
-							</div>
-
-							<div class="notification-content">
-								<p><strong>duyen.travels</strong> đã thích bài viết của bạn.</p>
-								<span class="notification-time">2 ngày trước</span>
-							</div>
-
-							<img class="notification-thumb" src="https://images.unsplash.com/photo-1521334884684-d80222895322?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được thích">
-						</div>
-
-						<div class="notification-item">
-							<div class="notification-user">
-								<img class="notification-avatar" src="https://images.unsplash.com/photo-1504593811423-6dd665756598?auto=format&fit=crop&w=120&q=60" alt="Avatar khai.moves">
-								<span class="notification-badge comment-badge" aria-hidden="true">
-									<i class="bx bxs-message-rounded-dots"></i>
-								</span>
-							</div>
-
-							<div class="notification-content">
-								<p><strong>khai.moves</strong> đã bình luận: "Nên thử vào lúc bình minh nhé!"</p>
-								<span class="notification-time">3 ngày trước</span>
-							</div>
-
-							<img class="notification-thumb" src="https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=240&q=70" alt="Ảnh bài viết được bình luận">
-						</div>
+					<!-- Danh sách thông báo — được render hoàn toàn bởi notifications.js -->
+					<div id="notifications-list" class="notifications-list" aria-live="polite" aria-label="Thông báo">
+						<!-- Notifications dynamically injected here -->
 					</div>
+
+					<!-- Trạng thái tải / kết thúc — hiển thị bên dưới danh sách -->
+					<div id="notifications-status" class="notifications-status is-hidden" aria-live="polite"></div>
 				</section>
 			</section>
 		</main>

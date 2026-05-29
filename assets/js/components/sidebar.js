@@ -1,6 +1,7 @@
 "use strict";
 
 import { getRoleFromToken, getUserId } from "../utils/auth.js";
+import { notificationApi } from "../api/notification-api.js";
 
 const SIDEBAR_BASE_ITEMS = [
 	{
@@ -130,10 +131,21 @@ const createSidebarLink = (item, currentPage) => {
 		link.classList.add("create-post-link");
 	}
 
-	link.innerHTML = `
-		<i class="bx ${item.icon}"></i>
-		<span class="nav-label">${item.label}</span>
-	`;
+	// Icon chuông cho mục thông báo — bọc thêm badge số chưa đọc
+	if (item.id === "notifications") {
+		link.innerHTML = `
+			<span class="nav-bell-wrap">
+				<i class="bx ${item.icon}"></i>
+				<span id="noti-count-badge" class="noti-badge is-hidden" aria-label="Số thông báo chưa đọc"></span>
+			</span>
+			<span class="nav-label">${item.label}</span>
+		`;
+	} else {
+		link.innerHTML = `
+			<i class="bx ${item.icon}"></i>
+			<span class="nav-label">${item.label}</span>
+		`;
+	}
 
 	return link;
 };
@@ -228,3 +240,55 @@ if (document.readyState === "loading") {
 } else {
 	initSidebar();
 }
+
+// ---------------------------------------------------------------------------
+// Unread notification count — Global logic
+// ---------------------------------------------------------------------------
+
+/**
+ * Cập nhật badge số thông báo chưa đọc trên icon chuông ở sidebar.
+ *
+ * Gọi API GET /api/notifications/unread-count và:
+ *  - Nếu count > 0 → hiển thị số lên badge.
+ *  - Nếu count = 0 → ẩn badge hoàn toàn.
+ *
+ * Hàm được export để tái sử dụng ở feed.js và các file khác.
+ * Được tự động trigger khi:
+ *  1. DOM load (mọi trang).
+ *  2. Window focus (tab được kích hoạt lại).
+ *  3. Feed.js: khi mở comment-modal hoặc load thêm bài viết (gọi thủ công).
+ */
+export const updateUnreadNotificationCount = async () => {
+	try {
+		const response = await notificationApi.getUnreadCount();
+		const count = Number(response?.data?.unreadCount ?? 0);
+
+		// Tìm badge trong DOM (có thể chưa tồn tại nếu sidebar chưa render)
+		const badge = document.getElementById("noti-count-badge");
+		if (!badge) return;
+
+		if (count > 0) {
+			// Hiển thị số — giới hạn 99+
+			badge.textContent = count > 99 ? "99+" : String(count);
+			badge.classList.remove("is-hidden");
+		} else {
+			// Ẩn hoàn toàn khi không có thông báo chưa đọc
+			badge.textContent = "";
+			badge.classList.add("is-hidden");
+		}
+	} catch (error) {
+		// Thất bại thầm lặng — không làm gián đoạn UX
+		console.warn("[sidebar] Không thể lấy số thông báo chưa đọc:", error);
+	}
+};
+
+// Trigger 1: Mỗi khi DOM load (mọi trang đều có sidebar)
+if (document.readyState === "loading") {
+	document.addEventListener("DOMContentLoaded", () => void updateUnreadNotificationCount());
+} else {
+	// DOM đã sẵn sàng (sidebar.js chạy sau DOMContentLoaded)
+	void updateUnreadNotificationCount();
+}
+
+// Trigger 2: Khi người dùng quay lại tab trình duyệt
+window.addEventListener("focus", () => void updateUnreadNotificationCount());

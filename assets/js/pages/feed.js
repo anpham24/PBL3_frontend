@@ -17,6 +17,7 @@ import { initCommentModal } from "../components/comment-modal.js";
 import { initCreatePostModal } from "../components/create-post-modal.js";
 import { initPostInteractions } from "../components/post-interactions.js";
 import { initPostMenus } from "../components/post-menu.js";
+import { updateUnreadNotificationCount } from "../components/sidebar.js";
 
 // ---------------------------------------------------------------------------
 // Constants
@@ -330,6 +331,9 @@ const loadFeed = async (shouldReset = false) => {
 		}
 
 		clearStatus();
+
+		// Trigger 3a: Cập nhật badge chuông mỗi khi tải thêm bài viết
+		void updateUnreadNotificationCount();
 	} catch (error) {
 		if (requestId !== feedState.requestSequence) return;
 		if (shouldReset) {
@@ -444,7 +448,7 @@ const initFeedPage = () => {
 	});
 
 	// ── Comment modal ─────────────────────────────────────────────────────────
-	commentModalController = initCommentModal({
+	const _rawCommentModal = initCommentModal({
 		onEditRequest: (post) => {
 			const postData = typeof post === "object" && post !== null
 				? post
@@ -464,6 +468,16 @@ const initFeedPage = () => {
 			syncEmptyStatus();
 		},
 	});
+
+	// Wrap open() để trigger cập nhật badge chuông khi người dùng mở comment-modal
+	// (Trigger 3b theo yêu cầu: khi mở comment-modal trên Feed)
+	commentModalController = {
+		..._rawCommentModal,
+		open: (post) => {
+			void updateUnreadNotificationCount();
+			_rawCommentModal.open(post);
+		},
+	};
 
 	// ── Post interactions (Like, Comment→modal, Edit, Delete, Report, Navigate) ─
 	initPostInteractions({

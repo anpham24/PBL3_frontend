@@ -1,3 +1,11 @@
+/* =============================================================================
+   notifications.css — Trang thông báo DUTraveler
+   ============================================================================= */
+
+/* ---------------------------------------------------------------------------
+   Page container
+   --------------------------------------------------------------------------- */
+
 .notifications-page {
 	width: 100%;
 	max-width: 600px;
@@ -11,6 +19,10 @@
 	margin-bottom: 20px;
 }
 
+/* ---------------------------------------------------------------------------
+   Danh sách thông báo
+   --------------------------------------------------------------------------- */
+
 .notifications-list {
 	border: 1px solid var(--border);
 	border-radius: 16px;
@@ -18,13 +30,20 @@
 	overflow: hidden;
 }
 
+/* ---------------------------------------------------------------------------
+   Item thông báo
+   --------------------------------------------------------------------------- */
+
 .notification-item {
 	display: flex;
 	align-items: center;
 	gap: 12px;
-	padding: 12px 14px;
+	padding: 14px 16px;
 	border-bottom: 1px solid var(--border);
-	transition: background-color 0.2s ease;
+	transition: background-color 0.18s ease;
+	cursor: pointer; /* Toàn bộ dòng đều click được */
+	text-decoration: none;
+	color: inherit;
 }
 
 .notification-item:last-child {
@@ -34,6 +53,34 @@
 .notification-item:hover {
 	background: #f9fafb;
 }
+
+/* Trạng thái chưa đọc — nền xanh nhạt */
+.notification-item.is-unread {
+	background: #eff6ff;
+}
+
+.notification-item.is-unread:hover {
+	background: #dbeafe;
+}
+
+/* ---------------------------------------------------------------------------
+   Thanh phân cách giữa thông báo chưa đọc và đã đọc
+   --------------------------------------------------------------------------- */
+
+.notification-divider {
+	padding: 6px 16px;
+	background: #f3f4f6;
+	border-bottom: 1px solid var(--border);
+	font-size: 0.72rem;
+	font-weight: 600;
+	color: #6b7280;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+/* ---------------------------------------------------------------------------
+   Avatar + Badge wrapper
+   --------------------------------------------------------------------------- */
 
 .notification-user {
 	position: relative;
@@ -48,12 +95,17 @@
 	border-radius: 50%;
 	object-fit: cover;
 	border: 1px solid var(--border);
+	display: block;
 }
+
+/* ---------------------------------------------------------------------------
+   Icon Badge — đè góc dưới-phải avatar
+   --------------------------------------------------------------------------- */
 
 .notification-badge {
 	position: absolute;
-	right: -2px;
-	bottom: -2px;
+	right: -3px;
+	bottom: -3px;
 	width: 20px;
 	height: 20px;
 	border-radius: 50%;
@@ -62,36 +114,59 @@
 	align-items: center;
 	justify-content: center;
 	color: #ffffff;
+	flex-shrink: 0;
 }
 
 .notification-badge i {
-	font-size: 0.74rem;
+	font-size: 0.72rem;
+	line-height: 1;
 }
 
+/* 4 loại badge tương ứng 4 type thông báo */
+
+/* LIKE_POST — tim đỏ */
 .like-badge {
 	background: #ef4444;
 }
 
+/* COMMENT — message xanh dương */
 .comment-badge {
 	background: #3b82f6;
 }
 
+/* FOLLOW — user icon tối */
 .follow-badge {
 	background: #111827;
 }
+
+/* NEW_POST — bell/post icon xanh lục */
+.new-post-badge {
+	background: #10b981;
+}
+
+/* ---------------------------------------------------------------------------
+   Nội dung thông báo
+   --------------------------------------------------------------------------- */
 
 .notification-content {
 	flex: 1;
 	min-width: 0;
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: 3px;
 }
 
 .notification-content p {
 	font-size: 0.94rem;
 	line-height: 1.45;
 	color: #111827;
+	margin: 0;
+
+	/* Truncate dài quá */
+	overflow: hidden;
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	-webkit-line-clamp: 3;
 }
 
 .notification-content strong {
@@ -103,27 +178,82 @@
 	color: #9ca3af;
 }
 
-.notification-thumb {
-	width: 52px;
-	height: 52px;
-	border-radius: 10px;
-	object-fit: cover;
-	border: 1px solid var(--border);
+/* Chưa đọc → thời gian đậm hơn */
+.notification-item.is-unread .notification-time {
+	color: #3b82f6;
+	font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Trạng thái tải / kết thúc
+   --------------------------------------------------------------------------- */
+
+.notifications-status {
+	text-align: center;
+	padding: 20px 16px;
+	font-size: 0.85rem;
+	color: #9ca3af;
+}
+
+.notifications-status.is-loading::before {
+	content: "";
+	display: inline-block;
+	width: 16px;
+	height: 16px;
+	border: 2px solid #d1d5db;
+	border-top-color: #6b7280;
+	border-radius: 50%;
+	animation: noti-spin 0.7s linear infinite;
+	vertical-align: middle;
+	margin-right: 8px;
+}
+
+@keyframes noti-spin {
+	to { transform: rotate(360deg); }
+}
+
+/* ---------------------------------------------------------------------------
+   Skeleton placeholder (khi đang load lần đầu)
+   --------------------------------------------------------------------------- */
+
+.notification-skeleton {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	padding: 14px 16px;
+	border-bottom: 1px solid var(--border);
+}
+
+.notification-skeleton:last-child {
+	border-bottom: none;
+}
+
+.notification-skeleton__avatar {
+	width: 48px;
+	height: 48px;
+	border-radius: 50%;
 	flex-shrink: 0;
 }
 
-.following-btn {
-	border: 1px solid var(--border);
-	background: #ffffff;
-	color: #111827;
-	padding: 8px 12px;
-	border-radius: 999px;
-	font-size: 0.82rem;
-	font-weight: 600;
-	white-space: nowrap;
-	cursor: pointer;
-	flex-shrink: 0;
+.notification-skeleton__body {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
 }
+
+.notification-skeleton__line {
+	border-radius: 6px;
+	height: 12px;
+}
+
+.notification-skeleton__line--short {
+	width: 40%;
+}
+
+/* ---------------------------------------------------------------------------
+   Responsive
+   --------------------------------------------------------------------------- */
 
 @media (max-width: 900px) {
 	.notifications-title {
@@ -143,7 +273,7 @@
 
 	.notification-item {
 		gap: 10px;
-		padding: 10px;
+		padding: 12px;
 	}
 
 	.notification-user,
@@ -157,22 +287,15 @@
 		height: 18px;
 	}
 
+	.notification-badge i {
+		font-size: 0.64rem;
+	}
+
 	.notification-content p {
 		font-size: 0.86rem;
 	}
 
 	.notification-time {
 		font-size: 0.74rem;
-	}
-
-	.notification-thumb {
-		width: 44px;
-		height: 44px;
-		border-radius: 8px;
-	}
-
-	.following-btn {
-		padding: 7px 10px;
-		font-size: 0.76rem;
 	}
 }

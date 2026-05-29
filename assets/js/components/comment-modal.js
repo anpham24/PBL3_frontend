@@ -3,6 +3,7 @@
 import { postApi } from "../api/post-api.js";
 import { isPostOwner } from "../utils/helpers.js";
 import { getAvtUrl, getNickname, getUserId } from "../utils/auth.js";
+import { updateUnreadNotificationCount } from "./sidebar.js";
 
 // ─── HTML Template ────────────────────────────────────────────────────────────
 
@@ -845,6 +846,10 @@ export const initCommentModal = (options = {}) => {
 						countSpan.textContent = formatCompactNumber(currentPostCommentCount);
 					}
 				}
+
+				// 4. Cập nhật badge chuông thông báo — người dùng vừa comment
+				//    nên có thể kích hoạt thông báo cho chủ bài → làm mới unread count.
+				void updateUnreadNotificationCount();
 			}
 		} catch (error) {
 			console.error("[comment-modal] Lỗi khi tạo bình luận:", error);
