@@ -225,25 +225,21 @@ const syncSidebarItems = () => {
 };
 
 // ---------------------------------------------------------------------------
-// Bootstrap
-// ---------------------------------------------------------------------------
-
-const initSidebar = () => {
-	injectSidebarHTML();
-	syncSidebarItems();
-};
-
-export const refreshSidebarItems = syncSidebarItems;
-
-if (document.readyState === "loading") {
-	document.addEventListener("DOMContentLoaded", initSidebar);
-} else {
-	initSidebar();
-}
-
-// ---------------------------------------------------------------------------
 // Unread notification count — Global logic
 // ---------------------------------------------------------------------------
+
+/** Tên file của trang Thông báo — dùng để bỏ qua gọi API khi đang ở trang này */
+const NOTIFICATIONS_PAGE = "notifications.html";
+
+/**
+ * Kiểm tra trang hiện tại có phải trang Thông báo không.
+ * Khi đang ở trang Thông báo, notifications.js đã gọi:
+ *   - GET /api/notifications (lấy danh sách)
+ *   - PATCH /api/notifications { isRead: true } (đánh dấu đã đọc)
+ * → Không cần gọi thêm GET /api/notifications/unread-count (dư thừa).
+ * @returns {boolean}
+ */
+const isNotificationsPage = () => getCurrentPage() === NOTIFICATIONS_PAGE;
 
 /**
  * Cập nhật badge số thông báo chưa đọc trên icon chuông ở sidebar.
@@ -252,23 +248,28 @@ if (document.readyState === "loading") {
  *  - Nếu count > 0 → hiển thị số lên badge.
  *  - Nếu count = 0 → ẩn badge hoàn toàn.
  *
- * Hàm được export để tái sử dụng ở feed.js và các file khác.
+ * Hàm được export để tái sử dụng ở feed.js, comment-modal.js và các file khác.
  * Được tự động trigger khi:
- *  1. DOM load (mọi trang).
+ *  1. DOM load (mọi trang) — gọi bên trong initSidebar() để đảm bảo badge đã có.
  *  2. Window focus (tab được kích hoạt lại).
  *  3. Feed.js: khi mở comment-modal hoặc load thêm bài viết (gọi thủ công).
+ *  4. comment-modal.js: sau khi gửi bình luận thành công.
+ *
+ * LƯU Ý: Hàm này phải được khai báo TRƯỚC initSidebar() để có thể gọi
+ *         bên trong initSidebar(). Do đó toàn bộ phần khai báo hàm được
+ *         đặt TRƯỚC khối bootstrap.
  */
 export const updateUnreadNotificationCount = async () => {
 	try {
 		const response = await notificationApi.getUnreadCount();
 		const count = Number(response?.data?.unreadCount ?? 0);
 
-		// Tìm badge trong DOM (có thể chưa tồn tại nếu sidebar chưa render)
+		// Tìm badge trong DOM
 		const badge = document.getElementById("noti-count-badge");
 		if (!badge) return;
 
 		if (count > 0) {
-			// Hiển thị số — giới hạn 99+
+			// Hiển thị số — giới hạn tối đa 99+
 			badge.textContent = count > 99 ? "99+" : String(count);
 			badge.classList.remove("is-hidden");
 		} else {
@@ -282,13 +283,35 @@ export const updateUnreadNotificationCount = async () => {
 	}
 };
 
-// Trigger 1: Mỗi khi DOM load (mọi trang đều có sidebar)
+// ---------------------------------------------------------------------------
+// Bootstrap
+// ---------------------------------------------------------------------------
+
+const initSidebar = () => {
+	injectSidebarHTML();   // 1. Tạo <aside> và inject #noti-count-badge vào DOM
+	syncSidebarItems();    // 2. Render các nav-item (đồng bộ)
+
+	// 3. Sau khi badge đã có trong DOM, lấy số thông báo chưa đọc từ API.
+	//    Bỏ qua khi đang ở trang Thông báo: trang đó đã gọi PATCH markAllAsRead(),
+	//    nên unread count lúc này chắc chắn = 0 và badge không cần cập nhật.
+	if (!isNotificationsPage()) {
+		void updateUnreadNotificationCount();
+	}
+};
+
+export const refreshSidebarItems = syncSidebarItems;
+
 if (document.readyState === "loading") {
-	document.addEventListener("DOMContentLoaded", () => void updateUnreadNotificationCount());
+	document.addEventListener("DOMContentLoaded", initSidebar);
 } else {
-	// DOM đã sẵn sàng (sidebar.js chạy sau DOMContentLoaded)
-	void updateUnreadNotificationCount();
+	// DOM đã sẵn sàng (ES module luôn defer, nên thường rơi vào đây)
+	initSidebar();
 }
 
-// Trigger 2: Khi người dùng quay lại tab trình duyệt
-window.addEventListener("focus", () => void updateUnreadNotificationCount());
+// Trigger 2: Khi người dùng quay lại tab trình duyệt.
+// Bỏ qua nếu đang ở trang Thông báo (lý do tương tự như trên).
+window.addEventListener("focus", () => {
+	if (!isNotificationsPage()) {
+		void updateUnreadNotificationCount();
+	}
+});
