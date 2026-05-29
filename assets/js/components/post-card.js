@@ -349,10 +349,10 @@ export const renderPostCard = (postData) => {
 			<!-- ── Footer: caption ── -->
 			<footer class="post-card__footer post-footer">
 				<div class="post-card__caption-wrap">
-					<p class="post-card__caption caption${content ? ' post-card__caption--clamped' : ''}" data-role="post-caption">
+					<p class="post-card__caption caption${content.length > 150 ? ' post-card__caption--clamped' : ''}" data-role="post-caption">
 						<strong>${_esc(authorName)}</strong>${_esc(content)}
 					</p>
-					${content ? `<button class="post-card__see-more" type="button" data-role="see-more" aria-expanded="false">Xem thêm</button>` : ''}
+					${content.length > 150 ? `<button class="post-card__see-more" type="button" data-role="see-more" aria-expanded="false">Xem thêm</button>` : ''}
 				</div>
 			</footer>
 		</article>
