@@ -1,9 +1,10 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>DUTraveler - Cài đặt</title>
+	<title>Traveler - Cài đặt</title>
 
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -12,6 +13,7 @@
 	<link rel="stylesheet" href="../assets/css/global.css">
 	<link rel="stylesheet" href="../assets/css/settings.css">
 </head>
+
 <body>
 	<div class="app-shell">
 		<!-- sidebar injected by assets/js/components/sidebar.js -->
@@ -57,12 +59,16 @@
 
 						<form id="settings-edit-profile-form" class="settings-form" action="#" method="post">
 							<div class="settings-avatar-row">
-								<img id="settings-avatar-preview" class="settings-avatar" src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=60" alt="Ảnh đại diện hiện tại">
-								<button id="settings-avatar-change" class="settings-avatar-change" type="button">Thay đổi ảnh đại diện</button>
+								<img id="settings-avatar-preview" class="settings-avatar"
+									src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&w=120&q=60"
+									alt="Ảnh đại diện hiện tại">
+								<button id="settings-avatar-change" class="settings-avatar-change" type="button">Thay
+									đổi ảnh đại diện</button>
 							</div>
 
 							<input id="settings-avatar-file" name="avatarFile" type="file" accept="image/*" hidden>
-							<p class="settings-avatar-hint">Nhấn vào ảnh hiện tại hoặc nút thay đổi để tải ảnh mới từ máy tính.</p>
+							<p class="settings-avatar-hint">Nhấn vào ảnh hiện tại hoặc nút thay đổi để tải ảnh mới từ
+								máy tính.</p>
 
 							<div class="field-group">
 								<label for="settings-nickname">Tên nick (nickname)</label>
@@ -71,11 +77,14 @@
 
 							<div class="field-group">
 								<label for="settings-bio">Tiểu sử (Bio)</label>
-								<textarea id="settings-bio" name="bio" rows="4" placeholder="Travel storyteller"></textarea>
+								<textarea id="settings-bio" name="bio" rows="4"
+									placeholder="Travel storyteller"></textarea>
 							</div>
 
-							<p id="settings-edit-feedback" class="settings-feedback is-hidden" role="status" aria-live="polite"></p>
-							<button id="settings-edit-submit" class="settings-submit-btn" type="submit">Lưu thay đổi</button>
+							<p id="settings-edit-feedback" class="settings-feedback is-hidden" role="status"
+								aria-live="polite"></p>
+							<button id="settings-edit-submit" class="settings-submit-btn" type="submit">Lưu thay
+								đổi</button>
 						</form>
 					</div>
 
@@ -89,21 +98,26 @@
 						<form id="settings-change-password-form" class="settings-form" action="#" method="post">
 							<div class="field-group">
 								<label for="settings-old-password">Mật khẩu cũ</label>
-								<input id="settings-old-password" name="oldPassword" type="password" placeholder="••••••••">
+								<input id="settings-old-password" name="oldPassword" type="password"
+									placeholder="••••••••">
 							</div>
 
 							<div class="field-group">
 								<label for="settings-new-password">Mật khẩu mới</label>
-								<input id="settings-new-password" name="newPassword" type="password" placeholder="••••••••">
+								<input id="settings-new-password" name="newPassword" type="password"
+									placeholder="••••••••">
 							</div>
 
 							<div class="field-group">
 								<label for="settings-confirm-password">Xác nhận mật khẩu mới</label>
-								<input id="settings-confirm-password" name="confirmPassword" type="password" placeholder="••••••••">
+								<input id="settings-confirm-password" name="confirmPassword" type="password"
+									placeholder="••••••••">
 							</div>
 
-							<p id="settings-password-feedback" class="settings-feedback is-hidden" role="status" aria-live="polite"></p>
-							<button id="settings-password-submit" class="settings-submit-btn" type="submit">Cập nhật mật khẩu</button>
+							<p id="settings-password-feedback" class="settings-feedback is-hidden" role="status"
+								aria-live="polite"></p>
+							<button id="settings-password-submit" class="settings-submit-btn" type="submit">Cập nhật mật
+								khẩu</button>
 						</form>
 					</div>
 				</section>
@@ -116,4 +130,5 @@
 	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/settings.js"></script>
 </body>
+
 </html>

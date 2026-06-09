@@ -180,7 +180,7 @@ const injectSidebarHTML = () => {
 
 	const brand = document.createElement("h1");
 	brand.className = "brand";
-	brand.textContent = "DUTraveler";
+	brand.textContent = "Traveler";
 
 	const nav = document.createElement("nav");
 	nav.className = "side-nav";

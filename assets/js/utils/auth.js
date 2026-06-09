@@ -133,7 +133,25 @@ export const saveAuthSession = (token, userDetails = {}) => {
 	setStorageValue(NICKNAME_KEY, userDetails.nickname ?? "");
 };
 
-export const getUserId = () => getStorageValue(USER_ID_KEY);
+/**
+ * Lấy userId của người dùng hiện tại.
+ * Ưu tiên đọc từ localStorage["userId"].
+ * Nếu chưa có (chưa lưu riêng), fallback sang JWT payload.sub để tương thích
+ * với các luồng chỉ lưu token mà không lưu userId tường minh.
+ * @returns {string} userId hoặc chuỗi rỗng nếu chưa đăng nhập.
+ */
+export const getUserId = () => {
+	const stored = getStorageValue(USER_ID_KEY);
+	if (stored.length > 0) return stored;
+
+	// Fallback: đọc từ JWT payload.sub
+	const token = getToken();
+	if (token.length === 0) return "";
+	const payload = parseJwt(token);
+	const sub = typeof payload?.sub === "string" ? payload.sub.trim() : "";
+	return sub;
+};
+
 export const getAvtUrl = () => getStorageValue(AVT_URL_KEY);
 export const getNickname = () => getStorageValue(NICKNAME_KEY);
 

@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>DUTraveler - Quản lý báo cáo</title>
-	<meta name="description" content="Trang quản lý và kiểm duyệt các bài viết bị người dùng báo cáo dành cho Admin và Moderator.">
+	<title>Traveler - Quản lý báo cáo</title>
+	<meta name="description"
+		content="Trang quản lý và kiểm duyệt các bài viết bị người dùng báo cáo dành cho Admin và Moderator.">
 	<link rel="preconnect" href="https://fonts.googleapis.com">
 	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 	<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -13,6 +15,7 @@
 	<link rel="stylesheet" href="../assets/css/post-card.css">
 	<link rel="stylesheet" href="../assets/css/reports.css">
 </head>
+
 <body>
 	<div class="app-shell">
 		<!-- sidebar injected by assets/js/components/sidebar.js -->
@@ -25,19 +28,22 @@
 				</div>
 			</header>
 
-			<section class="main-inner" style="max-width: 100%; padding: 28px 24px 50px; display: flex; justify-content: center;">
+			<section class="main-inner"
+				style="max-width: 100%; padding: 28px 24px 50px; display: flex; justify-content: center;">
 				<section class="reports-page" aria-label="Danh sách bài viết bị báo cáo">
 					<div class="reports-toolbar">
 						<label class="reports-search" for="reports-search-input">
 							<i class="bx bx-search"></i>
-							<input id="reports-search-input" type="search" placeholder="Tìm theo người đăng hoặc nội dung..." autocomplete="off">
+							<input id="reports-search-input" type="search"
+								placeholder="Tìm theo người đăng hoặc nội dung..." autocomplete="off">
 						</label>
 						<span id="reports-count-badge" class="reports-count-badge">0 bài viết bị báo cáo</span>
 					</div>
 
 					<p id="reports-status" class="reports-status is-hidden" role="status" aria-live="polite"></p>
 					<div id="reported-post-list" class="post-list"></div>
-					<p id="reports-empty-state" class="reports-empty-state is-hidden">Không còn bài viết nào cần xử lý.</p>
+					<p id="reports-empty-state" class="reports-empty-state is-hidden">Không còn bài viết nào cần xử lý.
+					</p>
 					<p id="reports-end-notice" class="reports-end-notice is-hidden">Đã tải hết tất cả báo cáo.</p>
 				</section>
 			</section>
@@ -49,4 +55,5 @@
 	<script type="module" src="../assets/js/components/sidebar.js"></script>
 	<script type="module" src="../assets/js/pages/reports.js"></script>
 </body>
+
 </html>
