@@ -66,6 +66,8 @@
 	padding-right: 6px;
 	cursor: pointer;
 	appearance: none;
+	text-align: center;
+	text-align-last: center;
 }
 
 .filter-select option {

@@ -224,12 +224,17 @@ const createNotificationItemHtml = (notification) => {
 	const { id, targetId, avtUrl, content, isRead, createAt, type } = notification;
 	const { badgeClass, iconClass } = getBadgeConfig(type);
 
-	const safeAvt    = escapeHtml(avtUrl || DEFAULT_AVATAR);
+	// Các trường hiển thị ra innerHTML → cần escapeHtml để tránh XSS
+	const safeAvt     = escapeHtml(avtUrl || DEFAULT_AVATAR);
 	const safeContent = escapeHtml(content || "Bạn có thông báo mới.");
-	const safeTime   = escapeHtml(createAt || "");
-	const safeId     = escapeHtml(id || "");
-	const safeTarget = escapeHtml(targetId || "");
-	const safeType   = escapeHtml(type || "");
+	const safeTime    = escapeHtml(createAt || "");
+
+	// Các trường gán vào data-* attribute → KHÔNG dùng escapeHtml
+	// (trình duyệt tự escape attribute; escapeHtml sẽ gây double-encoding
+	//  khiến dataset.targetId bị sai khi đọc lại → FOLLOW redirect thất bại)
+	const rawId     = String(id     || "").trim();
+	const rawTarget = String(targetId || "").trim();
+	const rawType   = String(type   || "").trim();
 
 	const unreadClass = isRead ? "" : " is-unread";
 
@@ -237,9 +242,9 @@ const createNotificationItemHtml = (notification) => {
 		<div class="notification-item${unreadClass}"
 			 role="button"
 			 tabindex="0"
-			 data-noti-id="${safeId}"
-			 data-target-id="${safeTarget}"
-			 data-noti-type="${safeType}"
+			 data-noti-id="${rawId}"
+			 data-target-id="${rawTarget}"
+			 data-noti-type="${rawType}"
 			 aria-label="${safeContent}">
 			<!-- Avatar + Badge -->
 			<div class="notification-user">
@@ -405,20 +410,26 @@ const clearUnreadBadgeOnSidebar = () => {
  * @param {HTMLElement} item - Phần tử .notification-item được click.
  */
 const handleNotificationClick = async (item) => {
-	const type     = item.dataset.notiType;
-	const targetId = item.dataset.targetId;
+	// Đọc và chuẩn hoá giá trị từ data-* attribute
+	const type     = (item.dataset.notiType   || "").trim();
+	const targetId = (item.dataset.targetId   || "").trim();
 
-	if (!type || !targetId) return;
+	if (!type || !targetId) {
+		console.warn("[notifications] Thiếu type hoặc targetId trên item:", item);
+		return;
+	}
 
-	// Xóa trạng thái chưa đọc ngay khi click (UI feedback)
+	// Xóa trạng thái chưa đọc ngay khi click (UI feedback tức thì)
 	item.classList.remove("is-unread");
 
 	if (type === "LIKE_POST" || type === "COMMENT" || type === "NEW_POST") {
 		// targetId là postId → lấy chi tiết bài và mở comment-modal
 		await handlePostNotificationClick(targetId);
 	} else if (type === "FOLLOW") {
-		// targetId là userId → chuyển hướng đến trang profile
+		// targetId là userId → chuyển hướng đến trang cá nhân của người đó
 		window.location.href = `profile.html?id=${encodeURIComponent(targetId)}`;
+	} else {
+		console.warn("[notifications] Loại thông báo không xác định:", type);
 	}
 };
 
